@@ -37,7 +37,7 @@ export const handleAction = (editor) => {
     displayDialogue(editor);
 };
 
-const displayDialogue = async(editor) => {
+const displayDialogue = async (editor) => {
     const elementid = "codepro_" + editor.id;
     const data = {
         elementid: elementid
@@ -54,57 +54,57 @@ const displayDialogue = async(editor) => {
             maxWidth: '100%',
             margin: 0
         });
-        // modal.getRoot().find('div.modal-footer').removeClass("hidden");
+        modal.header.hide();
         modal.footer.show();
 
-    // Need to load extension of Monaco
-    if (!window.MonacoEditorEx) {
-        const monacoexScript = document.createElement("script");
-        monacoexScript.src = baseUrl + '/assets/monaco-editor-ex.js';
-        monacoexScript.onload = () => onLazyLoadMonaco(editor, modal);
-        document.querySelector("head").appendChild(monacoexScript);
-    } else {
-        onLazyLoadMonaco(editor, modal);
-    }
+        const monaco = await lazyLoadMonaco();
+
+        console.log("creant l'editor ara");
+        const vseditor = monaco.editor.create(modal.body.find("#codepro_" + editor.id)[0], {
+            value: editor.getContent(),
+            language: 'html',
+            automaticLayout: true,
+            theme: "vs-light",
+        });
+        modal.onresize = function() {
+            vseditor.layout();
+        };
+        modal.footer.find("button.btn").on("click", (evt)=>{
+            if (evt.target.classList.contains("btn-primary")) {
+                const newContent = vseditor.getValue();
+                console.log(newContent);
+                editor.setContent(newContent, {format: 'html'});
+            }
+            modal.hide();
+            vseditor.dispose();
+            modal.destroy();
+        });
+        modal.getRoot().on(ModalEvents.hidden, () => {
+            vseditor.dispose();
+            modal.destroy();
+        });
+        modal.show();
+
 };
 
-const onLazyLoadMonaco = function(editor, modal) {
-
-    // initialize the editor
-    require.config({paths: {
-        vs: baseUrl + '/assets/monaco-editor/min/vs'
+const lazyLoadMonaco = function() {
+    return new Promise((resolve)=> {
+        if (!window.monaco || !window.MonacoEditorEx) {
+            require.config({paths:
+                {
+                    vs: baseUrl + '/amd/assets/monaco-editor/min/vs',
+                    tiny_codepro_vsex: baseUrl + '/amd/assets/monaco-editor-ex'
+                }
+            });
+            // Load monaco on demand
+            require(['tiny_codepro_vsex', 'vs/editor/editor.main'], function(MonacoEditorEx) {
+                console.log("requirejs resolves", window.monaco, monaco, MonacoEditorEx);
+                // Apply extensions into monaco editor
+                MonacoEditorEx.useMonacoEx(window.monaco);
+                resolve(window.monaco);
+            });
+        } else {
+            resolve(window.monaco);
         }
     });
-    require(['vs/editor/editor.main'], function() {
-        MonacoEditorEx.useMonacoEx(monaco);
-        modal.show();
-        setTimeout(() => {
-                console.log("creant l'editor ara");
-                const vseditor = monaco.editor.create(document.getElementById("codepro_" + editor.id), {
-                    value: editor.getContent(),
-                    language: 'html',
-                    automaticLayout: true,
-                    theme: "vs-light",
-                });
-            modal.onresize = function() {
-                vseditor.layout();
-            };
-            modal.getRoot().find("button.btn").on("click", (evt)=>{
-                if (evt.target.classList.contains("btn-primary")) {
-                    const newContent = vseditor.getValue();
-                    console.log(newContent);
-                    editor.setContent(newContent, {format: 'html'});
-                }
-                modal.hide();
-                vseditor.getModel().dispose();
-                modal.destroy();
-            });
-            modal.getRoot().on(ModalEvents.hidden, () => {
-                vseditor.getModel().dispose();
-                modal.destroy();
-            });
-        }, 500);
-
-    });
-
 };

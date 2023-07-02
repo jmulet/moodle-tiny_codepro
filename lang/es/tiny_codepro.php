@@ -24,3 +24,5 @@
 
  $string['plugin'] = 'CodePro by IEDIB (Tiny)';
  $string['pluginname'] = 'CodePro';
+ $string['cancel'] = 'Cancelar';
+ $string['accept'] = 'Aceptar';
