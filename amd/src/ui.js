@@ -20,6 +20,8 @@ import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
 import {baseUrl} from './common';
 
+const useEditor = "codemirror5";
+
 /**
  * Tiny CodePro plugin.
  *
@@ -28,16 +30,23 @@ import {baseUrl} from './common';
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+const addCssLink = (href, id) => {
+    const linkElem = document.createElement("link");
+    linkElem.id = id;
+    linkElem.setAttribute("rel", "stylesheet");
+    linkElem.setAttribute("href", href);
+    document.head.appendChild(linkElem);
+};
+
 /**
  * Handle action
  * @param {TinyMCE} editor
  */
 export const handleAction = (editor) => {
-    // TODO: Load components here
     displayDialogue(editor);
 };
 
-const displayDialogue = async (editor) => {
+const displayDialogue = async(editor) => {
     const elementid = "codepro_" + editor.id;
     const data = {
         elementid: elementid
@@ -49,62 +58,189 @@ const displayDialogue = async (editor) => {
             templateContext: data,
             large: true,
         });
-        console.log("The root of modal", modal, modal.getRoot());
-        modal.getRoot().find('div.modal-dialog').css({
-            maxWidth: '100%',
-            margin: 0
-        });
         modal.header.hide();
         modal.footer.show();
 
-        const monaco = await lazyLoadMonaco();
+        const targetElem = modal.body.find("#codepro_" + editor.id)[0];
 
-        console.log("creant l'editor ara");
-        const vseditor = monaco.editor.create(modal.body.find("#codepro_" + editor.id)[0], {
-            value: editor.getContent(),
+        let codeEditor;
+        switch (useEditor) {
+            case ("codemirror5"):
+                codeEditor = new CodeMirrorEditor(targetElem, editor);
+            break;
+            default:
+                codeEditor = new MonacoEditor(targetElem, editor);
+        }
+
+
+        await modal.show();
+
+        await codeEditor.create();
+
+        modal.onresize = function() {
+            codeEditor.layout();
+        };
+        modal.footer.find("button.btn").on("click", (evt)=>{
+            if (evt.target.classList.contains("btn-primary")) {
+               codeEditor.updateChanges();
+            }
+            modal.hide();
+            codeEditor.dispose();
+            modal.destroy();
+        });
+        modal.getRoot().on(ModalEvents.hidden, () => {
+            codeEditor.dispose();
+            modal.destroy();
+        });
+};
+
+class CodeMirrorEditor {
+    /**
+     * @member {HTMLElement} element
+     */
+    #element;
+    #codeEditor;
+    #tinyEditor;
+    constructor(element, tinyEditor) {
+        this.#element = element;
+        this.#tinyEditor = tinyEditor;
+    }
+
+    async create() {
+        const CodeMirror = await this.#lazyLoad();
+        this.#codeEditor = new CodeMirror(this.#element, {
+            mode: "text/html",
+            value: this.#tinyEditor.getContent(),
+            lineNumbers: true,
+            lineWrapping: true,
+            foldGutter: true,
+            gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+            extraKeys: {
+                    "F6": function(cm) {
+                      cm.setOption("fullScreen", !cm.getOption("fullScreen"));
+                    },
+                    "Esc": function(cm) {
+                      if (cm.getOption("fullScreen")) {
+                        cm.setOption("fullScreen", false);
+                      }
+                    },
+                    "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); },
+                    "Ctrl-Space": "autocomplete",
+            }
+        });
+        this.#codeEditor.foldCode(CodeMirror.Pos(0, 0));
+        this.#codeEditor.foldCode(CodeMirror.Pos(34, 0));
+    }
+
+    #lazyLoad() {
+        // <link rel="stylesheet" href="lib/codemirror.css"></link>
+        if (!document.head.querySelector("#codemirror_css")) {
+            addCssLink(baseUrl + "/vendor/codemirror5/lib/codemirror.css", "codemirror_css");
+            addCssLink(baseUrl + "/vendor/codemirror5/addon/display/fullscreen.css", "codemirror_fullscreen_css");
+            addCssLink(baseUrl + "/vendor/codemirror5/addon/fold/foldgutter.css", "codemirror_foldgutter_css");
+            addCssLink(baseUrl + "/vendor/codemirror5/addon/hint/show-hint.css", "codemirror_showhint_css");
+        }
+
+        return new Promise((resolve)=> {
+            if (!window.cm) {
+                    require.config({
+                        packages: [{
+                        name: "codemirror",
+                        location: baseUrl + '/vendor/codemirror5',
+                        main: "lib/codemirror"
+                        }],
+                        paths: {
+                            codemirror:  baseUrl + '/vendor/codemirror5'
+                        }
+                    });
+                    require(["codemirror/lib/codemirror",
+                    "codemirror/mode/htmlmixed/htmlmixed",
+                    "codemirror/addon/display/fullscreen",
+                    "codemirror/addon/hint/show-hint",
+                    "codemirror/addon/hint/html-hint",
+                    "codemirror/addon/fold/foldcode",
+                    "codemirror/addon/fold/foldgutter",
+                    "codemirror/addon/fold/brace-fold"],
+                     function(CodeMirror) {
+                        console.log("requirejs resolves", CodeMirror);
+                        resolve(CodeMirror);
+                    });
+                } else {
+                    resolve(window.cm);
+                }
+            });
+
+    }
+
+    updateChanges() {
+        this.#tinyEditor.setContent(this.#codeEditor.getValue(), {format: 'html'});
+    }
+
+    layout() {
+        this.#tinyEditor.setSize("100%", "100%");
+        this.#tinyEditor.refresh();
+    }
+
+    dispose() {
+        // Dispose the editor
+    }
+}
+
+
+class MonacoEditor {
+    /**
+     * @member {HTMLElement} element
+     */
+    #element;
+    #codeEditor;
+    #tinyEditor;
+    constructor(element, tinyEditor) {
+        this.#element = element;
+        this.#tinyEditor = tinyEditor;
+    }
+
+    async create() {
+        const monaco = await this.#lazyLoad();
+        this.#codeEditor = monaco.editor.create(this.#element, {
+            value: this.tinyEditor.getContent(),
             language: 'html',
             automaticLayout: true,
             theme: "vs-light",
         });
-        modal.onresize = function() {
-            vseditor.layout();
-        };
-        modal.footer.find("button.btn").on("click", (evt)=>{
-            if (evt.target.classList.contains("btn-primary")) {
-                const newContent = vseditor.getValue();
-                console.log(newContent);
-                editor.setContent(newContent, {format: 'html'});
-            }
-            modal.hide();
-            vseditor.dispose();
-            modal.destroy();
-        });
-        modal.getRoot().on(ModalEvents.hidden, () => {
-            vseditor.dispose();
-            modal.destroy();
-        });
-        modal.show();
+    }
 
-};
-
-const lazyLoadMonaco = function() {
-    return new Promise((resolve)=> {
-        if (!window.monaco || !window.MonacoEditorEx) {
-            require.config({paths:
-                {
-                    vs: baseUrl + '/amd/assets/monaco-editor/min/vs',
-                    tiny_codepro_vsex: baseUrl + '/amd/assets/monaco-editor-ex'
-                }
-            });
-            // Load monaco on demand
-            require(['tiny_codepro_vsex', 'vs/editor/editor.main'], function(MonacoEditorEx) {
-                console.log("requirejs resolves", window.monaco, monaco, MonacoEditorEx);
-                // Apply extensions into monaco editor
-                MonacoEditorEx.useMonacoEx(window.monaco);
+    #lazyLoad() {
+        return new Promise((resolve)=> {
+            if (!window.monaco || !window.MonacoEditorEx) {
+                require.config({paths:
+                    {
+                        vs: baseUrl + '/vendor/monaco-editor/min/vs',
+                        tiny_codepro_vsex: baseUrl + '/vendor/monaco-editor-ex'
+                    }
+                });
+                // Load monaco on demand
+                require(['tiny_codepro_vsex', 'vs/editor/editor.main'], function(MonacoEditorEx) {
+                    console.log("requirejs resolves", window.monaco, monaco, MonacoEditorEx);
+                    // Apply extensions into monaco editor
+                    MonacoEditorEx.useMonacoEx(window.monaco);
+                    resolve(window.monaco);
+                });
+            } else {
                 resolve(window.monaco);
-            });
-        } else {
-            resolve(window.monaco);
-        }
-    });
-};
+            }
+        });
+    }
+
+    updateChanges() {
+        this.#tinyEditor.setContent(this.#codeEditor.getValue(), {format: 'html'});
+    }
+
+    layout() {
+        this.#tinyEditor.layout();
+    }
+
+    dispose() {
+        this.#tinyEditor.dispose();
+    }
+}
+
