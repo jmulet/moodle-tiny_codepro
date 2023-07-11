@@ -18,7 +18,8 @@
 import CodeProModal from "./modal";
 import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
-import { baseUrl } from './common';
+import {baseUrl} from './common';
+import jQuery from 'jquery';
 
 /**
  * Tiny CodePro plugin.
@@ -36,9 +37,12 @@ let codeEditorInstance = null;
  * @param {TinyMCE} editor
  */
 export const handleAction = (editor) => {
+    console.log("handleAction");
     if (modal === null) {
+        console.log("createDialogue");
         createDialogue(editor);
     } else {
+        console.log("Showing dialogue");
         modal.show();
         codeEditorInstance.setValue(editor);
     }
@@ -65,9 +69,14 @@ const createDialogue = async (editor) => {
         }
     });
     require(['cm6'], (CodeProEditor) => {
-        console.log(CodeProEditor);
+        console.log("cm6 loaded: ", CodeProEditor);
+        // Setting themes
         const themeSelector = modal.footer.find("select");
-
+        const availableThemes = CodeProEditor.getThemes();
+        availableThemes.unshift("base-theme");
+        availableThemes.forEach((t, i) => {
+            themeSelector.append(jQuery(`<option value="${t}"${i === 0 ? ' selected' : ''}>${t}</option>`));
+        });
         modal.getRoot().find(".modal-dialog.modal-lg").css("max-width", "90%");
         modal.header.hide();
         modal.footer.show();

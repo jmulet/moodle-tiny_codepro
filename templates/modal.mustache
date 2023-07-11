@@ -33,15 +33,11 @@
         {{#str}} pluginname, tiny_codepro {{/str}}
     {{/title}}
     {{$body}}
-        <div id="{{elementid}}" class="codepro-editor-area"> 
+        <div id="{{elementid}}" class="tiny_codepro-editor-area"> 
         </div>
     {{/body}}
     {{$footer}}
-        <select style="float:left">
-        {{#themes}}
-        <option value="{{.}}">{{.}}</option>
-        {{/themes}}
-        </select>
+        <select class="form-control tiny_codepro-themeselector"></select>
         <button class="btn btn-secondary">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary">{{#str}} accept, tiny_codepro {{/str}}</button>
     {{/footer}}

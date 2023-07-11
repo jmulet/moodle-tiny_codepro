@@ -1,7 +1,11 @@
-.codepro-editor-area {
+.tiny_codepro-editor-area {
     width: 100%;
     height: 500px;
 }
-.cm-editor {
+.tiny_codepro-themeselector { 
+    max-width: 150px!important; 
+    margin-right: auto!important;
+}
+.tiny_codepro-editor-area .cm-editor {
     height: 100%;
 }
