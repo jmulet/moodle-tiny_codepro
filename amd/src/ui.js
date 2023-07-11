@@ -20,7 +20,7 @@ import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
 import {baseUrl} from './common';
 
-const useEditor = "codemirror5";
+const useEditor = "codemirror6";
 
 /**
  * Tiny CodePro plugin.
@@ -65,6 +65,18 @@ const displayDialogue = async(editor) => {
 
         let codeEditor;
         switch (useEditor) {
+            case ("codemirror6"):
+                require.config({paths:
+                    {
+                        cm6: baseUrl + '/vendor/codemirror6/dist/editor.bundle'
+                    }
+                });
+                // Load cm6 on demand
+                require(['cm6'], function(CodeProEditor) {
+                    codeEditor = new CodeProEditor(targetElem);
+                    codeEditor.setValue(editor);
+                });
+                break;
             case ("codemirror5"):
                 codeEditor = new CodeMirrorEditor(targetElem, editor);
             break;

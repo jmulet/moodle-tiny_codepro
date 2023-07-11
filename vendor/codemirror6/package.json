@@ -1,0 +1,26 @@
+{
+  "name": "codemirror6",
+  "version": "1.0.0",
+  "description": "Build a UMD packaged version of the codemirror6 editor",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup --config"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GNU",
+  "dependencies": {
+    "@codemirror/lang-html": "^6.4.5",
+    "cm6-theme-basic-dark": "^0.2.0",
+    "cm6-theme-basic-light": "^0.2.0",
+    "cm6-theme-material-dark": "^0.2.0",
+    "cm6-theme-solarized-dark": "^0.2.0",
+    "codemirror": "^6.0.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-terser": "^0.4.3",
+    "rollup": "^3.26.2"
+  }
+}

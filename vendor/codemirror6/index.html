@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ca">
+    <head>
+        <title>Code mirror 6 test</title>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+       <style>
+            * {
+    margin: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+.wrapper {
+    height: 100%;
+    margin: 0 auto -20px;
+}
+
+#editor .cm-editor {
+    height: 90%;
+    max-height: none;
+    border: none;
+  }
+  #editor .cm-scroller {
+    overflow: auto;
+  }
+
+.footer, .push {
+    height: 20px;
+}
+        </style>
+    </head>
+    <body>
+        <div id="editor" class="wrapper">
+
+        </div>
+        <div class="footer">
+            <button id="getValue">Get value</button>
+            <select id="getTheme">
+                <option value="base-theme" selected>base-theme</option>
+                <option value="basic-light">basic-light</option>
+                <option value="basic-dark">basic-dark</option>
+                <option value="solarized-dark">solarized-dark</option>
+            </select>
+        </div>
+        <script>
+            require.config({
+                paths: {
+                    "cmeditor": "./dist/editor.bundle"
+                }
+            })
+        </script>
+        <script>
+            require(["cmeditor"], function(CodeProEditor) {
+                var parent = document.getElementById("editor");
+                var codeProEditor = new CodeProEditor(parent);
+                codeProEditor.setValue("<p>Hello</p>\n<p>World!</p>");
+
+                document.querySelector("#getValue").addEventListener("click", ()=>{
+                    console.log(codeProEditor.getValue());
+                });
+
+                var sel = document.querySelector("#getTheme");
+                sel.addEventListener("change", ()=>{
+                    console.log(codeProEditor.setTheme(sel.value));
+                });
+               
+            });
+        </script>
+    </body>
+</html>
