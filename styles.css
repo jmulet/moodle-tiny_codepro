@@ -1,5 +1,7 @@
-.codepro-plugin-container {
-    width:800px;
-    height:600px;
-    border:1px solid grey;
+.codepro-editor-area {
+    width: 100%;
+    height: 500px;
+}
+.cm-editor {
+    height: 100%;
 }

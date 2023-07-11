@@ -1,5 +1,5 @@
 import {EditorView, basicSetup} from "codemirror"
-import { Compartment } from '@codemirror/state'
+import {Compartment} from '@codemirror/state'
 import {html} from "@codemirror/lang-html"
 import {basicLight} from 'cm6-theme-basic-light'
 import {basicDark} from 'cm6-theme-basic-dark'
@@ -39,6 +39,7 @@ export default class CodeProEditor {
             extensions: [
                 basicSetup, 
                 html(),
+                EditorView.lineWrapping,
                 this.themeConfig.of([themes['base-theme']])
             ],
             parent: this.#parentElement
