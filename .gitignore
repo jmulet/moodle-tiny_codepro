@@ -1,5 +1,4 @@
-node_modules/ 
-presets/*.txt
+node_modules/
 TODO
 # Ignore Mac DS_Store files
 .DS_Store
