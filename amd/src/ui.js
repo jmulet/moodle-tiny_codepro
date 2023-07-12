@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -30,6 +28,18 @@ import {baseUrl} from './common';
 
 let modal = null;
 let codeEditorInstance = null;
+
+/**
+ * Utility to toggle a class in an HTML element
+ * @param {HTMLElement} el - The Element
+ * @param {string[]} classList
+ */
+const toggleClasses = function(el, classList) {
+    const cl = el.classList;
+    classList.forEach(className => {
+        cl.toggle(className);
+    });
+};
 
 /**
  * Handle action
@@ -89,13 +99,13 @@ const createDialogue = async (editor) => {
             const icon = evt.currentTarget.querySelector("i.fa");
             if (ds.fs) {
                 if (ds.fs === "false") {
-                    // Go to FS
+                    // Set fullscreen mode
                     ds.fs = "true";
                     modal.header.hide();
                     modal.getRoot().find('[role="document"]').removeClass("modal-dialog modal-lg modal-dialog-scrollable");
                     modal.getRoot().find('[role="document"]').addClass("tiny_codepro-fullscreen");
                 } else {
-                    // Return to modal
+                    // Set to modal-lg
                     ds.fs = "false";
                     modal.header.show();
                     modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-fullscreen");
@@ -104,29 +114,23 @@ const createDialogue = async (editor) => {
             } else if (ds.theme) {
                 if (ds.theme === "light") {
                     ds.theme = "dark";
-                    icon.classList.remove("fa-sun-o");
-                    icon.classList.add("fa-moon-o");
                     codeEditorInstance.setTheme("dark");
                     modal.getRoot().find('[role="document"]').addClass("tiny_codepro-dark");
                 } else {
                     ds.theme = "light";
-                    icon.classList.remove("fa-moon-o");
-                    icon.classList.add("fa-sun-o");
                     codeEditorInstance.setTheme("light");
                     modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-dark");
                 }
+                toggleClasses(icon, ["fa-sun-o", "fa-moon-o"]);
             } else if (ds.wrap) {
                 if (ds.wrap === "true") {
                     ds.wrap = false;
                     codeEditorInstance.setLineWrapping(false);
-                    icon.classList.remove("fa-exchange");
-                    icon.classList.add("fa-long-arrow-right");
                 } else {
                     ds.wrap = true;
                     codeEditorInstance.setLineWrapping(true);
-                    icon.classList.add("fa-exchange");
-                    icon.classList.remove("fa-long-arrow-right");
                 }
+                toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
             }
         });
         modal.getRoot().on(ModalEvents.hidden, () => {
