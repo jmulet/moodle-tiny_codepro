@@ -28,4 +28,4 @@ $plugin->component = 'tiny_codepro';
 $plugin->release = '1.0.0';
 $plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_STABLE;
-$plugin->version = 2023070100;
+$plugin->version = 2023071200;
