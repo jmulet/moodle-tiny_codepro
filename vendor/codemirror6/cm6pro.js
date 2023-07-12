@@ -1,11 +1,11 @@
 import {EditorView, basicSetup} from "codemirror"
 import {Compartment} from '@codemirror/state'
 import {html} from "@codemirror/lang-html"
-import {solarizedDark} from 'cm6-theme-solarized-dark'
+import {cm6proDark} from './cm6pro-dark-theme'
 
 const themes = {
     'light': EditorView.baseTheme(),
-    'dark': solarizedDark
+    'dark': cm6proDark
 };
 
 export default class CodeProEditor {

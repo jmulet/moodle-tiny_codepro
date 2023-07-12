@@ -8,7 +8,6 @@
             * {
     margin: 0;
 }
-
 html, body {
     height: 100%;
 }
@@ -39,21 +38,19 @@ html, body {
         <div class="footer">
             <button id="getValue">Get value</button>
             <select id="getTheme">
-                <option value="base-theme" selected>base-theme</option>
-                <option value="basic-light">basic-light</option>
-                <option value="basic-dark">basic-dark</option>
-                <option value="solarized-dark">solarized-dark</option>
+                <option value="light" selected>Light</option>
+                <option value="dark">Dark</option>
             </select>
         </div>
         <script>
             require.config({
                 paths: {
-                    "cmeditor": "./dist/editor.bundle"
+                    "cm6pro": "./dist/cm6pro.min"
                 }
             })
         </script>
         <script>
-            require(["cmeditor"], function(CodeProEditor) {
+            require(["cm6pro"], function(CodeProEditor) {
                 var parent = document.getElementById("editor");
                 var codeProEditor = new CodeProEditor(parent);
                 codeProEditor.setValue("<p>Hello</p>\n<p>World!</p>");

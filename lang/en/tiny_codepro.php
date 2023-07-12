@@ -24,4 +24,4 @@
  $string['plugin'] = 'codePro';
  $string['pluginname'] = 'Source code Pro';
  $string['cancel'] = 'Cancel';
- $string['accept'] = 'Accept';
+ $string['save'] = 'Save';

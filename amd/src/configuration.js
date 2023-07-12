@@ -23,21 +23,19 @@
  */
 
 import {component as buttonName} from './common';
-//import {addMenubarItem} from 'editor_tiny/utils';
 
 const configureMenu = (menu) => {
+    // Replace original items with the new one
     menu.view.items = menu.view.items.replace(/code /g, buttonName + " ");
     menu.tools.items = menu.tools.items.replace(/code /g, buttonName + " ");
-    console.log(menu.view.items, menu.tools.items);
     return menu;
 };
 
 const configureToolbar = (toolbar) => {
     // The toolbar contains an array of named sections.
-    // The Moodle integration ensures that there is a section called 'content'.
-
+    // The Moodle integration ensures that there is a section called 'history'.
     return toolbar.map((section) => {
-        if (section.name === 'content') {
+        if (section.name === 'history') {
             // Insert the button at the start of it.
             section.items.unshift(buttonName);
         }

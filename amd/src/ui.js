@@ -60,21 +60,21 @@ const createDialogue = async (editor) => {
         templateContext: data,
         large: true,
     });
+    modal.getRoot().find(".modal-dialog.modal-lg").css("max-width", "85%");
+    // Disable ESC key on this modal
+    modal.getRoot().off('keydown');
+    modal.body.css("overflow-y", "overlay");
 
     // Load cm6 on demand
     require.config({
         paths: {
-            cm6: baseUrl + '/vendor/codemirror6/dist/cm6-lazy.min'
+            cm6pro: baseUrl + '/vendor/codemirror6/dist/cm6pro.min'
         }
     });
-    require(['cm6'], (CodeProEditor) => {
-        console.log("cm6 loaded: ", CodeProEditor);
+    require(['cm6pro'], (CodeProEditor) => {
+        console.log("cm6pro loaded: ", CodeProEditor);
         // Setting themes
         const themeSelector = modal.footer.find("select");
-        modal.getRoot().find(".modal-dialog.modal-lg").css("max-width", "90%");
-        // Disable ESC key on this modal
-        modal.getRoot().off('keydown');
-
         const targetElem = modal.body.find('#' + elementid)[0];
 
         codeEditorInstance = new CodeProEditor(targetElem);
