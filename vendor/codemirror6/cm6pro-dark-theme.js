@@ -17,7 +17,7 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pmulet@iedib.net>
+ * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 */
 import { EditorView } from '@codemirror/view';
