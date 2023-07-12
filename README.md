@@ -17,6 +17,8 @@ The source code opens in a modal dialogue that can be expanded to fit the entire
 
 The capability 'tiny/codepro:viewplugin' allows to set the plugin visibility for any role.
 
+Icon by [Fontawesome 6.4](https://fontawesome.com/icons/file-code?f=classic&s=light).
+
 ## Generate AMD modules
 
 In order to generate the binaries in `/amd/build` from source code in `/amd/src`, you need to execute the command
