@@ -36,19 +36,15 @@ let codeEditorInstance = null;
  * @param {TinyMCE} editor
  */
 export const handleAction = (editor) => {
-    console.log("handleAction");
     if (modal === null) {
-        console.log("createDialogue");
         createDialogue(editor);
     } else {
-        console.log("Showing dialogue");
         modal.show();
         codeEditorInstance.setValue(editor);
     }
 };
 
 const createDialogue = async (editor) => {
-    console.log("createDialogue....");
     const elementid = "codepro_editorroot";
     const data = {
         elementid: elementid
@@ -72,7 +68,6 @@ const createDialogue = async (editor) => {
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
-        console.log("cm6pro loaded: ", CodeProEditor);
         // Setting themes
         const themeSelector = modal.footer.find("select");
         const targetElem = modal.body.find('#' + elementid)[0];
@@ -138,7 +133,6 @@ const createDialogue = async (editor) => {
             codeEditorInstance.setValue();
         });
 
-        console.log("setting and showing");
         modal.show();
         codeEditorInstance.setValue(editor);
     });
