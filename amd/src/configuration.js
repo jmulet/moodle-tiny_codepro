@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -22,27 +23,12 @@
  */
 
 import {component as buttonName} from './common';
-import {addMenubarItem} from 'editor_tiny/utils';
+//import {addMenubarItem} from 'editor_tiny/utils';
 
 const configureMenu = (menu) => {
-    const items = menu.insert.items.split(' ');
-    const inserted = items.some((item, index) => {
-        // TODO Could also remove the standard code menu or replace it
-        // Append after the link button.
-        if (item.match(/(link)\b/)) {
-            items.splice(index + 1, 0, buttonName);
-            return true;
-        }
-
-        return false;
-    });
-
-    if (inserted) {
-        menu.insert.items = items.join(' ');
-    } else {
-        addMenubarItem(menu, 'insert', buttonName);
-    }
-
+    menu.view.items = menu.view.items.replace(/code /g, buttonName + " ");
+    menu.tools.items = menu.tools.items.replace(/code /g, buttonName + " ");
+    console.log(menu.view.items, menu.tools.items);
     return menu;
 };
 

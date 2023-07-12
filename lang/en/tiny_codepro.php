@@ -15,14 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny CodePro plugin version details.
+ * Tiny CodePro plugin
  *
  * @package     tiny_codepro
  * @copyright   2023 Josep Mulet Pol <jmuletpol@iedib.net>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
- $string['plugin'] = 'CodePro by IEDIB (Tiny)';
- $string['pluginname'] = 'CodePro';
+ $string['plugin'] = 'codePro';
+ $string['pluginname'] = 'Source code Pro';
  $string['cancel'] = 'Cancel';
  $string['accept'] = 'Accept';

@@ -4,7 +4,8 @@ import terser from '@rollup/plugin-terser';
 export default {
 	input: 'index.js',
 	output: {
-		file: 'dist/editor.bundle.js',
+        sourcemap: true,
+		file: './dist/cm6-lazy.min.js',
 		format: 'umd',
         name: 'cm6',
         plugins: [

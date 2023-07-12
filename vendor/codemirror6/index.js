@@ -1,20 +1,16 @@
 import {EditorView, basicSetup} from "codemirror"
 import {Compartment} from '@codemirror/state'
 import {html} from "@codemirror/lang-html"
-import {basicLight} from 'cm6-theme-basic-light'
-import {basicDark} from 'cm6-theme-basic-dark'
 import {solarizedDark} from 'cm6-theme-solarized-dark'
 
 const themes = {
-    'base-theme': EditorView.baseTheme(),
-    'basic-light': basicLight,
-    'basic-dark': basicDark,
-    'solarized-dark': solarizedDark,
+    'light': EditorView.baseTheme(),
+    'dark': solarizedDark
 };
 
 export default class CodeProEditor {
     static getThemes() {
-        return ['basic-light', 'basic-dark', 'solarized-dark']
+        return ['light', 'dark']
     }
     /**
      * @member {HTMLElement} parentElement
@@ -35,12 +31,13 @@ export default class CodeProEditor {
 
     #init() {
         this.themeConfig = new Compartment();
+        this.linewrapConfig = new Compartment();
         this.#editorView = new EditorView({
             extensions: [
                 basicSetup, 
                 html(),
-                EditorView.lineWrapping,
-                this.themeConfig.of([themes['base-theme']])
+                this.linewrapConfig.of([EditorView.lineWrapping]),
+                this.themeConfig.of([themes['light']])
             ],
             parent: this.#parentElement
         });
@@ -55,9 +52,8 @@ export default class CodeProEditor {
         if(typeof source?.getContent === "function") {
             code = source.getContent();
         }
-        this.#editorView.dispatch({
-            changes: {from: 0, insert: code}
-        });
+        const view = this.#editorView;
+        view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: code}});
     }
     /**
      * @returns {string}
@@ -85,6 +81,16 @@ export default class CodeProEditor {
         } else {
             console.error("Unknown theme", themeName);
         }
+    }
+
+    /**
+     * 
+     * @param {boolean} bool 
+     */
+    setLineWrapping(bool) {
+        this.#editorView.dispatch({
+            effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
+        });
     }
 }
 

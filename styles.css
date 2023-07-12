@@ -9,3 +9,35 @@
 .tiny_codepro-editor-area .cm-editor {
     height: 100%;
 }
+.tiny_codepro-fullscreen {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%!important;
+}
+.tiny_codepro-fullscreen .modal-content {
+    height: 100%;
+}
+.tiny_codepro-fullscreen #codepro_editorroot {
+    height: 100%!important;
+}
+.tiny_codepro-dark .modal-content {
+    background: #15272c;
+}
+.tiny_codepro-dark .modal-header h5, .tiny_codepro-dark .modal-header span {
+    color: whitesmoke;
+}
+.tiny_codepro-dark .modal-header {
+    border-bottom: 1px solid #21363c;
+}
+.tiny_codepro-dark .modal-footer {
+    border-top: 1px solid #21363c;
+}
+.tiny_codepro-left {
+    margin-right: auto!important;
+}
+.tiny_codepro-left > button {
+    width: 40px;
+}

@@ -29,18 +29,14 @@ import {isPluginVisible} from './options';
 
 export const getSetup = async() => {
     const [
-        snippetNameTitle,
+        pluginName,
         buttonImage,
     ] = await Promise.all([
-        getString('settings', component),
+        getString('pluginname', component),
         getButtonImage('icon', component),
     ]);
 
     return (editor) => {
-
-        // eslint-disable-next-line no-console
-        console.log(editor, isPluginVisible(editor));
-
         if (isPluginVisible(editor)) {
             // Register the Icon.
             editor.ui.registry.addIcon(icon, buttonImage.html);
@@ -48,7 +44,7 @@ export const getSetup = async() => {
             // Register the Toolbar Button.
             editor.ui.registry.addButton(component, {
                 icon,
-                tooltip: snippetNameTitle,
+                tooltip: pluginName,
                 onAction: () => handleAction(editor),
             });
 
@@ -56,7 +52,7 @@ export const getSetup = async() => {
             // This allows it to be added to a standard menu, or a context menu.
             editor.ui.registry.addMenuItem(component, {
                 icon,
-                text: snippetNameTitle,
+                text: pluginName,
                 onAction: () => handleAction(editor),
             });
         }
