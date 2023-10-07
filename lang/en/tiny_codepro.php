@@ -20,8 +20,8 @@
  * @package     tiny_codepro
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
- $string['plugin'] = 'codePro';
- $string['pluginname'] = 'Source code Pro';
- $string['cancel'] = 'Cancel';
- $string['save'] = 'Save';
+*/
+$string['plugin'] = 'codePro';
+$string['pluginname'] = 'Source code Pro';
+$string['cancel'] = 'Cancel';
+$string['save'] = 'Save';

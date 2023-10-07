@@ -35,7 +35,7 @@ const configureToolbar = (toolbar) => {
     // The Moodle integration ensures that there is a section called 'history'.
     return toolbar.map((section) => {
         if (section.name === 'history') {
-            // Insert the button at the start of it.
+            // Insert the button at the beginning of this section
             section.items.unshift(buttonName);
         }
         return section;
@@ -45,6 +45,6 @@ const configureToolbar = (toolbar) => {
 export const configure = (instanceConfig) => {
     return {
         menu: configureMenu(instanceConfig.menu),
-        toolbar: configureToolbar(instanceConfig.toolbar),
+        toolbar: configureToolbar(instanceConfig.toolbar)
     };
 };
