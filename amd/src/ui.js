@@ -50,7 +50,7 @@ export const handleAction = (editor) => {
         createDialogue(editor);
     } else {
         modal.show();
-        codeEditorInstance.setValue(editor);
+        codeEditorInstance.setValue(editor.getContent());
     }
 };
 
@@ -140,6 +140,6 @@ const createDialogue = async (editor) => {
         });
 
         modal.show();
-        codeEditorInstance.setValue(editor);
+        codeEditorInstance.setValue(editor.getContent());
     });
 };
