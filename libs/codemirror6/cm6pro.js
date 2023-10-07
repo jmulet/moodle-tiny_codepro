@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny CodePro plugin.
+ * Tiny CodePro plugin. Thin wrapper around CodeMirror 6
  *
  * @module      tiny_codepro/plugin
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
@@ -37,7 +37,7 @@ export default class CodeProEditor {
     }
     /**
      * @member {HTMLElement} parentElement
-     * @member {string | TinyMCE} source
+     * @member {string} source
      * @member {CodeMirrorView} editorView;
      */
     #parentElement;
@@ -66,32 +66,22 @@ export default class CodeProEditor {
         });
     }
     /**
-     * 
-     * @param {string | TinyMCE} source 
+     * Sets the html source code
+     * @param {string} source 
      */
     setValue(source) {
         this.#source = source;
-        let code = source || '';
-        if(typeof source?.getContent === "function") {
-            code = source.getContent();
-        }
         const view = this.#editorView;
-        view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: code}});
+        view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
     }
     /**
+     * Gets the html source code
      * @returns {string}
      */
     getValue() {
         return this.#editorView.state.doc.toString();
     }
-
-    updateContent() {
-        if(typeof this.#source?.setContent === "function") {
-            this.#source.setContent(this.getValue(), {format: 'html'});
-        } else {
-            console.log(this.getValue());
-        }
-    }
+    
     /**
      * 
      * @param {string} theme 
