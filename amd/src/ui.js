@@ -74,7 +74,7 @@ const createDialogue = async (editor) => {
     // Load cm6 on demand
     require.config({
         paths: {
-            cm6pro: baseUrl + '/vendor/codemirror6/dist/cm6pro.min'
+            cm6pro: baseUrl + '/libs/codemirror6/dist/cm6pro.min'
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
@@ -88,9 +88,11 @@ const createDialogue = async (editor) => {
         });
         modal.footer.find("button.btn[data-action]").on("click", (evt) => {
             if (evt.target.classList.contains("btn-primary")) {
-                codeEditorInstance.updateContent();
+                const updatedCode = codeEditorInstance.getValue();
+                editor.setContent(updatedCode);
             }
             modal.hide();
+            // Delete content
             codeEditorInstance.setValue();
         });
         modal.footer.find("button.btn.btn-light").on("click", (evt) => {
