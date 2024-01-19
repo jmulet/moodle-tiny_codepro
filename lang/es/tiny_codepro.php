@@ -25,4 +25,3 @@
  $string['pluginname'] = 'Source code Pro';
  $string['cancel'] = 'Cancelar';
  $string['save'] = 'Guardar';
- 
