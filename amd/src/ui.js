@@ -54,7 +54,7 @@ export const handleAction = (editor) => {
     }
 };
 
-const createDialogue = async (editor) => {
+const createDialogue = async(editor) => {
     const elementid = "editorroot";
     const data = {
         elementid: elementid
