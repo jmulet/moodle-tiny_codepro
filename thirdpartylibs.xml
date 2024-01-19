@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<libraries>
+    <library>
+        <location>libs/codemirror/</location>
+        <name>codemirror</name>
+        <version>6.0.1</version>
+        <license>MIT</license>
+        <licenseversion></licenseversion>
+    </library>
+     <library>
+        <location>libs/codemirror/</location>
+        <name>@codemirror/lang-html</name>
+        <version>6.4.5</version>
+        <license>MIT</license>
+        <licenseversion></licenseversion>
+    </library>
+</libraries>
