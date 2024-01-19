@@ -55,7 +55,7 @@ export const handleAction = (editor) => {
 };
 
 const createDialogue = async (editor) => {
-    const elementid = "codepro_editorroot";
+    const elementid = "editorroot";
     const data = {
         elementid: elementid
     };
