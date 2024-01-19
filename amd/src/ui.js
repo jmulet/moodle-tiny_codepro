@@ -74,7 +74,7 @@ const createDialogue = async (editor) => {
     // Load cm6 on demand
     require.config({
         paths: {
-            cm6pro: baseUrl + '/libs/codemirror6/dist/cm6pro.min'
+            cm6pro: baseUrl + '/libs/codemirror/dist/cm6pro.min'
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
