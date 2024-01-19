@@ -1,10 +1,11 @@
+/* stylelint-disable declaration-no-important */
 .tiny_codepro-editor-area {
     width: 100%;
     min-height: 100px;
     max-height: 500px;
 }
 .tiny_codepro-themeselector {
-    max-width: 150px !important; 
+    max-width: 150px !important;
     margin-right: auto !important;
 }
 .tiny_codepro-editor-area .cm-editor {
@@ -30,7 +31,8 @@
 .tiny_codepro-dark .modal-content {
     background: #2e2e2e;
 }
-.tiny_codepro-dark .modal-header h5, .tiny_codepro-dark .modal-header span {
+.tiny_codepro-dark .modal-header h5,
+.tiny_codepro-dark .modal-header span {
     color: whitesmoke;
 }
 .tiny_codepro-dark .modal-header {
