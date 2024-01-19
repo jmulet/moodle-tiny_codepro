@@ -102,7 +102,7 @@ jobs:
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        run: npx browserslist@latest --update-db -y && moodle-plugin-ci grunt --max-lint-warnings 0
+        run: moodle-plugin-ci grunt --max-lint-warnings 0
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
