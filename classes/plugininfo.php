@@ -74,18 +74,17 @@ class plugininfo extends plugin implements
         ?\editor_tiny\editor $editor = null
     ): array {
         global $USER, $COURSE, $PAGE;
-        
-        //Decide if to enable the plugin
+
+        // Decide if to enable the plugin?
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 
-        //Obtain admin configuration parameters
+        // Obtain admin configuration parameters.
         $conf = get_config('tiny_codepro');
- 
-        $params = [
+
+        return [
             'showplugin' => $showplugin,
             'replacelegacy' => ($conf->replacelegacy == '1'),
-            'addbutton' => ($conf->addbutton == '1')
+            'addbutton' => ($conf->addbutton == '1'),
         ];
-        return $params;
     }
 }
