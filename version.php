@@ -26,6 +26,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tiny_codepro';
 $plugin->release = '1.0.2';
-$plugin->requires = 2023122200;
+$plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_STABLE;
 $plugin->version = 2024012001;
