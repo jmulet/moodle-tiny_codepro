@@ -27,6 +27,6 @@ In order to generate the binaries in `/amd/build` from source code in `/amd/src`
 npx grunt amd
 ```
 
-## Generate codeMirror dependency
+## Generate codemirror dependency
 
-Please refer to the documentation in vendor/codemirror6.
+Please refer to the documentation in libs/codemirror.
