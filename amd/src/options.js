@@ -14,9 +14,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny IBSnippet plugin.
+ * Tiny CodePro plugin.
  *
- * @module      tiny_ibsnippet/plugin
+ * @module      tiny_codepro/plugin
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

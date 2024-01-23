@@ -15,7 +15,7 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template tiny_ibsnippet/modal
+    @template tiny_codepro/plugin
 
     Modal to manage components within the Tiny Editor.
 
@@ -26,14 +26,19 @@
     * none
 
     Context variables required for this template:
- 
+    elementid - The ID of the element to be edited.
+
+    Example context (json):
+    {
+        "elementid": "id_of_element"
+    }
 }}
 {{< core/modal }}
     {{$title}}
         {{#str}} pluginname, tiny_codepro {{/str}}
     {{/title}}
     {{$body}}
-        <div id="{{elementid}}" class="tiny_codepro-editor-area"> 
+        <div id="codepro_{{elementid}}" class="tiny_codepro-editor-area"> 
         </div>
     {{/body}}
     {{$footer}}

@@ -1,0 +1,2 @@
+== 1.0.2 ==
+Added thirdpartylibs.xml, readme_moodle.txt and upgrade.txt files

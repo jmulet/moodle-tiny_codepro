@@ -54,10 +54,9 @@ export const handleAction = (editor) => {
     }
 };
 
-const createDialogue = async (editor) => {
-    const elementid = "codepro_editorroot";
+const createDialogue = async(editor) => {
     const data = {
-        elementid: elementid
+        elementid: editor.id
     };
 
     // Show modal with buttons.
@@ -74,13 +73,13 @@ const createDialogue = async (editor) => {
     // Load cm6 on demand
     require.config({
         paths: {
-            cm6pro: baseUrl + '/libs/codemirror6/dist/cm6pro.min'
+            cm6pro: baseUrl + '/libs/codemirror/dist/cm6pro.min'
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
         // Setting themes
         const themeSelector = modal.footer.find("select");
-        const targetElem = modal.body.find('#' + elementid)[0];
+        const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
 
         codeEditorInstance = new CodeProEditor(targetElem);
         themeSelector.on("change", (evt) => {
