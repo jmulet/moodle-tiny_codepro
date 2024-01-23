@@ -15,5 +15,5 @@ And run the job defined in the `rollup.config.js` file
 
 npm run build
 
-If everything runs smoothly, the file libs/codemirror/dist/cm6pro.min.js will be generated. This very same file 
+The file libs/codemirror/dist/cm6pro.min.js should be generated. This very same file 
 will be lazy loaded and used by the codePro plugin.
