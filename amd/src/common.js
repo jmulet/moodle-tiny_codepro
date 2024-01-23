@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny CodePro plugin. Config
+ * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
