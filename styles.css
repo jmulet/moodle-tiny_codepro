@@ -1,7 +1,7 @@
 /* stylelint-disable declaration-no-important */
 .tiny_codepro-editor-area {
     width: 100%;
-    min-height: 100px;
+    min-height: 300px;
     max-height: 500px;
 }
 .tiny_codepro-themeselector {
