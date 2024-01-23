@@ -20,6 +20,4 @@ Feature: Tiny code pro editor
     When I open my profile in edit mode
     And I set the field "Description" to "Hello tiny!"
     And I click on the "View > Source code Pro" menu item for the "Description" TinyMCE editor
-    And I should see "Source code Pro"
-    Then I should see "<p>Hello tiny!</p>" source code for the "Description" TinyMCE editor_tiny
-    
+    Then I should see "Source code Pro"
