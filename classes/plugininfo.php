@@ -78,13 +78,8 @@ class plugininfo extends plugin implements
         // Decide if to enable the plugin?
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 
-        // Obtain admin configuration parameters.
-        $conf = get_config('tiny_codepro');
-
         return [
-            'showplugin' => $showplugin,
-            'replacelegacy' => ($conf->replacelegacy == '1'),
-            'addbutton' => ($conf->addbutton == '1'),
+            'showplugin' => $showplugin
         ];
     }
 }
