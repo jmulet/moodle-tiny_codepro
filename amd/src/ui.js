@@ -55,9 +55,8 @@ export const handleAction = (editor) => {
 };
 
 const createDialogue = async(editor) => {
-    const elementid = "editorroot";
     const data = {
-        elementid: elementid
+        elementid: editor.id
     };
 
     // Show modal with buttons.
