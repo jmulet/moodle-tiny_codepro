@@ -79,7 +79,7 @@ class plugininfo extends plugin implements
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 
         return [
-            'showplugin' => $showplugin
+            'showplugin' => $showplugin,
         ];
     }
 }
