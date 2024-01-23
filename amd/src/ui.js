@@ -80,7 +80,7 @@ const createDialogue = async(editor) => {
     require(['cm6pro'], (CodeProEditor) => {
         // Setting themes
         const themeSelector = modal.footer.find("select");
-        const targetElem = modal.body.find('#' + elementid)[0];
+        const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
 
         codeEditorInstance = new CodeProEditor(targetElem);
         themeSelector.on("change", (evt) => {
