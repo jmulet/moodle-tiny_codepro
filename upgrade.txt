@@ -1,2 +1,7 @@
 == 1.0.2 ==
 Added thirdpartylibs.xml, readme_moodle.txt and upgrade.txt files
+
+== 1.1.0 ==
+Added string lang for 'privacy:metadata'
+Updated dependency @codemirror/lang-html to 6.4.9
+Added dependency on htmlfy to prettify the code
