@@ -23,8 +23,9 @@
 
 import {EditorView, basicSetup} from "codemirror"
 import {Compartment} from '@codemirror/state'
-import {html} from "@codemirror/lang-html"
+import {html as htmlLang} from "@codemirror/lang-html"
 import {cm6proDark} from './cm6pro-dark-theme'
+import {prettify} from 'htmlfy'
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -58,7 +59,7 @@ export default class CodeProEditor {
         this.#editorView = new EditorView({
             extensions: [
                 basicSetup, 
-                html(),
+                htmlLang(),
                 this.linewrapConfig.of([EditorView.lineWrapping]),
                 this.themeConfig.of([themes['light']])
             ],
@@ -104,6 +105,16 @@ export default class CodeProEditor {
         this.#editorView.dispatch({
             effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
         });
+    }
+
+    /**
+     * Prettify the html source
+     * @returns {string}
+     */
+    prettify() {
+        const source = this.getValue();
+        const beautified = prettify(source);
+        this.setValue(beautified);
     }
 }
 
