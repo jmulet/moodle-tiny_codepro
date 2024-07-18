@@ -23,5 +23,6 @@
  */
 $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
+$string['privacy:metadata'] = 'Aquest plugin no desa cap dada associada amb l\'usuari.';
 $string['cancel'] = 'Cancel·la';
 $string['save'] = 'Desa';
