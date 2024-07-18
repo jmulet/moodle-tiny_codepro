@@ -17,6 +17,7 @@ import CodeProModal from "./modal";
 import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
 import {baseUrl} from './common';
+import {getPref, setPref} from "./preferences";
 
 /**
  * Tiny CodePro plugin.
@@ -77,14 +78,9 @@ const createDialogue = async(editor) => {
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
-        // Setting themes
-        const themeSelector = modal.footer.find("select");
         const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
-
         codeEditorInstance = new CodeProEditor(targetElem);
-        themeSelector.on("change", (evt) => {
-            codeEditorInstance.setTheme(evt.target.value);
-        });
+
         modal.footer.find("button.btn[data-action]").on("click", (evt) => {
             if (evt.target.classList.contains("btn-primary")) {
                 const updatedCode = codeEditorInstance.getValue();
@@ -112,6 +108,7 @@ const createDialogue = async(editor) => {
                     modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-fullscreen");
                     modal.getRoot().find('[role="document"]').addClass("modal-dialog modal-lg modal-dialog-scrollable");
                 }
+                setPref("fs", ds.fs, true);
             } else if (ds.theme) {
                 if (ds.theme === "light") {
                     ds.theme = "dark";
@@ -123,6 +120,7 @@ const createDialogue = async(editor) => {
                     modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-dark");
                 }
                 toggleClasses(icon, ["fa-sun-o", "fa-moon-o"]);
+                setPref("theme", ds.theme, true);
             } else if (ds.wrap) {
                 if (ds.wrap === "true") {
                     ds.wrap = false;
@@ -131,12 +129,29 @@ const createDialogue = async(editor) => {
                     ds.wrap = true;
                     codeEditorInstance.setLineWrapping(true);
                 }
+                setPref("wrap", ds.wrap, true);
                 toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
+            } else if (ds.prettify) {
+                codeEditorInstance.prettify();
             }
         });
         modal.getRoot().on(ModalEvents.hidden, () => {
             codeEditorInstance.setValue();
         });
+
+        // Setting stored preferences
+        const currentTheme = getPref("theme", "light");
+        const currentWrap = getPref("wrap", "false");
+        const currentFs = getPref("fs", "false");
+        if (currentTheme !== "light") {
+            modal.footer.find("button.btn.btn-light[data-theme]").click();
+        }
+        if (currentWrap === "true") {
+            modal.footer.find("button.btn.btn-light[data-wrap]").click();
+        }
+        if (currentFs === "true") {
+            modal.footer.find("button.btn.btn-light[data-fs]").click();
+        }
 
         modal.show();
         codeEditorInstance.setValue(editor.getContent());

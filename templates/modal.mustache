@@ -43,9 +43,10 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            <button class="btn btn-light" data-fs="false" title="Fullscreen"><i class="fa fa-arrows-alt"></i></button>
-            <button class="btn btn-light" data-theme="light" title="Light/Dark themes"><i class="fa fa-sun-o"></i></button>
-            <button class="btn btn-light" data-wrap="true" title="Line wrap"><i class="fa fa-exchange"></i></button>
+            <button class="btn btn-light" data-fs="false" data-toggle="tooltip" title="Fullscreen"><i class="fa fa-arrows-alt"></i></button>
+            <button class="btn btn-light" data-theme="light" data-toggle="tooltip" title="Light/Dark themes"><i class="fa fa-sun-o"></i></button>
+            <button class="btn btn-light" data-wrap="true" data-toggle="tooltip" title="Line wrap"><i class="fa fa-exchange"></i></button>
+            <button class="btn btn-light" data-prettify="true" data-toggle="tooltip" title="Prettify code"><i class="fa fa-magic"></i></button>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>
