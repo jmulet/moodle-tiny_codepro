@@ -15,6 +15,11 @@ The source code opens in a modal dialogue that can be expanded to fit the entire
 
 <img src="./pix/pict03.png" style="max-width:350px;">
 
+Now, the code can be easily formatted thanks to [htmlfy](https://github.com/j4w8n/htmlfy#readme) library. The following animation shows the editor in action. Enjoy it!
+
+<img src="./pix/pict04.gif" style="max-width:350px;">
+
+
 The capability 'tiny/codepro:viewplugin' allows to set the plugin visibility for any role.
 
 Icon by [Fontawesome 6.4](https://fontawesome.com/icons/file-code?f=classic&s=light).
@@ -27,6 +32,6 @@ In order to generate the binaries in `/amd/build` from source code in `/amd/src`
 npx grunt amd
 ```
 
-## Generate codemirror dependency
+## Generate codemirror dependency with extra toppings
 
 Please refer to the documentation in libs/codemirror.
