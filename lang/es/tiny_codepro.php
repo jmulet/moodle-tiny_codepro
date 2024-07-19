@@ -21,8 +21,8 @@
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
- $string['plugin'] = 'codePro';
- $string['pluginname'] = 'Source code Pro';
- $string['privacy:metadata'] = 'Este plugin no guarda ningún dato asociado con el usuario.';
- $string['cancel'] = 'Cancelar';
- $string['save'] = 'Guardar';
+$string['cancel'] = 'Cancelar';
+$string['plugin'] = 'codePro';
+$string['pluginname'] = 'Source code Pro';
+$string['privacy:metadata'] = 'Este plugin no guarda ningún dato asociado con el usuario.';
+$string['save'] = 'Guardar';
