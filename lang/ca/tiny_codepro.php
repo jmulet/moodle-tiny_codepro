@@ -21,7 +21,8 @@
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+$string['cancel'] = 'Cancel·la';
 $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
-$string['cancel'] = 'Cancel·la';
+$string['privacy:metadata'] = 'Aquest plugin no desa cap dada associada amb l\'usuari.';
 $string['save'] = 'Desa';

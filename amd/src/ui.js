@@ -17,6 +17,7 @@ import CodeProModal from "./modal";
 import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
 import {baseUrl} from './common';
+import {getPref, setPref} from "./preferences";
 
 /**
  * Tiny CodePro plugin.
@@ -25,7 +26,7 @@ import {baseUrl} from './common';
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+const dialogQuery = '[role="document"], [data-region="modal"]';
 let modal = null;
 let codeEditorInstance = null;
 
@@ -77,14 +78,9 @@ const createDialogue = async(editor) => {
         }
     });
     require(['cm6pro'], (CodeProEditor) => {
-        // Setting themes
-        const themeSelector = modal.footer.find("select");
         const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
-
         codeEditorInstance = new CodeProEditor(targetElem);
-        themeSelector.on("change", (evt) => {
-            codeEditorInstance.setTheme(evt.target.value);
-        });
+
         modal.footer.find("button.btn[data-action]").on("click", (evt) => {
             if (evt.target.classList.contains("btn-primary")) {
                 const updatedCode = codeEditorInstance.getValue();
@@ -98,31 +94,34 @@ const createDialogue = async(editor) => {
             evt.preventDefault();
             const ds = evt.currentTarget.dataset;
             const icon = evt.currentTarget.querySelector("i.fa");
+            const $dlgElem = modal.getRoot().find(dialogQuery);
             if (ds.fs) {
                 if (ds.fs === "false") {
                     // Set fullscreen mode
                     ds.fs = "true";
                     modal.header.hide();
-                    modal.getRoot().find('[role="document"]').removeClass("modal-dialog modal-lg modal-dialog-scrollable");
-                    modal.getRoot().find('[role="document"]').addClass("tiny_codepro-fullscreen");
+                    $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
+                    $dlgElem.addClass("tiny_codepro-fullscreen");
                 } else {
                     // Set to modal-lg
                     ds.fs = "false";
                     modal.header.show();
-                    modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-fullscreen");
-                    modal.getRoot().find('[role="document"]').addClass("modal-dialog modal-lg modal-dialog-scrollable");
+                    $dlgElem.removeClass("tiny_codepro-fullscreen");
+                    $dlgElem.addClass("modal-dialog modal-lg modal-dialog-scrollable");
                 }
+                setPref("fs", ds.fs, true);
             } else if (ds.theme) {
                 if (ds.theme === "light") {
                     ds.theme = "dark";
                     codeEditorInstance.setTheme("dark");
-                    modal.getRoot().find('[role="document"]').addClass("tiny_codepro-dark");
+                    $dlgElem.addClass("tiny_codepro-dark");
                 } else {
                     ds.theme = "light";
                     codeEditorInstance.setTheme("light");
-                    modal.getRoot().find('[role="document"]').removeClass("tiny_codepro-dark");
+                    $dlgElem.removeClass("tiny_codepro-dark");
                 }
                 toggleClasses(icon, ["fa-sun-o", "fa-moon-o"]);
+                setPref("theme", ds.theme, true);
             } else if (ds.wrap) {
                 if (ds.wrap === "true") {
                     ds.wrap = false;
@@ -131,12 +130,29 @@ const createDialogue = async(editor) => {
                     ds.wrap = true;
                     codeEditorInstance.setLineWrapping(true);
                 }
+                setPref("wrap", ds.wrap, true);
                 toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
+            } else if (ds.prettify) {
+                codeEditorInstance.prettify();
             }
         });
         modal.getRoot().on(ModalEvents.hidden, () => {
             codeEditorInstance.setValue();
         });
+
+        // Setting stored preferences
+        const currentTheme = getPref("theme", "light");
+        const currentWrap = getPref("wrap", "false");
+        const currentFs = getPref("fs", "false");
+        if (currentTheme !== "light") {
+            modal.footer.find("button.btn.btn-light[data-theme]").click();
+        }
+        if (currentWrap === "true") {
+            modal.footer.find("button.btn.btn-light[data-wrap]").click();
+        }
+        if (currentFs === "true") {
+            modal.footer.find("button.btn.btn-light[data-fs]").click();
+        }
 
         modal.show();
         codeEditorInstance.setValue(editor.getContent());
