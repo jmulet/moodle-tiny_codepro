@@ -26,7 +26,7 @@ Icon by [Fontawesome 6.4](https://fontawesome.com/icons/file-code?f=classic&s=li
 
 ## Generate AMD modules
 
-In order to generate the binaries in `/amd/build` from source code in `/amd/src`, you need to execute the command
+In order to generate the compiled code in `/amd/build` from sources in `/amd/src`, you need to execute the command
 
 ```
 npx grunt amd
