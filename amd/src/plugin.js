@@ -29,7 +29,10 @@ import {register as registerOptions} from './options';
 import {getSetup as getCommandSetup} from './commands';
 import * as Configuration from './configuration';
 
+const documentationUrl = 'https://github.com/jmulet/moodle-tiny_codepro';
+
 // Setup the Plugin.
+// eslint-disable-next-line no-async-promise-executor
 export default new Promise(async(resolve) => {
     const [
         tinyMCE,
@@ -37,7 +40,7 @@ export default new Promise(async(resolve) => {
         setupCommands,
     ] = await Promise.all([
         getTinyMCE(),
-        getPluginMetadata(component, pluginName),
+        getPluginMetadata(component, pluginName, documentationUrl),
         getCommandSetup(),
     ]);
 

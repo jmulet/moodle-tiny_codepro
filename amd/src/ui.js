@@ -16,7 +16,6 @@
 import CodeProModal from "./modal";
 import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
-import {baseUrl} from './common';
 import {getPref, setPref} from "./preferences";
 
 /**
@@ -64,20 +63,19 @@ const createDialogue = async(editor) => {
     modal = await ModalFactory.create({
         type: CodeProModal.TYPE,
         templateContext: data,
-        large: true,
+        large: true
     });
     modal.getRoot().find(".modal-dialog.modal-lg").css("max-width", "85%");
-    // Disable ESC key on this modal
+    // Disable keyboard events (ESC key) on this modal
     modal.getRoot().off('keydown');
+    // Prevent modal from closing on outside clicks
+    modal.getRoot().on(ModalEvents.outsideClick, (evt) => {
+        evt.preventDefault();
+    });
     modal.body.css("overflow-y", "overlay");
 
     // Load cm6 on demand
-    require.config({
-        paths: {
-            cm6pro: baseUrl + '/libs/codemirror/dist/cm6pro.min'
-        }
-    });
-    require(['cm6pro'], (CodeProEditor) => {
+    require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
         const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
         codeEditorInstance = new CodeProEditor(targetElem);
 
