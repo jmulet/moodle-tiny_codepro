@@ -7,4 +7,9 @@ Updated dependency @codemirror/lang-html to 6.4.9
 Added the dependency htmlfy that allows code formatting
 Supported versions of Moodle from 4.1 to 4.4
 
+== 1.1.1 ==
+Merged pull request - revert bootstrap tooltips. Fix issue tooltips not hidding on toggle fullscreen
+Move cm6pro dependency as a /amd/src module. Avoid defining requirejs paths manually
+Disable modal close on backdrop clicks
+Updated helplinktext
 
