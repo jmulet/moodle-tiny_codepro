@@ -22,6 +22,7 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 $string['cancel'] = 'Cancel';
+$string['helplinktext'] = 'Source code Pro';
 $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
 $string['privacy:metadata'] = 'This plugin does not store any user related data.';
