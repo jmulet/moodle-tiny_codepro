@@ -36,27 +36,37 @@ html, body {
 
         </div>
         <div class="footer">
+            <button id="setValue">Set value</button>
             <button id="getValue">Get value</button>
             <select id="getTheme">
                 <option value="light" selected>Light</option>
                 <option value="dark">Dark</option>
             </select>
+            <button id="pretty">Prettify code</button>
         </div>
         <script>
             require.config({
                 paths: {
-                    "cm6pro": "./dist/cm6pro.min"
+                    "tiny_codepro/cm6pro-lazy": "../../amd/build/cm6pro-lazy.min"
                 }
             })
         </script>
         <script>
-            require(["cm6pro"], function(CodeProEditor) {
+            require(["tiny_codepro/cm6pro-lazy"], function(CodeProEditor) {
                 var parent = document.getElementById("editor");
                 var codeProEditor = new CodeProEditor(parent);
                 codeProEditor.setValue("<p>Hello</p>\n<p>World!</p>");
 
+                document.querySelector("#setValue").addEventListener("click", ()=>{
+                    codeProEditor.setValue('<p>Tiny CodePro. By Josep Mulet :-)</p>')
+                });
+
                 document.querySelector("#getValue").addEventListener("click", ()=>{
                     console.log(codeProEditor.getValue());
+                });
+
+                document.querySelector("#pretty").addEventListener("click", ()=>{
+                    codeProEditor.prettify();
                 });
 
                 var sel = document.querySelector("#getTheme");

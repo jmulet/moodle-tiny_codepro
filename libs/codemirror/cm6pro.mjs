@@ -21,11 +21,11 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {EditorView, basicSetup} from "codemirror"
-import {Compartment} from '@codemirror/state'
-import {html as htmlLang} from "@codemirror/lang-html"
-import {cm6proDark} from './cm6pro-dark-theme'
-import {prettify} from 'htmlfy'
+import {EditorView, basicSetup} from "codemirror";
+import {Compartment} from '@codemirror/state';
+import {html as htmlLang} from "@codemirror/lang-html";
+import {cm6proDark} from './cm6pro-dark-theme';
+import {prettify} from 'htmlfy';
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -34,45 +34,44 @@ const themes = {
 
 export default class CodeProEditor {
     static getThemes() {
-        return ['light', 'dark']
+        return ['light', 'dark'];
     }
     /**
-     * @member {HTMLElement} parentElement
-     * @member {string} source
-     * @member {CodeMirrorView} editorView;
+     * @member {HTMLElement} _parentElement
+     * @member {string} _source
+     * @member {CodeMirrorView} _editorView
      */
-    #parentElement;
-    #source;
-    #editorView;
-    
+    _parentElement;
+    _source;
+    _editorView;
     /**
-     * @param {HTMLElement} parentElement 
+     * @param {HTMLElement} parentElement
      */
-    constructor(parentElement) { 
-        this.#parentElement = parentElement;
-        this.#init();
+    constructor(parentElement) {
+        this._parentElement = parentElement;
+        this._init();
     }
 
-    #init() {
+    _init() {
         this.themeConfig = new Compartment();
         this.linewrapConfig = new Compartment();
-        this.#editorView = new EditorView({
+        this._editorView = new EditorView({
             extensions: [
-                basicSetup, 
+                basicSetup,
                 htmlLang(),
                 this.linewrapConfig.of([EditorView.lineWrapping]),
                 this.themeConfig.of([themes['light']])
             ],
-            parent: this.#parentElement
+            parent: this._parentElement
         });
     }
     /**
      * Sets the html source code
-     * @param {string} source 
+     * @param {string} source
      */
     setValue(source) {
-        this.#source = source;
-        const view = this.#editorView;
+        this._source = source;
+        const view = this._editorView;
         view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
     }
     /**
@@ -80,29 +79,30 @@ export default class CodeProEditor {
      * @returns {string}
      */
     getValue() {
-        return this.#editorView.state.doc.toString();
+        return this._editorView.state.doc.toString();
     }
-    
+
     /**
-     * 
-     * @param {string} theme 
+     *
+     * @param {string} theme
      */
     setTheme(themeName) {
-        if (themes[themeName]) { 
-            this.#editorView.dispatch({
+        if (themes[themeName]) {
+            this._editorView.dispatch({
                 effects: this.themeConfig.reconfigure([themes[themeName]])
             });
         } else {
+            // eslint-disable-next-line no-console
             console.error("Unknown theme", themeName);
         }
     }
 
     /**
-     * 
-     * @param {boolean} bool 
+     *
+     * @param {boolean} bool
      */
     setLineWrapping(bool) {
-        this.#editorView.dispatch({
+        this._editorView.dispatch({
             effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
         });
     }

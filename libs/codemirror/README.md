@@ -14,4 +14,4 @@ And run the job defined in the `rollup.config.js` file
 npm run build
 ```
 
-If everything runs smoothly, the file libs/codemirror/dist/cm6pro.min.js will be generated. This very same file will be lazy loaded by the codePro plugin.
+If everything runs smoothly, the file amd/src/cm6pro-lazy.js will be generated. Then, you must compile it using the command `npx grunt amd`. The resulting minified version of this file will be lazy loaded on demand when the code editor is opened.

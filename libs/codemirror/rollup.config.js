@@ -1,16 +1,15 @@
 import {nodeResolve} from '@rollup/plugin-node-resolve';
-import terser from '@rollup/plugin-terser';
 
-export default {
-	input: 'cm6pro.js',
-	output: {
-        sourcemap: true,
-		file: './dist/cm6pro.min.js',
-		format: 'umd',
-        name: 'cm6pro',
-        plugins: [
-            terser()
-        ]
-	},
-    plugins: [nodeResolve()]
-};
+export default [
+    {
+        input: 'cm6pro.mjs',
+        output: {
+            sourcemap: false,
+            file: '../../amd/src/cm6pro-lazy.js',
+            format: 'esm',
+            name: 'cm6pro',
+            plugins: []
+        },
+        plugins: [nodeResolve()]
+    }
+];
