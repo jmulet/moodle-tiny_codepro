@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable */
 /**
 The data structure for documents. @nonabstract
@@ -28691,6 +28690,15 @@ class CodeProEditor {
         const source = this.getValue();
         const beautified = prettify(source);
         this.setValue(beautified);
+    }
+
+    /**
+     * Puts focus the editor
+     */
+    focus() {
+        if (!this._editorView.hasFocus) {
+            this._editorView.focus();
+        }
     }
 }
 
