@@ -116,5 +116,14 @@ export default class CodeProEditor {
         const beautified = prettify(source);
         this.setValue(beautified);
     }
+
+    /**
+     * Puts focus the editor
+     */
+    focus() {
+        if (!this._editorView.hasFocus) {
+            this._editorView.focus();
+        }
+    }
 }
 

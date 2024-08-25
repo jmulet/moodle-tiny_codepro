@@ -13,3 +13,6 @@ Move cm6pro dependency as a /amd/src module. Avoid defining requirejs paths manu
 Disable modal close on backdrop clicks
 Updated helplinktext
 
+== 1.1.2 ==
+Fix Issue #10: Wrong area target to insert htmlcode
+Get focus on editor when opened
