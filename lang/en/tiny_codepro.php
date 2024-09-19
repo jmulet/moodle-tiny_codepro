@@ -27,3 +27,4 @@ $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
 $string['privacy:metadata'] = 'This plugin does not store any user related data.';
 $string['save'] = 'Save';
+$string['viewplugin'] = 'View plugin';
