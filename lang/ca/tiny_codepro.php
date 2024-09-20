@@ -27,4 +27,4 @@ $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
 $string['privacy:metadata'] = 'Aquest plugin no desa cap dada associada amb l\'usuari.';
 $string['save'] = 'Desa';
-$string['viewplugin'] = 'View plugin';
+$string['codepro:viewplugin'] = 'View plugin';
