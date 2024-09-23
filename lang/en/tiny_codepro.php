@@ -22,9 +22,9 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 $string['cancel'] = 'Cancel';
+$string['codepro:viewplugin'] = 'View plugin';
 $string['helplinktext'] = 'Source code Pro';
 $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
 $string['privacy:metadata'] = 'This plugin does not store any user related data.';
 $string['save'] = 'Save';
-$string['codepro:viewplugin'] = 'View plugin';
