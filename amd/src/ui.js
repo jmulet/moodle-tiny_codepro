@@ -49,6 +49,7 @@ export const handleAction = async(editor) => {
     if (modal === null) {
        await createDialogue();
     }
+
     // Issue, editor var does not get updated
     // Bind save action to the correct editor
     const $btn = modal.footer.find("button.btn[data-action]");
@@ -88,6 +89,9 @@ const createDialogue = async() => {
         evt.preventDefault();
     });
     modal.body.css("overflow-y", "overlay");
+    // Override styles imposed by body.tox-fullscreen on modals
+    modal.header.css('height', '61.46px');
+    modal.header.css('padding', '1rem 1rem');
 
     return new Promise((resolve) => {
         // Load cm6 on demand

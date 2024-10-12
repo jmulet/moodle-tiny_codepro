@@ -37,24 +37,25 @@ export const getSetup = async() => {
     ]);
 
     return (editor) => {
-        if (isPluginVisible(editor)) {
-            // Register the Icon.
-            editor.ui.registry.addIcon(icon, buttonImage.html);
-
-            // Register the Toolbar Button.
-            editor.ui.registry.addButton(component, {
-                icon,
-                tooltip: pluginName,
-                onAction: () => handleAction(editor),
-            });
-
-            // Add the Menu Item.
-            // This allows it to be added to a standard menu, or a context menu.
-            editor.ui.registry.addMenuItem(component, {
-                icon,
-                text: pluginName,
-                onAction: () => handleAction(editor),
-            });
+        if (!isPluginVisible(editor)) {
+            return;
         }
+        // Register the Icon.
+        editor.ui.registry.addIcon(icon, buttonImage.html);
+
+        // Register the Toolbar Button.
+        editor.ui.registry.addButton(component, {
+            icon,
+            tooltip: pluginName,
+            onAction: () => handleAction(editor),
+        });
+
+        // Add the Menu Item.
+        // This allows it to be added to a standard menu, or a context menu.
+        editor.ui.registry.addMenuItem(component, {
+            icon,
+            text: pluginName,
+            onAction: () => handleAction(editor),
+        });
     };
 };
