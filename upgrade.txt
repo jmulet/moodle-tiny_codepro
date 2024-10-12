@@ -16,3 +16,8 @@ Updated helplinktext
 == 1.1.2 ==
 Fix Issue #10: Wrong area target to insert htmlcode
 Get focus on editor when opened
+
+== 1.1.3 ==
+Fix Issue #12: Missing Language string
+Override style imposed by body.tox-fullscreen on modal-header
+Updated htmlfy dependency to 0.3.2

@@ -1,3 +1,4 @@
+/** @ts-ignore */
 /* eslint-disable */
 /**
 The data structure for documents. @nonabstract
@@ -28227,7 +28228,7 @@ const CONFIG = {
  * @param {string} content Content to evaluate.
  * @returns {boolean} A boolean.
  */
-const hasHtml = (content) => {
+const isHtml = (content) => {
   const regex = /<(?<Element>[A-Za-z]+\b)[^>]*(?:.|\n)*?<\/{1}\k<Element>>/;
   return regex.test(content)
 };
@@ -28325,7 +28326,7 @@ const void_elements = [
  */
 const closify = (html, html_check = true) => {
   if (html_check)
-    if (!hasHtml(html)) return html
+    if (!isHtml(html)) return html
   
   return html.replace(/<([a-zA-Z\-0-9]+)[^>]*>/g, (match, name) => {
     if (void_elements.indexOf(name) > -1) {
@@ -28414,7 +28415,7 @@ const entify = (html, minify = false) => {
  */
 const minify = (html, html_check = true) => {
   if (html_check)
-    if (!hasHtml(html)) return html
+    if (!isHtml(html)) return html
 
   /**
    * Ensure textarea content is specially minified and protected
@@ -28574,11 +28575,11 @@ const process$1 = (html, step) => {
  * @returns {string} A well-formed HTML string.
  */
 const prettify = (html, config) => {
+  /* Return content as-is if it does not contain any HTML elements. */
+  if (!isHtml(html)) return html
+
   const validated_config = config ? validateConfig(config) : CONFIG;
   strict = validated_config.strict;
-
-  /* Return content as-is if it does not contain any HTML elements. */
-  if (!hasHtml(html)) return html
 
   html = preprocess(html);
   html = process$1(html, validated_config.tab_size);
