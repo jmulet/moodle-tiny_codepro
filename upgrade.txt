@@ -21,3 +21,5 @@ Get focus on editor when opened
 Fix Issue #12: Missing Language string
 Override style imposed by body.tox-fullscreen on modal-header
 Updated htmlfy dependency to 0.3.2
+Option to auto prettify html code when editor opens
+Enable codeMirror plugin @replit/codemirror-indentation-markers

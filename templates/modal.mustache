@@ -46,7 +46,13 @@
             <button class="btn btn-light" data-fs="false" title="Fullscreen"><i class="fa fa-arrows-alt"></i></button>
             <button class="btn btn-light" data-theme="light" title="Light/Dark themes"><i class="fa fa-sun-o"></i></button>
             <button class="btn btn-light" data-wrap="true" title="Line wrap"><i class="fa fa-exchange"></i></button>
-            <button class="btn btn-light" data-prettify="true" title="Prettify code"><i class="fa fa-magic"></i></button>
+            <div class="btn-group">
+                <button class="btn btn-light" data-prettify title="Prettify code"><i class="fa fa-magic"></i></button>
+                <button data-auto-prettify class="btn btn-light dropdown-toggle-split"
+                    title="Auto prettify when editor opens" style="padding: 1px; width: 20px; border-left: 1px solid gray;">
+                    <small><i class="fas fa fa-times"></i></small>
+                </button>
+            </div>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>

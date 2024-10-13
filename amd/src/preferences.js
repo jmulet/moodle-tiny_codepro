@@ -1,12 +1,13 @@
 const preferences = {
-    theme: "light",
-    wrap: "false",
-    fs: "false",
+    theme: "light", /** Light vs dark themes */
+    wrap: "false", /** Wrap long lines */
+    fs: "false", /** Fullscreen mode */
+    prettify: false, /** Apply htmlfy when editor opens */
 };
 
 /**
- * @param {*} key The preference key
- * @param {*} def The default value (optional)
+ * @param {string} key The preference key
+ * @param {*} [def] The default value (optional)
  * @returns the preference value
  */
 const getPref = (key, def) => {
