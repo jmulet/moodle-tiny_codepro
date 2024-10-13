@@ -26,6 +26,7 @@ import {Compartment} from '@codemirror/state';
 import {html as htmlLang} from "@codemirror/lang-html";
 import {cm6proDark} from './cm6pro-dark-theme';
 import {prettify} from 'htmlfy';
+import {indentationMarkers} from '@replit/codemirror-indentation-markers';
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -58,6 +59,7 @@ export default class CodeProEditor {
         this._editorView = new EditorView({
             extensions: [
                 basicSetup,
+                indentationMarkers(),
                 htmlLang(),
                 this.linewrapConfig.of([EditorView.lineWrapping]),
                 this.themeConfig.of([themes['light']])

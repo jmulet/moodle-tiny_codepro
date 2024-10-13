@@ -49,6 +49,7 @@ export const handleAction = async(editor) => {
     if (modal === null) {
        await createDialogue();
     }
+
     // Issue, editor var does not get updated
     // Bind save action to the correct editor
     const $btn = modal.footer.find("button.btn[data-action]");
@@ -65,6 +66,9 @@ export const handleAction = async(editor) => {
 
     // eslint-disable-next-line camelcase
     codeEditorInstance.setValue(editor.getContent({source_view: true}));
+    if (getPref("prettify")) {
+        codeEditorInstance.prettify();
+    }
     modal.show();
     setTimeout(() => codeEditorInstance.focus(), 500);
 };
@@ -88,6 +92,9 @@ const createDialogue = async() => {
         evt.preventDefault();
     });
     modal.body.css("overflow-y", "overlay");
+    // Override styles imposed by body.tox-fullscreen on modals
+    modal.header.css('height', '61.46px');
+    modal.header.css('padding', '1rem 1rem');
 
     return new Promise((resolve) => {
         // Load cm6 on demand
@@ -137,10 +144,15 @@ const createDialogue = async() => {
                     }
                     setPref("wrap", ds.wrap, true);
                     toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
-                } else if (ds.prettify) {
+                } else if (ds.prettify !== undefined) {
                     codeEditorInstance.prettify();
+                } else if (ds.autoPrettify !== undefined) {
+                    setPref("prettify", !getPref("prettify", false), true);
+                    const icon = evt.currentTarget.querySelector("i");
+                    toggleClasses(icon, ["fa-times", "fa-check"]);
                 }
             });
+
             modal.getRoot().on(ModalEvents.hidden, () => {
                 codeEditorInstance.setValue();
             });
@@ -149,6 +161,8 @@ const createDialogue = async() => {
             const currentTheme = getPref("theme", "light");
             const currentWrap = getPref("wrap", "false");
             const currentFs = getPref("fs", "false");
+            const currentPrettify = getPref("prettify", false);
+
             if (currentTheme !== "light") {
                 modal.footer.find("button.btn.btn-light[data-theme]").click();
             }
@@ -158,6 +172,12 @@ const createDialogue = async() => {
             if (currentFs === "true") {
                 modal.footer.find("button.btn.btn-light[data-fs]").click();
             }
+            if (currentPrettify) {
+                modal.footer.find("button.btn.btn-light[data-auto-prettify] > i")
+                    .removeClass("fa-times")
+                    .addClass("fa-check");
+            }
+
             resolve(modal);
         });
     });
