@@ -21,10 +21,15 @@
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+$string['autoprettify'] = 'Formata\'l automàticament quan s\'obri';
 $string['cancel'] = 'Cancel·la';
 $string['codepro:viewplugin'] = 'Veure plugin';
+$string['fullscreen'] = 'Pantalla completa';
 $string['helplinktext'] = 'Source code Pro';
+$string['linewrap'] = 'Trencar línies llargues';
 $string['plugin'] = 'codePro';
 $string['pluginname'] = 'Source code Pro';
+$string['prettify'] = 'Formata el codi';
 $string['privacy:metadata'] = 'Aquest plugin no desa cap dada associada amb l\'usuari.';
 $string['save'] = 'Desa';
+$string['themes'] = 'Temes clar/obscur';
