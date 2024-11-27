@@ -14,4 +14,28 @@ And run the job defined in the `rollup.config.js` file
 npm run build
 ```
 
-If everything runs smoothly, the file amd/src/cm6pro-lazy.js will be generated. Then, you must compile it using the command `npx grunt amd`. The resulting minified version of this file will be lazy loaded on demand when the code editor is opened.
+
+If everything runs smoothly, the file amd/src/cm6pro-lazy.js will be generated.
+
+Open this file and add these lines to the top
+```
+/** @ts-ignore */
+/* eslint-disable */
+````
+
+### This is a workaround for an issue that appears when using requirejs in Moodle4.1.2
+
+Search for `define([` in the file and do the following replacement
+
+```
+const defaultHighlightStyle = /*@__PURE__*/HighlightStyle.define([
+```
+
+```
+const HighlightStyleDefs = HighlightStyle.define;
+const defaultHighlightStyle = /*@__PURE__*/HighlightStyleDefs([
+```
+
+
+
+Then, you must compile it using the command `npx grunt amd`. The resulting minified version of this file will be lazy loaded on demand when the code editor is opened.

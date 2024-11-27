@@ -19226,7 +19226,8 @@ const treeHighlighter = /*@__PURE__*/Prec.high(/*@__PURE__*/ViewPlugin.fromClass
 /**
 A default highlight style (works well with light themes).
 */
-const defaultHighlightStyle = /*@__PURE__*/HighlightStyle.define([
+const HighlightStyleDefs = HighlightStyle.define;
+const defaultHighlightStyle = /*@__PURE__*/HighlightStyleDefs([
     { tag: tags$1.meta,
         color: "#404740" },
     { tag: tags$1.link,
@@ -28112,7 +28113,9 @@ const cm6proDarkTheme = EditorView.theme({
 /**
 The highlighting style for code in the CodePro Dark theme.
 */
-const cm6proDarkHighlightStyle = HighlightStyle.define([
+// Workaround issue requirejs Moodle4.1.2
+const HighlightStyleDef = HighlightStyle.define;
+const cm6proDarkHighlightStyle = HighlightStyleDef([
     { tag: tags$1.keyword, color: base_green },
     {
         tag: [tags$1.name, tags$1.deleted, tags$1.character, tags$1.propertyName, tags$1.macroName],

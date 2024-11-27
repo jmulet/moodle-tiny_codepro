@@ -114,7 +114,9 @@ const cm6proDarkTheme = EditorView.theme({
 /**
 The highlighting style for code in the CodePro Dark theme.
 */
-const cm6proDarkHighlightStyle = HighlightStyle.define([
+// Workaround issue requirejs Moodle4.1.2
+const HighlightStyleDef = HighlightStyle.define;
+const cm6proDarkHighlightStyle = HighlightStyleDef([
     { tag: tags.keyword, color: base_green },
     {
         tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName],
