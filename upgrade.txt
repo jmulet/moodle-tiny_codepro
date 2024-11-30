@@ -23,3 +23,10 @@ Override style imposed by body.tox-fullscreen on modal-header
 Updated htmlfy dependency to 0.3.2
 Option to auto prettify html code when editor opens
 Enable codeMirror plugin @replit/codemirror-indentation-markers
+
+== 1.1.4 ==
+Fix Issue #15: Translation of tooltips
+Fix Issue #16: Source Code Pro (versions 1.1.1 - 1.1.3) not working in Moodle 4.1.2
+Solve ModalFactory.create deprecation on newer versions of Moodle
+Set the CodeMirror cursor to the selected Tiny position
+Prevents from opening the code editor before the content is set in Tiny editor

@@ -22,9 +22,10 @@
  */
 
 import Modal from 'core/modal';
+import ModalFactory from 'core/modal_factory';
 import ModalRegistry from 'core/modal_registry';
 
-const CodeProModal = class extends Modal {
+class CodeProModal extends Modal {
     static TYPE = 'tiny_codepro/modal';
     static TEMPLATE = 'tiny_codepro/modal';
 
@@ -32,8 +33,29 @@ const CodeProModal = class extends Modal {
         // Call the parent registration.
         super.registerEventListeners();
     }
-};
+}
 
 ModalRegistry.register(CodeProModal.TYPE, CodeProModal, CodeProModal.TEMPLATE);
 
-export default CodeProModal;
+/**
+ * @param {*} opts
+ * @returns {Promise<*>}
+ */
+export function createModal(opts) {
+    let modalPromise;
+    if (CodeProModal.create) {
+        // On newer versions, create directly from modal class.
+        modalPromise = CodeProModal.create({
+            large: true,
+            ...opts
+        });
+    } else {
+        // On old versions of Moodle, use ModalFactory
+        modalPromise = ModalFactory.create({
+            type: CodeProModal.TYPE,
+            large: true,
+            ...opts
+        });
+    }
+    return modalPromise;
+}

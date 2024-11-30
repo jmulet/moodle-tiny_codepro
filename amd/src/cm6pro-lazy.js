@@ -29048,6 +29048,24 @@ class CodeProEditor {
         });
     }
     /**
+     * Scrolls to the caret position defined by NULL ut8 char
+     */
+    scrollToCaretPosition() {
+       // Search the position of the NULL caret
+       const state = this._editorView.state;
+       const searchCursor = new SearchCursor(state.doc, String.fromCharCode(0));
+       searchCursor.next();
+       const value = searchCursor.value;
+       if (value) {
+           // Update the view by removing this marker and scrolling to its position
+           this._editorView.dispatch({
+               changes: {from: value.from, to: value.to, insert: ''},
+               selection: {anchor: value.from},
+               scrollIntoView: true
+           });
+       }
+    }
+    /**
      * Sets the html source code
      * @param {string} source
      */
@@ -29055,6 +29073,7 @@ class CodeProEditor {
         this._source = source;
         const view = this._editorView;
         view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
+        this.scrollToCaretPosition();
     }
     /**
      * Gets the html source code
@@ -29090,17 +29109,34 @@ class CodeProEditor {
     }
 
     /**
-     * Prettify the html source
+     * Returns the prettified code as a string
+     * @param {string} [text]
+     * @param {boolean} [addMarker]
      * @returns {string}
      */
+    prettifyCode(text, addMarker) {
+        if (!text) {
+            if (addMarker) {
+                // Must add the marker to the current selection position in order to restore scroll
+                // after the code has been formatted.
+                const cursor = this._editorView.state.selection.main.head;
+                this._editorView.dispatch({
+                    changes: {from: cursor, insert: String.fromCharCode(0)},
+                });
+            }
+            text = this.getValue();
+        }
+        return prettify(text);
+    }
+    /**
+     * Dispatch the prettified html into the view
+     */
     prettify() {
-        const source = this.getValue();
-        const beautified = prettify(source);
-        this.setValue(beautified);
+        this.setValue(this.prettifyCode(null, true));
     }
 
     /**
-     * Puts focus the editor
+     * Focus onto the editor
      */
     focus() {
         if (!this._editorView.hasFocus) {

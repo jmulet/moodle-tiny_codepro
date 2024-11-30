@@ -13,8 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-import CodeProModal from "./modal";
-import ModalFactory from 'core/modal_factory';
+import {createModal} from "./modal";
 import ModalEvents from 'core/modal_events';
 import {getPref, setPref} from "./preferences";
 
@@ -64,11 +63,22 @@ export const handleAction = async(editor) => {
         codeEditorInstance.setValue();
     });
 
+    // Insert caret marker and retrieve html code to pass to CodeMirror
+    const markerNode = document.createElement("SPAN");
+    markerNode.innerHTML = '&nbsp;';
+    markerNode.classList.add('CmCaReT');
+    const currentNode = editor.selection.getStart();
+    currentNode.append(markerNode);
     // eslint-disable-next-line camelcase
-    codeEditorInstance.setValue(editor.getContent({source_view: true}));
+    let html = editor.getContent({source_view: true});
+    html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
+    markerNode.remove();
+
     if (getPref("prettify")) {
-        codeEditorInstance.prettify();
+        html = codeEditorInstance.prettifyCode(html);
     }
+    codeEditorInstance.setValue(html);
+
     modal.show();
     setTimeout(() => codeEditorInstance.focus(), 500);
 };
@@ -79,11 +89,10 @@ const createDialogue = async() => {
     };
 
     // Show modal with buttons.
-    modal = await ModalFactory.create({
-        type: CodeProModal.TYPE,
-        templateContext: data,
-        large: true
+    modal = await createModal({
+        templateContext: data
     });
+
     modal.getRoot().find(".modal-dialog.modal-lg").addClass("tiny_codepro-dlg");
     // Disable keyboard events (ESC key) on this modal
     modal.getRoot().off('keydown');
