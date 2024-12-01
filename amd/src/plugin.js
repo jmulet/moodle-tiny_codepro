@@ -48,9 +48,12 @@ export default new Promise(async(resolve) => {
         // Register options.
         registerOptions(editor);
         // Resolve the Plugin and include configuration.
-        // Setup commands.
-        setupCommands(editor);
+        // Setup commands (only if the content has been set) to prevent from opening the modal without content.
+        editor.once('SetContent', () => {
+            setupCommands(editor);
+        });
         return pluginMetadata;
     });
+
     resolve([pluginName, Configuration]);
 });
