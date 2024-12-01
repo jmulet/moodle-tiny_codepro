@@ -43,11 +43,20 @@ export const getSetup = async() => {
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
 
+        // Disable button and menu item until the content has been set.
+        const onSetup = (api) => {
+            const cb = () => api.setEnabled(true);
+            editor.on('SetContent', cb);
+            return () => editor.off('SetContent', cb);
+        };
+
         // Register the Toolbar Button.
         editor.ui.registry.addButton(component, {
             icon,
             tooltip: pluginName,
             onAction: () => handleAction(editor),
+            enabled: false,
+            onSetup
         });
 
         // Add the Menu Item.
@@ -56,6 +65,8 @@ export const getSetup = async() => {
             icon,
             text: pluginName,
             onAction: () => handleAction(editor),
+            enabled: false,
+            onSetup
         });
     };
 };

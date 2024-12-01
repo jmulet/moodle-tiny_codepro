@@ -9,10 +9,14 @@
     margin-right: auto !important;
 }
 .tiny_codepro-editor-area .cm-editor {
-    height: 100%;
+    height: 100vh;
+    min-height: 300px;
+}
+.tiny_codepro-editor-area .cm-gutter, .tiny_codepro-editor-area .cm-content {
+    min-height: 300px;
 }
 .tiny_codepro-editor-area .cm-editor.cm-focused {
-    outline: 1px dotted #3e3e3e !important;
+    outline: none;
 }
 .tiny_codepro-fullscreen .modal-content {
     height: 100%;

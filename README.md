@@ -3,6 +3,15 @@
 A plugin for the Moodle TinyMCE editor which replaces the basic source code editor shipped by TinyMCE6.
 This plugin leverages [codeMirror](https://codemirror.net/) version 6 to provide syntax highlight, autocompletion, block fold, etc.
 
+### Features
+
+1. Color syntax and line numbers
+2. Search and replace
+3. Code formatting
+4. Cursor position synchronized with Tiny editor (since v1.1.4)
+5. Light and dark themes
+6. Toggle fullscreen mode
+
 This plugin does not include any configuration settings. The installation is straightforward: simply go to Site Administration area (Plugins → Install plugins → Install plugin from ZIP file).
 
 Once the plugin is installed, the items named "Source Code" in the menu, will be replaced by "Source Code Pro". Also a button will be added in the first position of the toolbar.
