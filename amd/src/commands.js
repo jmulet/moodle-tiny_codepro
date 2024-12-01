@@ -47,13 +47,7 @@ export const getSetup = async() => {
         editor.ui.registry.addButton(component, {
             icon,
             tooltip: pluginName,
-            onAction: () => handleAction(editor),
-            enabled: false,
-            onSetup: (api) => {
-                const cb = () => api.setEnabled(true);
-                editor.on('SetContent', cb);
-                return () => editor.off('SetContent', cb);
-            }
+            onAction: () => handleAction(editor)
         });
 
         // Add the Menu Item.

@@ -40,13 +40,19 @@ const toggleClasses = function(el, classList) {
     });
 };
 
+let isLoading = false;
 /**
  * Handle action
  * @param {TinyMCE} editor
  */
 export const handleAction = async(editor) => {
+    if (isLoading) {
+        return;
+    }
     if (modal === null) {
-       await createDialogue();
+        isLoading = true;
+        modal = await createDialogue();
+        isLoading = false;
     }
 
     // Issue, editor var does not get updated
@@ -55,12 +61,12 @@ export const handleAction = async(editor) => {
     $btn.off("click.codepro").on("click.codepro", (evt) => {
         if (evt.target.classList.contains("btn-primary")) {
             // eslint-disable-next-line camelcase
-            const updatedCode = codeEditorInstance.getValue({source_view: true});
-            editor.setContent(updatedCode);
+            const updatedCode = codeEditorInstance?.getValue({source_view: true});
+            editor.setContent(updatedCode ?? '');
         }
         modal.hide();
         // Delete content
-        codeEditorInstance.setValue();
+        codeEditorInstance?.setValue();
     });
 
     // Insert caret marker and retrieve html code to pass to CodeMirror
@@ -75,21 +81,37 @@ export const handleAction = async(editor) => {
     markerNode.remove();
 
     if (getPref("prettify")) {
-        html = codeEditorInstance.prettifyCode(html);
+        html = codeEditorInstance?.prettifyCode(html);
     }
-    codeEditorInstance.setValue(html);
+    codeEditorInstance?.setValue(html);
 
     modal.show();
-    setTimeout(() => codeEditorInstance.focus(), 500);
+    setTimeout(() => codeEditorInstance?.focus(), 500);
 };
 
+/**
+ * Loads cm6 on demand (The first load will be delayed a little bit)
+ * @returns {Promise<CodeProEditor>}
+ */
+const requireCm6Pro = () => {
+    return new Promise((resolve) => {
+        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
+            resolve(CodeProEditor);
+        });
+    });
+};
+
+/**
+ * Returns the modal instance
+ * @returns {Promise<Modal>}
+ */
 const createDialogue = async() => {
     const data = {
         elementid: Math.random().toString(32).substring(2)
     };
 
     // Show modal with buttons.
-    modal = await createModal({
+    const modal = await createModal({
         templateContext: data
     });
 
@@ -105,89 +127,84 @@ const createDialogue = async() => {
     modal.header.css('height', '61.46px');
     modal.header.css('padding', '1rem 1rem');
 
-    return new Promise((resolve) => {
-        // Load cm6 on demand
-        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
-            const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
-            codeEditorInstance = new CodeProEditor(targetElem);
+    const CodeProEditor = await requireCm6Pro();
+    const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
+    codeEditorInstance = new CodeProEditor(targetElem);
 
-            modal.footer.find("button.btn.btn-light").on("click", (evt) => {
-                evt.preventDefault();
-                const ds = evt.currentTarget.dataset;
-                const icon = evt.currentTarget.querySelector("i.fa");
-                const $dlgElem = modal.getRoot().find(dialogQuery);
-                if (ds.fs) {
-                    if (ds.fs === "false") {
-                        // Set fullscreen mode
-                        ds.fs = "true";
-                        modal.header.hide();
-                        $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
-                        $dlgElem.addClass("tiny_codepro-fullscreen");
-                    } else {
-                        // Set to modal-lg
-                        ds.fs = "false";
-                        modal.header.show();
-                        $dlgElem.removeClass("tiny_codepro-fullscreen");
-                        $dlgElem.addClass("modal-dialog modal-lg modal-dialog-scrollable");
-                    }
-                    setPref("fs", ds.fs, true);
-                } else if (ds.theme) {
-                    if (ds.theme === "light") {
-                        ds.theme = "dark";
-                        codeEditorInstance.setTheme("dark");
-                        $dlgElem.addClass("tiny_codepro-dark");
-                    } else {
-                        ds.theme = "light";
-                        codeEditorInstance.setTheme("light");
-                        $dlgElem.removeClass("tiny_codepro-dark");
-                    }
-                    toggleClasses(icon, ["fa-sun-o", "fa-moon-o"]);
-                    setPref("theme", ds.theme, true);
-                } else if (ds.wrap) {
-                    if (ds.wrap === "true") {
-                        ds.wrap = false;
-                        codeEditorInstance.setLineWrapping(false);
-                    } else {
-                        ds.wrap = true;
-                        codeEditorInstance.setLineWrapping(true);
-                    }
-                    setPref("wrap", ds.wrap, true);
-                    toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
-                } else if (ds.prettify !== undefined) {
-                    codeEditorInstance.prettify();
-                } else if (ds.autoPrettify !== undefined) {
-                    setPref("prettify", !getPref("prettify", false), true);
-                    const icon = evt.currentTarget.querySelector("i");
-                    toggleClasses(icon, ["fa-times", "fa-check"]);
-                }
-            });
-
-            modal.getRoot().on(ModalEvents.hidden, () => {
-                codeEditorInstance.setValue();
-            });
-
-            // Setting stored preferences
-            const currentTheme = getPref("theme", "light");
-            const currentWrap = getPref("wrap", "false");
-            const currentFs = getPref("fs", "false");
-            const currentPrettify = getPref("prettify", false);
-
-            if (currentTheme !== "light") {
-                modal.footer.find("button.btn.btn-light[data-theme]").click();
+    modal.footer.find("button.btn.btn-light").on("click", (evt) => {
+        evt.preventDefault();
+        const ds = evt.currentTarget.dataset;
+        const icon = evt.currentTarget.querySelector("i.fa");
+        const $dlgElem = modal.getRoot().find(dialogQuery);
+        if (ds.fs) {
+            if (ds.fs === "false") {
+                // Set fullscreen mode
+                ds.fs = "true";
+                modal.header.hide();
+                $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
+                $dlgElem.addClass("tiny_codepro-fullscreen");
+            } else {
+                // Set to modal-lg
+                ds.fs = "false";
+                modal.header.show();
+                $dlgElem.removeClass("tiny_codepro-fullscreen");
+                $dlgElem.addClass("modal-dialog modal-lg modal-dialog-scrollable");
             }
-            if (currentWrap === "true") {
-                modal.footer.find("button.btn.btn-light[data-wrap]").click();
+            setPref("fs", ds.fs, true);
+        } else if (ds.theme) {
+            if (ds.theme === "light") {
+                ds.theme = "dark";
+                codeEditorInstance.setTheme("dark");
+                $dlgElem.addClass("tiny_codepro-dark");
+            } else {
+                ds.theme = "light";
+                codeEditorInstance.setTheme("light");
+                $dlgElem.removeClass("tiny_codepro-dark");
             }
-            if (currentFs === "true") {
-                modal.footer.find("button.btn.btn-light[data-fs]").click();
+            toggleClasses(icon, ["fa-sun-o", "fa-moon-o"]);
+            setPref("theme", ds.theme, true);
+        } else if (ds.wrap) {
+            if (ds.wrap === "true") {
+                ds.wrap = false;
+                codeEditorInstance?.setLineWrapping(false);
+            } else {
+                ds.wrap = true;
+                codeEditorInstance?.setLineWrapping(true);
             }
-            if (currentPrettify) {
-                modal.footer.find("button.btn.btn-light[data-auto-prettify] > i")
-                    .removeClass("fa-times")
-                    .addClass("fa-check");
-            }
-
-            resolve(modal);
-        });
+            setPref("wrap", ds.wrap, true);
+            toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
+        } else if (ds.prettify !== undefined) {
+            codeEditorInstance?.prettify();
+        } else if (ds.autoPrettify !== undefined) {
+            setPref("prettify", !getPref("prettify", false), true);
+            const icon = evt.currentTarget.querySelector("i");
+            toggleClasses(icon, ["fa-times", "fa-check"]);
+        }
     });
+
+    modal.getRoot().on(ModalEvents.hidden, () => {
+        codeEditorInstance?.setValue();
+    });
+
+    // Setting stored preferences
+    const currentTheme = getPref("theme", "light");
+    const currentWrap = getPref("wrap", "false");
+    const currentFs = getPref("fs", "false");
+    const currentPrettify = getPref("prettify", false);
+
+    if (currentTheme !== "light") {
+        modal.footer.find("button.btn.btn-light[data-theme]").click();
+    }
+    if (currentWrap === "true") {
+        modal.footer.find("button.btn.btn-light[data-wrap]").click();
+    }
+    if (currentFs === "true") {
+        modal.footer.find("button.btn.btn-light[data-fs]").click();
+    }
+    if (currentPrettify) {
+        modal.footer.find("button.btn.btn-light[data-auto-prettify] > i")
+            .removeClass("fa-times")
+            .addClass("fa-check");
+    }
+    return modal;
 };
