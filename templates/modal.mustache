@@ -43,16 +43,11 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
+            <button class="btn btn-light" data-view="panel" title="{{#str}} panelview, tiny_codepro {{/str}}"><i class="fa fa-eye"></i></button>
             <button class="btn btn-light" data-fs="false" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><i class="fa fa-arrows-alt"></i></button>
             <button class="btn btn-light" data-theme="light" title="{{#str}} themes, tiny_codepro {{/str}}"><i class="fa fa-sun-o"></i></button>
             <button class="btn btn-light" data-wrap="true" title="{{#str}} linewrap, tiny_codepro {{/str}}"><i class="fa fa-exchange"></i></button>
-            <div class="btn-group">
-                <button class="btn btn-light" data-prettify title="{{#str}} prettify, tiny_codepro {{/str}}"><i class="fa fa-magic"></i></button>
-                <button data-auto-prettify class="btn btn-light dropdown-toggle-split"
-                    title="{{#str}} autoprettify, tiny_codepro {{/str}}" style="padding: 1px; width: 20px; border-left: 1px solid gray;">
-                    <small><i class="fas fa fa-times"></i></small>
-                </button>
-            </div>
+            <button class="btn btn-light" data-prettify title="{{#str}} prettify, tiny_codepro {{/str}}"><i class="fa fa-magic"></i></button>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>

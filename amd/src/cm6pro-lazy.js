@@ -29021,32 +29021,59 @@ class CodeProEditor {
      * @member {HTMLElement} _parentElement
      * @member {string} _source
      * @member {CodeMirrorView} _editorView
+     * @member {boolean} _pendingChanges
+     * @member {(code: string) => void} _changesListener
      */
     _parentElement;
     _source;
     _editorView;
+    _pendingChanges;
+    _changesListener;
     /**
      * @param {HTMLElement} parentElement
+     * @param {(code: string) => void} [changesListener]
      */
-    constructor(parentElement) {
+    constructor(parentElement, changesListener) {
         this._parentElement = parentElement;
+        this._changesListener = changesListener;
         this._init();
     }
 
     _init() {
         this.themeConfig = new Compartment();
         this.linewrapConfig = new Compartment();
+        const extensions = [
+            basicSetup,
+            indentationMarkers(),
+            html(),
+            this.linewrapConfig.of([EditorView.lineWrapping]),
+            this.themeConfig.of([themes.light])
+        ];
+        if (this._changesListener) {
+            extensions.push(
+                EditorView.updateListener.of((viewUpdate) => {
+                    this._pendingChanges ||= viewUpdate.docChanged;
+                    if (this._pendingChanges && viewUpdate.focusChanged) {
+                        // Do save changes into Tiny editor.
+                        this._changesListener(this.getValue());
+                        this._pendingChanges = false;
+                    }
+                })
+            );
+        }
         this._editorView = new EditorView({
-            extensions: [
-                basicSetup,
-                indentationMarkers(),
-                html(),
-                this.linewrapConfig.of([EditorView.lineWrapping]),
-                this.themeConfig.of([themes['light']])
-            ],
+            extensions,
             parent: this._parentElement
         });
     }
+
+    /**
+     * Destroys the editor
+     */
+    destroy() {
+        this._editorView.destroy(this._parentElement);
+    }
+
     /**
      * Scrolls to the caret position defined by NULL ut8 char
      */
@@ -29074,6 +29101,7 @@ class CodeProEditor {
         const view = this._editorView;
         view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
         this.scrollToCaretPosition();
+        this._pendingChanges = false;
     }
     /**
      * Gets the html source code

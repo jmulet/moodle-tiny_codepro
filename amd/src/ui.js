@@ -44,14 +44,15 @@ let isLoading = false;
 /**
  * Handle action
  * @param {TinyMCE} editor
+ * @param {string} [initialHTML]
  */
-export const handleAction = async(editor) => {
+export const handleAction = async(editor, initialHTML) => {
     if (isLoading) {
         return;
     }
     if (modal === null) {
         isLoading = true;
-        modal = await createDialogue();
+        modal = await createDialogue(editor);
         isLoading = false;
     }
 
@@ -70,18 +71,23 @@ export const handleAction = async(editor) => {
     });
 
     // Insert caret marker and retrieve html code to pass to CodeMirror
-    const markerNode = document.createElement("SPAN");
-    markerNode.innerHTML = '&nbsp;';
-    markerNode.classList.add('CmCaReT');
-    const currentNode = editor.selection.getStart();
-    currentNode.append(markerNode);
-    // eslint-disable-next-line camelcase
-    let html = editor.getContent({source_view: true});
-    html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
-    markerNode.remove();
+    let html;
+    if (initialHTML) {
+        html = initialHTML;
+    } else {
+        const markerNode = document.createElement("SPAN");
+        markerNode.innerHTML = '&nbsp;';
+        markerNode.classList.add('CmCaReT');
+        const currentNode = editor.selection.getStart();
+        currentNode.append(markerNode);
+        // eslint-disable-next-line camelcase
+        html = editor.getContent({source_view: true});
+        html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
+        markerNode.remove();
 
-    if (getPref("prettify")) {
-        html = codeEditorInstance?.prettifyCode(html);
+        if (getPref("prettify")) {
+            html = codeEditorInstance?.prettifyCode(html);
+        }
     }
     codeEditorInstance?.setValue(html);
 
@@ -93,7 +99,7 @@ export const handleAction = async(editor) => {
  * Loads cm6 on demand (The first load will be delayed a little bit)
  * @returns {Promise<CodeProEditor>}
  */
-const requireCm6Pro = () => {
+export const requireCm6Pro = () => {
     return new Promise((resolve) => {
         require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
             resolve(CodeProEditor);
@@ -103,9 +109,10 @@ const requireCm6Pro = () => {
 
 /**
  * Returns the modal instance
+ * @param {TinyMCE} editor
  * @returns {Promise<Modal>}
  */
-const createDialogue = async() => {
+const createDialogue = async(editor) => {
     const data = {
         elementid: Math.random().toString(32).substring(2)
     };
@@ -175,10 +182,14 @@ const createDialogue = async() => {
             toggleClasses(icon, ["fa-exchange", "fa-long-arrow-right"]);
         } else if (ds.prettify !== undefined) {
             codeEditorInstance?.prettify();
-        } else if (ds.autoPrettify !== undefined) {
-            setPref("prettify", !getPref("prettify", false), true);
-            const icon = evt.currentTarget.querySelector("i");
-            toggleClasses(icon, ["fa-times", "fa-check"]);
+        } else if (ds.view !== undefined) {
+            // Toggle view to a panel
+            const initialHTML = codeEditorInstance.getValue();
+            // eslint-disable-next-line no-console
+            console.log(initialHTML);
+            //TODO this initialHTML must be passed to tox view, e.g. via localStorage??
+            modal.hide();
+            editor.execCommand('ToggleView', false, 'codepro');
         }
     });
 
@@ -190,7 +201,6 @@ const createDialogue = async() => {
     const currentTheme = getPref("theme", "light");
     const currentWrap = getPref("wrap", "false");
     const currentFs = getPref("fs", "false");
-    const currentPrettify = getPref("prettify", false);
 
     if (currentTheme !== "light") {
         modal.footer.find("button.btn.btn-light[data-theme]").click();
@@ -200,11 +210,6 @@ const createDialogue = async() => {
     }
     if (currentFs === "true") {
         modal.footer.find("button.btn.btn-light[data-fs]").click();
-    }
-    if (currentPrettify) {
-        modal.footer.find("button.btn.btn-light[data-auto-prettify] > i")
-            .removeClass("fa-times")
-            .addClass("fa-check");
     }
     return modal;
 };

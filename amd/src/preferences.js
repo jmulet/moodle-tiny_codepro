@@ -1,8 +1,8 @@
 const preferences = {
     theme: "light", /** Light vs dark themes */
-    wrap: "false", /** Wrap long lines */
+    wrap: "true", /** Wrap long lines */
     fs: "false", /** Fullscreen mode */
-    prettify: false, /** Apply htmlfy when editor opens */
+    view: "", /** Apply htmlfy when editor opens */
 };
 
 /**
@@ -13,7 +13,14 @@ const preferences = {
 const getPref = (key, def) => {
     const stored = localStorage.getItem("tiny-codepro");
     if (stored) {
-        Object.assign(preferences, JSON.parse(stored));
+        let storedParsed = {};
+        try {
+            storedParsed = JSON.parse(stored);
+        } catch (ex) {
+            // eslint-disable-next-line no-console
+            console.error("Cannot parse JSON", stored);
+        }
+        Object.assign(preferences, storedParsed);
     }
     return preferences[key] ?? def;
 };

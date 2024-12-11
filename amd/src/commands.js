@@ -25,7 +25,9 @@ import {getButtonImage} from 'editor_tiny/utils';
 import {get_string as getString} from 'core/str';
 import {handleAction} from './ui';
 import {component, icon} from './common';
-import {isPluginVisible} from './options';
+import {getDefaultUI, isPluginVisible} from './options';
+import {createView} from './view';
+import {getPref} from './preferences';
 
 export const getSetup = async() => {
     const [
@@ -35,6 +37,17 @@ export const getSetup = async() => {
         getString('pluginname', component),
         getButtonImage('icon', component),
     ]);
+
+    const handleClickAction = (editor) => {
+        const defaultUI = getPref('view', getDefaultUI(editor) ?? 'dialogue');
+        if (defaultUI === 'dialogue') {
+            // Show editor in a modal dialogue
+            handleAction(editor);
+        } else {
+            // Show editor as a view panel
+            editor.execCommand('ToggleView', false, 'codepro');
+        }
+    };
 
     return (editor) => {
         if (!isPluginVisible(editor)) {
@@ -47,7 +60,7 @@ export const getSetup = async() => {
         editor.ui.registry.addButton(component, {
             icon,
             tooltip: pluginName,
-            onAction: () => handleAction(editor)
+            onAction: () => handleClickAction(editor)
         });
 
         // Add the Menu Item.
@@ -55,7 +68,10 @@ export const getSetup = async() => {
         editor.ui.registry.addMenuItem(component, {
             icon,
             text: pluginName,
-            onAction: () => handleAction(editor)
+            onAction: () => handleClickAction(editor)
         });
+
+        // Creates a View for holding the code editor
+        editor.ui.registry.addView('codepro', createView(editor));
     };
 };

@@ -25,6 +25,9 @@ import {getPluginOptionName} from 'editor_tiny/options';
 import {pluginName} from './common';
 
 const showPlugin = getPluginOptionName(pluginName, 'showplugin');
+const autoFormatHTML = getPluginOptionName(pluginName, 'autoFormatHTML');
+const defaultUI = getPluginOptionName(pluginName, 'defaultUI');
+
 
 export const register = (editor) => {
     const registerOption = editor.options.register;
@@ -33,6 +36,16 @@ export const register = (editor) => {
         processor: 'boolean',
         "default": true,
     });
+
+    registerOption(autoFormatHTML, {
+        processor: 'boolean',
+        "default": true,
+    });
+
+    registerOption(defaultUI, {
+        processor: 'string',
+        "default": 'dialogue',
+    });
 };
 
 
@@ -40,6 +53,22 @@ export const register = (editor) => {
  * Get the permissions configuration for the Tiny plugin.
  *
  * @param {TinyMCE} editor
- * @returns {object}
+ * @returns {boolean}
  */
 export const isPluginVisible = (editor) => editor.options.get(showPlugin);
+
+/**
+ * Should prettify the HTML code when the CodeMirror editor opens?
+ *
+ * @param {TinyMCE} editor
+ * @returns {boolean}
+ */
+export const isAutoFormatHTML = (editor) => editor.options.get(autoFormatHTML);
+
+/**
+ * How to render the HTML editor?
+ *
+ * @param {TinyMCE} editor
+ * @returns {string}
+ */
+export const getDefaultUI = (editor) => editor.options.get(defaultUI);
