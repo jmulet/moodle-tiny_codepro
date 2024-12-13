@@ -2,7 +2,7 @@ const preferences = {
     theme: "light", /** Light vs dark themes */
     wrap: "true", /** Wrap long lines */
     fs: "false", /** Fullscreen mode */
-    view: "", /** Apply htmlfy when editor opens */
+    view: undefined, /** Apply htmlfy when editor opens */
 };
 
 /**

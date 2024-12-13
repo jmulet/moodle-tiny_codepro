@@ -78,8 +78,15 @@ class plugininfo extends plugin implements
         // Decide if to enable the plugin?
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 
-        return [
-            'showplugin' => $showplugin,
-        ];
+        $params = ['showplugin' => $showplugin];
+
+        if ($showplugin) {
+            $cfg = get_config('tiny_codepro');
+            $params['autoprettify'] = $cfg->autoprettify;
+            $params['trackcaret'] = $cfg->trackcaret;
+            $params['uimode'] = $cfg->uimode;
+        }
+
+        return $params;
     }
 }

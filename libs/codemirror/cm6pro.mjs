@@ -22,7 +22,7 @@
  */
 
 import {EditorView, basicSetup} from "codemirror";
-import {Compartment} from '@codemirror/state';
+import {EditorState, Compartment} from '@codemirror/state';
 import {SearchCursor} from '@codemirror/search';
 import {html as htmlLang} from "@codemirror/lang-html";
 import {cm6proDark} from './cm6pro-dark-theme';
@@ -43,48 +43,63 @@ export default class CodeProEditor {
      * @member {string} _source
      * @member {CodeMirrorView} _editorView
      * @member {boolean} _pendingChanges
-     * @member {(code: string) => void} _changesListener
+     * @member {Record<string,*>} _config
      */
     _parentElement;
     _source;
     _editorView;
     _pendingChanges;
-    _changesListener;
+    _config;
     /**
      * @param {HTMLElement} parentElement
-     * @param {(code: string) => void} [changesListener]
+     * @param {Record<string, any>} [options]
      */
-    constructor(parentElement, changesListener) {
+    constructor(parentElement, options) {
+        // Default configuration
+        const themeName = options?.theme ?? 'light';
+        this._config = {
+            theme: [themes[themeName]],
+            lineWrapping: options?.lineWrapping === false ? [] : [EditorView.lineWrapping],
+            changesListener: options?.changesListener
+        };
+
         this._parentElement = parentElement;
-        this._changesListener = changesListener;
-        this._init();
+        this._editorView = new EditorView({
+            state: this._createState(),
+            parent: this._parentElement
+        });
     }
 
-    _init() {
+    /**
+     *
+     * @param {string} [html] - The initial html
+     * @returns {*} a new State
+     */
+    _createState(html) {
         this.themeConfig = new Compartment();
         this.linewrapConfig = new Compartment();
         const extensions = [
             basicSetup,
             indentationMarkers(),
             htmlLang(),
-            this.linewrapConfig.of([EditorView.lineWrapping]),
-            this.themeConfig.of([themes.light])
+            this.linewrapConfig.of(this._config.lineWrapping),
+            this.themeConfig.of(this._config.theme)
         ];
-        if (this._changesListener) {
+        if (this._config.changesListener) {
             extensions.push(
                 EditorView.updateListener.of((viewUpdate) => {
                     this._pendingChanges ||= viewUpdate.docChanged;
                     if (this._pendingChanges && viewUpdate.focusChanged) {
-                        // Do save changes into Tiny editor.
-                        this._changesListener(this.getValue());
+                        // E.g. do save changes into Tiny editor.
+                        this._config.changesListener(this.getValue());
                         this._pendingChanges = false;
                     }
                 })
             );
         }
-        this._editorView = new EditorView({
-            extensions,
-            parent: this._parentElement
+        return EditorState.create({
+            doc: html ?? '',
+            extensions
         });
     }
 
@@ -105,14 +120,20 @@ export default class CodeProEditor {
        searchCursor.next();
        const value = searchCursor.value;
        if (value) {
-           // Update the view by removing this marker and scrolling to its position
-           this._editorView.dispatch({
+            // Update the view by removing this marker and scrolling to its position
+            this._editorView.dispatch({
                changes: {from: value.from, to: value.to, insert: ''},
                selection: {anchor: value.from},
                scrollIntoView: true
-           });
+            });
+       } else {
+            // Simply ensure that the cursor position is into view
+            this._editorView.dispatch({
+                scrollIntoView: true
+            });
        }
     }
+
     /**
      * Sets the html source code
      * @param {string} source
@@ -124,6 +145,7 @@ export default class CodeProEditor {
         this.scrollToCaretPosition();
         this._pendingChanges = false;
     }
+
     /**
      * Gets the html source code
      * @returns {string}
@@ -133,13 +155,45 @@ export default class CodeProEditor {
     }
 
     /**
-     *
+     * Sets the state properties. Not directly the whole state
+     * to prevent plugins from being restarted
+     * @param {*} stateProps
+     */
+    setState(stateProps) {
+        const {html, selection} = stateProps;
+        const view = this._editorView;
+        const newState = this._createState(html, selection);
+        view.setState(newState);
+
+        // Restore selection
+        this._editorView.dispatch({
+            selection,
+            scrollIntoView: true
+        });
+    }
+
+    /**
+     * Gets the current editor's view state properties
+     * @returns {*}
+     */
+    getState() {
+        const state = this._editorView.state;
+        const range = state.selection.ranges[0] || {from: 0, to: 0};
+        return {
+            html: state.doc.toString(),
+            selection: {anchor: range.from, head: range.to}
+        };
+    }
+
+    /**
+     * Sets light or dark themes dynamically
      * @param {string} theme
      */
     setTheme(themeName) {
         if (themes[themeName]) {
+            this._config.theme = [themes[themeName]];
             this._editorView.dispatch({
-                effects: this.themeConfig.reconfigure([themes[themeName]])
+                effects: this.themeConfig.reconfigure(this._config.theme)
             });
         } else {
             // eslint-disable-next-line no-console
@@ -148,12 +202,13 @@ export default class CodeProEditor {
     }
 
     /**
-     *
+     * Enable/disable linewrapping dynamically
      * @param {boolean} bool
      */
     setLineWrapping(bool) {
+        this._config.lineWrapping = bool ? [EditorView.lineWrapping] : [];
         this._editorView.dispatch({
-            effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
+            effects: this.linewrapConfig.reconfigure(this._config.lineWrapping)
         });
     }
 

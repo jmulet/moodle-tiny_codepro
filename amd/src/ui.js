@@ -16,6 +16,8 @@
 import {createModal} from "./modal";
 import ModalEvents from 'core/modal_events';
 import {getPref, setPref} from "./preferences";
+import {getDefaultUI} from "./options";
+import {blackboard} from "./commands";
 
 /**
  * Tiny CodePro plugin.
@@ -46,7 +48,7 @@ let isLoading = false;
  * @param {TinyMCE} editor
  * @param {string} [initialHTML]
  */
-export const handleAction = async(editor, initialHTML) => {
+export const displayDialogue = async(editor, initialHTML) => {
     if (isLoading) {
         return;
     }
@@ -70,26 +72,31 @@ export const handleAction = async(editor, initialHTML) => {
         codeEditorInstance?.setValue();
     });
 
-    // Insert caret marker and retrieve html code to pass to CodeMirror
-    let html;
-    if (initialHTML) {
-        html = initialHTML;
+    if (blackboard.state) {
+        codeEditorInstance?.setState(blackboard.state);
+        blackboard.state = null;
     } else {
-        const markerNode = document.createElement("SPAN");
-        markerNode.innerHTML = '&nbsp;';
-        markerNode.classList.add('CmCaReT');
-        const currentNode = editor.selection.getStart();
-        currentNode.append(markerNode);
-        // eslint-disable-next-line camelcase
-        html = editor.getContent({source_view: true});
-        html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
-        markerNode.remove();
+        // Insert caret marker and retrieve html code to pass to CodeMirror
+        let html;
+        if (initialHTML) {
+            html = initialHTML;
+        } else {
+            const markerNode = document.createElement("SPAN");
+            markerNode.innerHTML = '&nbsp;';
+            markerNode.classList.add('CmCaReT');
+            const currentNode = editor.selection.getStart();
+            currentNode.append(markerNode);
+            // eslint-disable-next-line camelcase
+            html = editor.getContent({source_view: true});
+            html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
+            markerNode.remove();
 
-        if (getPref("prettify")) {
-            html = codeEditorInstance?.prettifyCode(html);
+            if (getPref("prettify")) {
+                html = codeEditorInstance?.prettifyCode(html);
+            }
         }
+        codeEditorInstance?.setValue(html);
     }
-    codeEditorInstance?.setValue(html);
 
     modal.show();
     setTimeout(() => codeEditorInstance?.focus(), 500);
@@ -113,8 +120,13 @@ export const requireCm6Pro = () => {
  * @returns {Promise<Modal>}
  */
 const createDialogue = async(editor) => {
+
+    const defaultUI = getDefaultUI(editor) ?? 'dialog';
+    const canUserSwitchUI = defaultUI.startsWith('user:');
+
     const data = {
-        elementid: Math.random().toString(32).substring(2)
+        elementid: Math.random().toString(32).substring(2),
+        canUserSwitchUI
     };
 
     // Show modal with buttons.
@@ -183,13 +195,11 @@ const createDialogue = async(editor) => {
         } else if (ds.prettify !== undefined) {
             codeEditorInstance?.prettify();
         } else if (ds.view !== undefined) {
-            // Toggle view to a panel
-            const initialHTML = codeEditorInstance.getValue();
-            // eslint-disable-next-line no-console
-            console.log(initialHTML);
-            //TODO this initialHTML must be passed to tox view, e.g. via localStorage??
+            // Toggle UI to View panel
+            blackboard.state = codeEditorInstance.getState();
             modal.hide();
             editor.execCommand('ToggleView', false, 'codepro');
+            setPref("view", 'panel', true);
         }
     });
 

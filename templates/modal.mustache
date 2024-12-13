@@ -27,10 +27,12 @@
 
     Context variables required for this template:
     elementid - The ID of the element to be edited.
+    canUserSwitchUI - Whether the user is allowed to switch between dialog and panel UI modes or not.
 
     Example context (json):
     {
-        "elementid": "id_of_element"
+        "elementid": "id_of_element",
+        "canUserSwitchUI": true
     }
 }}
 {{< core/modal }}
@@ -43,7 +45,7 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            <button class="btn btn-light" data-view="panel" title="{{#str}} panelview, tiny_codepro {{/str}}"><i class="fa fa-eye"></i></button>
+            {{#canUserSwitchUI}}<button class="btn btn-light" data-view="panel" title="{{#str}} openpanel, tiny_codepro {{/str}}"><i class="fa fa-eye"></i></button>{{/canUserSwitchUI}}
             <button class="btn btn-light" data-fs="false" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><i class="fa fa-arrows-alt"></i></button>
             <button class="btn btn-light" data-theme="light" title="{{#str}} themes, tiny_codepro {{/str}}"><i class="fa fa-sun-o"></i></button>
             <button class="btn btn-light" data-wrap="true" title="{{#str}} linewrap, tiny_codepro {{/str}}"><i class="fa fa-exchange"></i></button>

@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -22,34 +23,53 @@
  */
 
 import {getButtonImage} from 'editor_tiny/utils';
-import {get_string as getString} from 'core/str';
-import {handleAction} from './ui';
+import {get_strings} from 'core/str';
+import {displayDialogue} from './ui';
 import {component, icon} from './common';
 import {getDefaultUI, isPluginVisible} from './options';
 import {createView} from './view';
 import {getPref} from './preferences';
 
+/**
+ * Share the state among editor Views
+ * @type {*}
+ **/
+export const blackboard = {};
+
 export const getSetup = async() => {
     const [
-        pluginName,
+        strs,
         buttonImage,
     ] = await Promise.all([
-        getString('pluginname', component),
+        get_strings([
+            {key: 'pluginname', component},
+            {key: 'opendialog', component},
+            {key: 'fullscreen', component},
+            {key: 'themes', component},
+            {key: 'linewrap', component},
+            {key: 'prettify', component},
+        ]),
         getButtonImage('icon', component),
     ]);
 
+    const [pluginName, translations] = strs;
+
     const handleClickAction = (editor) => {
-        const defaultUI = getPref('view', getDefaultUI(editor) ?? 'dialogue');
-        if (defaultUI === 'dialogue') {
+        let defaultUI = getDefaultUI(editor) ?? 'dialog';
+        let canUserSwitchUI = defaultUI.startsWith('user:');
+        if (canUserSwitchUI) {
+            defaultUI = getPref('view', defaultUI.substring(5));
+        }
+        if (defaultUI === 'dialog') {
             // Show editor in a modal dialogue
-            handleAction(editor);
+            displayDialogue(editor);
         } else {
             // Show editor as a view panel
             editor.execCommand('ToggleView', false, 'codepro');
         }
     };
 
-    return (editor) => {
+    return async(editor) => {
         if (!isPluginVisible(editor)) {
             return;
         }
@@ -71,7 +91,11 @@ export const getSetup = async() => {
             onAction: () => handleClickAction(editor)
         });
 
-        // Creates a View for holding the code editor
-        editor.ui.registry.addView('codepro', createView(editor));
+        // Creates a View for holding the code editor as panel
+        // Only if it is going to be required
+        const defaultUI = getDefaultUI(editor) ?? '';
+        if (defaultUI === 'panel' || defaultUI.startsWith('user:')) {
+            editor.ui.registry.addView('codepro', createView(editor, translations));
+        }
     };
 };

@@ -44,7 +44,7 @@ export const register = (editor) => {
 
     registerOption(defaultUI, {
         processor: 'string',
-        "default": 'dialogue',
+        "default": 'dialog',
     });
 };
 
@@ -67,7 +67,10 @@ export const isAutoFormatHTML = (editor) => editor.options.get(autoFormatHTML);
 
 /**
  * How to render the HTML editor?
- *
+ * dialog - It opens always as a dialog
+ * panel - It opens always as a panel
+ * user:dialog - The user is allowed to change the setting; defaults to dialog
+ * user:panel - The user is allowed to change the setting; defaults to panel
  * @param {TinyMCE} editor
  * @returns {string}
  */
