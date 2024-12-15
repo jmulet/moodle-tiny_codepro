@@ -17,7 +17,7 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -25,10 +25,12 @@ import * as Config from 'core/config';
 
 const baseUrl = `${Config.wwwroot}/lib/editor/tiny/plugins/codepro`;
 const component = 'tiny_codepro';
+const MARKER = String.fromCharCode(0);
 
 export default {
     baseUrl,
     component,
     pluginName: `${component}/plugin`,
-    icon: `${component}`
+    icon: `${component}`,
+    MARKER
 };

@@ -23,11 +23,14 @@
 
 import {EditorView, basicSetup} from "codemirror";
 import {EditorState, Compartment} from '@codemirror/state';
+import {syntaxTree} from '@codemirror/language';
 import {SearchCursor} from '@codemirror/search';
 import {html as htmlLang} from "@codemirror/lang-html";
 import {cm6proDark} from './cm6pro-dark-theme';
 import {prettify} from 'htmlfy';
 import {indentationMarkers} from '@replit/codemirror-indentation-markers';
+
+const MARKER = String.fromCharCode(0);
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -107,7 +110,7 @@ export default class CodeProEditor {
      * Destroys the editor
      */
     destroy() {
-        this._editorView.destroy(this._parentElement);
+        this._editorView.destroy();
     }
 
     /**
@@ -116,7 +119,7 @@ export default class CodeProEditor {
     scrollToCaretPosition() {
        // Search the position of the NULL caret
        const state = this._editorView.state;
-       const searchCursor = new SearchCursor(state.doc, String.fromCharCode(0));
+       const searchCursor = new SearchCursor(state.doc, MARKER);
        searchCursor.next();
        const value = searchCursor.value;
        if (value) {
@@ -151,7 +154,42 @@ export default class CodeProEditor {
      * @returns {string}
      */
     getValue() {
-        return this._editorView.state.doc.toString();
+        // Insert the NULL marker at the begining of the closest TAG
+        const state = this._editorView.state;
+        const anchor = state.selection.main.from;
+        const tree = syntaxTree(state);
+        let currentNode = tree.resolve(anchor, 1);
+        // eslint-disable-next-line no-console
+        console.log(state.selection.main, currentNode);
+
+        let nodeFound = null;
+        while (!nodeFound && currentNode) {
+            if (currentNode.type.name === 'Element') {
+                nodeFound = currentNode;
+            } else if (currentNode.prevSibling) {
+                currentNode = currentNode.prevSibling;
+            } else {
+                currentNode = currentNode.parent;
+            }
+        }
+        let pos = null;
+        if (nodeFound) {
+            // eslint-disable-next-line no-console
+            console.log(nodeFound);
+            pos = nodeFound.from;
+            this._editorView.dispatch({
+                changes: {from: pos, to: pos, insert: MARKER}
+            });
+        }
+        const html = this._editorView.state.doc.toString();
+        if (pos !== null) {
+            // eslint-disable-next-line no-console
+            console.log("dispatching ", pos, pos + 1);
+            this._editorView.dispatch({
+                changes: {from: pos, to: pos + 1, insert: ''}
+            });
+        }
+        return html;
     }
 
     /**
@@ -225,7 +263,7 @@ export default class CodeProEditor {
                 // after the code has been formatted.
                 const cursor = this._editorView.state.selection.main.head;
                 this._editorView.dispatch({
-                    changes: {from: cursor, insert: String.fromCharCode(0)},
+                    changes: {from: cursor, insert: MARKER},
                 });
             }
             text = this.getValue();

@@ -20,13 +20,14 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-import {displayDialogue, requireCm6Pro} from "./ui";
 import {getPref, setPref} from "./preferences";
-import {isAutoFormatHTML, getDefaultUI} from "./options";
-import {blackboard} from "./commands";
+import {isAutoFormatHTML, getDefaultUI, isSyncCaret} from "./options";
+import {blackboard, requireCm6Pro} from "./commands";
+import {MARKER} from "./common";
+
 /**
  * @param {*} editor
  * @param {string[]} translations
@@ -43,15 +44,27 @@ export function createView(editor, translations) {
     editor.ui.registry.addIcon('tiny_codepro-arrowright', '<svg xmlns="http://www.w3.org/2000/svg" height="21" width="21" viewBox="0 0 512 512"><path d="M313.9 216H12c-6.6 0-12 5.4-12 12v56c0 6.6 5.4 12 12 12h301.9v46.1c0 21.4 25.9 32.1 41 17l86.1-86.1c9.4-9.4 9.4-24.6 0-33.9l-86.1-86.1c-15.1-15.1-41-4.4-41 17V216z"/></svg>');
     editor.ui.registry.addIcon('tiny_codepro-eye', '<svg xmlns="http://www.w3.org/2000/svg" height="21" width="21" viewBox="0 0 560 512"><path d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1 -144 144zm0-240a95.3 95.3 0 0 0 -25.3 3.8 47.9 47.9 0 0 1 -66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg>');
 
+    let codeEditorElement;
     let codeEditorInstance;
 
-    const saveAction = () => {
+    const autoSaveAction = () => {
         if (codeEditorInstance) {
-            const codeContent = codeEditorInstance.getValue();
-            editor.setContent(codeContent);
+            const codeContent = codeEditorInstance.getValue()
+                .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
+            console.log("Autosave");
+            // Do it in a transaction
+            editor.focus();
+            editor.undoManager.transact(() => {
+                editor.setContent(codeContent);
+            });
+            // Restore cursor position
+            const node = editor.dom.select('span.CmCaReT');
+            if (node) {
+              editor.selection.setCursorLocation(node);
+            }
+            editor.nodeChanged();
         }
     };
-
 
     const buttons = [
         {
@@ -105,7 +118,7 @@ export function createView(editor, translations) {
             },
             onSetup: (api) => {
                 // According to user preferences set the correct wrap setting
-                const isWrap = getPref("wrap", "false") === "true";
+                const isWrap = getPref("wrap", "true") === "true";
                 api.setActive(isWrap);
                 api.setIcon(isWrap ? 'tiny_codepro-arrowright' : 'tiny_codepro-exchange');
             }
@@ -125,7 +138,7 @@ export function createView(editor, translations) {
             icon: 'tiny_codepro-tinymce',
             buttonType: 'primary',
             onAction: () => {
-                saveAction();
+                autoSaveAction();
                 editor.execCommand('ToggleView', false, 'codepro');
             }
         },
@@ -142,10 +155,12 @@ export function createView(editor, translations) {
             tooltip: opendialogStr,
             onAction: () => {
                 blackboard.state = codeEditorInstance.getState();
+                // Hide the view panel
                 editor.execCommand('ToggleView', false, 'codepro');
-                // Now handleAction as dialog
-                displayDialogue(editor);
-                setPref("view", 'dialog', true);
+                // Set user preference
+                setPref('view', 'dialog', true);
+                // Call the action again
+                editor.execCommand('mceCodeProEditor', false);
             }
         });
     }
@@ -153,12 +168,12 @@ export function createView(editor, translations) {
     return {
         buttons,
         onShow: async(api) => {
-            if (!codeEditorInstance) {
+            if (!codeEditorElement) {
                 const container = api.getContainer();
                 container.classList.add('tiny_codepro-view__pane');
                 const shadowRoot = container.attachShadow({mode: "open"});
-                const cmElement = document.createElement("DIV");
-                cmElement.classList.add('tiny_codepro-container');
+                codeEditorElement = document.createElement("DIV");
+                codeEditorElement.classList.add('tiny_codepro-container');
 
                 const shadowStyles = document.createElement('style');
                 shadowStyles.textContent = `
@@ -172,40 +187,45 @@ export function createView(editor, translations) {
                     height: 100%;
                 }`;
                 shadowRoot.appendChild(shadowStyles);
-
-                shadowRoot.appendChild(cmElement);
-                const CodeProEditor = await requireCm6Pro();
-                const opts = {
-                    changesListener: saveAction
-                };
-                codeEditorInstance = new CodeProEditor(cmElement, opts);
+                shadowRoot.appendChild(codeEditorElement);
             }
+
+            const CodeProEditor = await requireCm6Pro();
+            const opts = {
+                changesListener: autoSaveAction
+            };
+            codeEditorInstance = new CodeProEditor(codeEditorElement, opts);
 
             if (blackboard.state) {
                 // Restore state from the another view
                 codeEditorInstance.setState(blackboard.state);
-                // Always set linewrapping regardless of the previous state
-                // codeEditorInstance.setLineWrapping(true);
                 blackboard.state = null;
             } else {
-                // Insert caret marker and retrieve html code to pass to CodeMirror
-                const markerNode = document.createElement("SPAN");
-                markerNode.innerHTML = '&nbsp;';
-                markerNode.classList.add('CmCaReT');
-                const currentNode = editor.selection.getStart();
-                currentNode.append(markerNode);
-                // eslint-disable-next-line camelcase
+                const syncCaret = isSyncCaret(editor);
+                let markerNode;
+                if (syncCaret) {
+                    // Insert caret marker and retrieve html code to pass to CodeMirror
+                    markerNode = document.createElement("SPAN");
+                    markerNode.innerHTML = '&nbsp;';
+                    markerNode.classList.add('CmCaReT');
+                    const currentNode = editor.selection.getStart();
+                    currentNode.append(markerNode);
+                }
                 let html = editor.getContent({source_view: true});
-                html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
-                markerNode.remove();
+                if (syncCaret) {
+                    html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, MARKER);
+                    markerNode.remove();
+                }
 
-                // TODO According to global preference prettify code when opening the editor
+                // According to global preference prettify code when opening the editor
                 if (isAutoFormatHTML(editor)) {
                     html = codeEditorInstance?.prettifyCode(html);
                 }
                 codeEditorInstance?.setValue(html);
             }
         },
-        onHide: () => {}
+        onHide: () => {
+            codeEditorInstance?.destroy();
+        }
     };
 }

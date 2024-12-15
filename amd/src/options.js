@@ -17,7 +17,7 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -25,8 +25,9 @@ import {getPluginOptionName} from 'editor_tiny/options';
 import {pluginName} from './common';
 
 const showPlugin = getPluginOptionName(pluginName, 'showplugin');
-const autoFormatHTML = getPluginOptionName(pluginName, 'autoFormatHTML');
-const defaultUI = getPluginOptionName(pluginName, 'defaultUI');
+const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
+const uiMode = getPluginOptionName(pluginName, 'uimode');
+const syncCaret = getPluginOptionName(pluginName, 'synccaret');
 
 
 export const register = (editor) => {
@@ -37,14 +38,19 @@ export const register = (editor) => {
         "default": true,
     });
 
-    registerOption(autoFormatHTML, {
+    registerOption(autoPrettify, {
         processor: 'boolean',
         "default": true,
     });
 
-    registerOption(defaultUI, {
+    registerOption(syncCaret, {
+        processor: 'boolean',
+        "default": true,
+    });
+
+    registerOption(uiMode, {
         processor: 'string',
-        "default": 'dialog',
+        "default": 'user:dialog',
     });
 };
 
@@ -63,7 +69,14 @@ export const isPluginVisible = (editor) => editor.options.get(showPlugin);
  * @param {TinyMCE} editor
  * @returns {boolean}
  */
-export const isAutoFormatHTML = (editor) => editor.options.get(autoFormatHTML);
+export const isAutoFormatHTML = (editor) => editor.options.get(autoPrettify);
+
+/**
+ * Should the cursor position be synchronized between TinyMCE and CodeMirror?
+ * @param {TinyMCE} editor
+ * @returns {boolean}
+ */
+export const isSyncCaret = (editor) => editor.options.get(syncCaret);
 
 /**
  * How to render the HTML editor?
@@ -74,4 +87,6 @@ export const isAutoFormatHTML = (editor) => editor.options.get(autoFormatHTML);
  * @param {TinyMCE} editor
  * @returns {string}
  */
-export const getDefaultUI = (editor) => editor.options.get(defaultUI);
+export const getDefaultUI = (editor) => editor.options.get(uiMode);
+
+

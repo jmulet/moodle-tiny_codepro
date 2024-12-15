@@ -23,6 +23,19 @@ use editor_tiny\plugin_with_configuration;
 use editor_tiny\plugin_with_menuitems;
 
 /**
+ * Gets the value of a configuration key with a default fallback.
+ *
+ * @param object $cfg       The configuration object.
+ * @param string $key       The key to check in the configuration object.
+ * @param mixed  $default   The default value to return if the key is not found.
+ *
+ * @return mixed The value of the key if it exists, or the default value.
+ */
+function cfgwithdefault(object $cfg, string $key, $default) {
+    return property_exists($cfg, $key) ? $cfg->$key : $default;
+}
+
+/**
  * Tiny CodePro plugin version details.
  *
  * @package     tiny_codepro
@@ -82,9 +95,9 @@ class plugininfo extends plugin implements
 
         if ($showplugin) {
             $cfg = get_config('tiny_codepro');
-            $params['autoprettify'] = $cfg->autoprettify;
-            $params['trackcaret'] = $cfg->trackcaret;
-            $params['uimode'] = $cfg->uimode;
+            $params['autoprettify'] = cfgwithdefault($cfg, 'autoprettify', 1) == 1;
+            $params['synccaret'] = cfgwithdefault($cfg, 'synccaret', 1) == 1;
+            $params['uimode'] = cfgwithdefault($cfg, 'uimode', 'user:dialog');
         }
 
         return $params;

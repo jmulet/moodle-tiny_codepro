@@ -8,7 +8,11 @@ export default [
             file: '../../amd/src/cm6pro-lazy.js',
             format: 'esm',
             name: 'cm6pro',
-            plugins: []
+            plugins: [],
+            banner: `
+/** @ts-ignore */
+/* eslint-disable */
+            `
         },
         plugins: [nodeResolve()]
     }

@@ -18,24 +18,41 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import {getButtonImage} from 'editor_tiny/utils';
 import {get_strings} from 'core/str';
-import {displayDialogue} from './ui';
+import {showDialog} from './viewdialog';
 import {component, icon} from './common';
 import {getDefaultUI, isPluginVisible} from './options';
-import {createView} from './view';
+import {createView} from './viewpanel';
 import {getPref} from './preferences';
 
 /**
  * Share the state among editor Views
  * @type {*}
  **/
-export const blackboard = {};
+export const blackboard = {
+};
 
+/**
+ * Loads cm6 on demand (The first load will be delayed a little bit)
+ * @returns {Promise<CodeProEditor>}
+ */
+export const requireCm6Pro = () => {
+    return new Promise((resolve) => {
+        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
+            resolve(CodeProEditor);
+        });
+    });
+};
+
+/**
+ * Setups the TinyMCE editor
+ * @returns {Promise<(editor: TinyMCE)=>void>}
+ */
 export const getSetup = async() => {
     const [
         strs,
@@ -54,21 +71,6 @@ export const getSetup = async() => {
 
     const [pluginName, translations] = strs;
 
-    const handleClickAction = (editor) => {
-        let defaultUI = getDefaultUI(editor) ?? 'dialog';
-        let canUserSwitchUI = defaultUI.startsWith('user:');
-        if (canUserSwitchUI) {
-            defaultUI = getPref('view', defaultUI.substring(5));
-        }
-        if (defaultUI === 'dialog') {
-            // Show editor in a modal dialogue
-            displayDialogue(editor);
-        } else {
-            // Show editor as a view panel
-            editor.execCommand('ToggleView', false, 'codepro');
-        }
-    };
-
     return async(editor) => {
         if (!isPluginVisible(editor)) {
             return;
@@ -76,11 +78,27 @@ export const getSetup = async() => {
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
 
+         // Add command to show the code editor.
+         editor.addCommand("mceCodeProEditor", () => {
+            let defaultUI = getDefaultUI(editor) ?? 'dialog';
+            const canUserSwitchUI = defaultUI.startsWith('user:');
+            if (canUserSwitchUI) {
+                defaultUI = getPref('view', defaultUI.substring(5));
+            }
+            if (defaultUI === 'dialog') {
+                // Show editor in a modal dialog
+                showDialog(editor);
+            } else {
+                // Show editor as a view panel
+                editor.execCommand('ToggleView', false, 'codepro');
+            }
+        });
+
         // Register the Toolbar Button.
         editor.ui.registry.addButton(component, {
             icon,
             tooltip: pluginName,
-            onAction: () => handleClickAction(editor)
+            onAction: () => editor.execCommand("mceCodeProEditor", false)
         });
 
         // Add the Menu Item.
@@ -88,7 +106,7 @@ export const getSetup = async() => {
         editor.ui.registry.addMenuItem(component, {
             icon,
             text: pluginName,
-            onAction: () => handleClickAction(editor)
+            onAction: () => editor.execCommand("mceCodeProEditor", false)
         });
 
         // Creates a View for holding the code editor as panel

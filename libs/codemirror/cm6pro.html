@@ -62,7 +62,7 @@ html, body {
                 });
 
                 document.querySelector("#getValue").addEventListener("click", ()=>{
-                    console.log(codeProEditor.getValue());
+                    console.log(codeProEditor.getValue().replace(String.fromCharCode(0), 'X'));
                 });
 
                 document.querySelector("#pretty").addEventListener("click", ()=>{

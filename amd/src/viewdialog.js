@@ -16,19 +16,18 @@
 import {createModal} from "./modal";
 import ModalEvents from 'core/modal_events';
 import {getPref, setPref} from "./preferences";
-import {getDefaultUI} from "./options";
-import {blackboard} from "./commands";
+import {getDefaultUI, isAutoFormatHTML, isSyncCaret} from "./options";
+import {blackboard, requireCm6Pro} from "./commands";
+import {MARKER} from "./common";
 
 /**
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 const dialogQuery = '[role="document"], [data-region="modal"]';
-let modal = null;
-let codeEditorInstance = null;
 
 /**
  * Utility to toggle a class in an HTML element
@@ -44,57 +43,43 @@ const toggleClasses = function(el, classList) {
 
 let isLoading = false;
 /**
- * Handle action
+ * Shows the dialog
  * @param {TinyMCE} editor
- * @param {string} [initialHTML]
  */
-export const displayDialogue = async(editor, initialHTML) => {
+export const showDialog = async(editor) => {
     if (isLoading) {
         return;
     }
-    if (modal === null) {
-        isLoading = true;
-        modal = await createDialogue(editor);
-        isLoading = false;
-    }
-
-    // Issue, editor var does not get updated
-    // Bind save action to the correct editor
-    const $btn = modal.footer.find("button.btn[data-action]");
-    $btn.off("click.codepro").on("click.codepro", (evt) => {
-        if (evt.target.classList.contains("btn-primary")) {
-            // eslint-disable-next-line camelcase
-            const updatedCode = codeEditorInstance?.getValue({source_view: true});
-            editor.setContent(updatedCode ?? '');
-        }
-        modal.hide();
-        // Delete content
-        codeEditorInstance?.setValue();
-    });
+    isLoading = true;
+    const {modal, codeEditorInstance} = await createDialog(editor);
+    isLoading = false;
 
     if (blackboard.state) {
         codeEditorInstance?.setState(blackboard.state);
         blackboard.state = null;
     } else {
-        // Insert caret marker and retrieve html code to pass to CodeMirror
         let html;
-        if (initialHTML) {
-            html = initialHTML;
-        } else {
-            const markerNode = document.createElement("SPAN");
+        const syncCaret = isSyncCaret(editor);
+        let markerNode;
+        if (syncCaret) {
+            markerNode = document.createElement("SPAN");
             markerNode.innerHTML = '&nbsp;';
             markerNode.classList.add('CmCaReT');
             const currentNode = editor.selection.getStart();
             currentNode.append(markerNode);
-            // eslint-disable-next-line camelcase
-            html = editor.getContent({source_view: true});
-            html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, String.fromCharCode(0));
-            markerNode.remove();
-
-            if (getPref("prettify")) {
-                html = codeEditorInstance?.prettifyCode(html);
-            }
         }
+        // eslint-disable-next-line camelcase
+        html = editor.getContent({source_view: true});
+        if (syncCaret) {
+            html = html.replace(/<span\s+class="CmCaReT"([^>]*)>([^<]*)<\/span>/gm, MARKER);
+            markerNode.remove();
+        }
+
+        // According to global preference prettify code when opening the editor
+        if (isAutoFormatHTML(editor)) {
+            html = codeEditorInstance?.prettifyCode(html);
+        }
+
         codeEditorInstance?.setValue(html);
     }
 
@@ -103,24 +88,11 @@ export const displayDialogue = async(editor, initialHTML) => {
 };
 
 /**
- * Loads cm6 on demand (The first load will be delayed a little bit)
- * @returns {Promise<CodeProEditor>}
- */
-export const requireCm6Pro = () => {
-    return new Promise((resolve) => {
-        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
-            resolve(CodeProEditor);
-        });
-    });
-};
-
-/**
  * Returns the modal instance
  * @param {TinyMCE} editor
- * @returns {Promise<Modal>}
+ * @returns {Promise<{modal: Modal, codeEditorInstance: *}>}
  */
-const createDialogue = async(editor) => {
-
+const createDialog = async(editor) => {
     const defaultUI = getDefaultUI(editor) ?? 'dialog';
     const canUserSwitchUI = defaultUI.startsWith('user:');
 
@@ -146,9 +118,34 @@ const createDialogue = async(editor) => {
     modal.header.css('height', '61.46px');
     modal.header.css('padding', '1rem 1rem');
 
+    // TODO, it may take some time the first run. Show a spinner!!!
     const CodeProEditor = await requireCm6Pro();
+    // Remove spinner
+
     const targetElem = modal.body.find('.tiny_codepro-editor-area')[0];
-    codeEditorInstance = new CodeProEditor(targetElem);
+    const codeEditorInstance = new CodeProEditor(targetElem);
+
+    // Issue, editor var does not get updated
+    // Bind save action to the correct editor
+    modal.footer.find("button.btn[data-action]").on("click", (evt) => {
+        if (evt.target.classList.contains("btn-primary")) {
+            // eslint-disable-next-line camelcase
+            const updatedCode = codeEditorInstance?.getValue({source_view: true})
+                    .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
+            // Do it in a transaction
+            editor.focus();
+            editor.undoManager.transact(() => {
+                editor.setContent(updatedCode ?? '');
+            });
+            // Restore cursor position
+            const node = editor.dom.select('span.CmCaReT');
+            if (node) {
+              editor.selection.setCursorLocation(node);
+            }
+            editor.nodeChanged();
+        }
+        modal.hide();
+    });
 
     modal.footer.find("button.btn.btn-light").on("click", (evt) => {
         evt.preventDefault();
@@ -195,21 +192,25 @@ const createDialogue = async(editor) => {
         } else if (ds.prettify !== undefined) {
             codeEditorInstance?.prettify();
         } else if (ds.view !== undefined) {
-            // Toggle UI to View panel
             blackboard.state = codeEditorInstance.getState();
+            // Destroy modal
             modal.hide();
-            editor.execCommand('ToggleView', false, 'codepro');
-            setPref("view", 'panel', true);
+            // Set user preference
+            setPref('view', 'panel', true);
+            // Call the action again
+            editor.execCommand('mceCodeProEditor', false);
         }
     });
 
     modal.getRoot().on(ModalEvents.hidden, () => {
-        codeEditorInstance?.setValue();
+        // Get rid of the codeEditor and the modal itself
+        codeEditorInstance?.destroy();
+        modal?.destroy();
     });
 
     // Setting stored preferences
     const currentTheme = getPref("theme", "light");
-    const currentWrap = getPref("wrap", "false");
+    const currentWrap = getPref("wrap", "true");
     const currentFs = getPref("fs", "false");
 
     if (currentTheme !== "light") {
@@ -221,5 +222,5 @@ const createDialogue = async(editor) => {
     if (currentFs === "true") {
         modal.footer.find("button.btn.btn-light[data-fs]").click();
     }
-    return modal;
+    return {modal, codeEditorInstance};
 };

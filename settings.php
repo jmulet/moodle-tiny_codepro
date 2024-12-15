@@ -26,8 +26,7 @@
 
  if ($hassiteconfig) {
      $pluginname = 'tiny_codepro';
-     $ADMIN->add('editortiny', new admin_category('tiny_codepro_settings', get_string('pluginname', $pluginname)));
-     $settingspage = new admin_settingpage('managetinycodepro', get_string('manage', $pluginname));
+     $settingspage = new admin_settingpage('tiny_codepro_pluginsettings', get_string('manage', $pluginname));
  
      if ($ADMIN->fulltree) {
         $settingspage->add(new admin_setting_configcheckbox(
@@ -37,21 +36,14 @@
             1
         ));
 
-        $choices1 = [
-            'none' => 'Never synchronize caret position',
-            'unidirectional' => 'Synchronize Tiny\' caret position to HTML editor',
-            'bidirectional' => 'Bidirectional synchronization of caret position',
-        ];
-
-        $settingspage->add(new admin_setting_configselect(
-            'tiny_codepro/trackcaret',
-            get_string('trackcaret', $pluginname),
-            get_string('trackcaret', $pluginname),
-            'unidirectional',
-            $choices1
+        $settingspage->add(new admin_setting_configcheckbox(
+            'tiny_codepro/synccaret',
+            get_string('synccaret', $pluginname),
+            get_string('synccaret', $pluginname),
+            1
         ));
 
-        $choices2 = [
+        $choices1 = [
             'dialog' => 'Open as dialog',
             'panel' => 'Open as view panel',
             'user:dialog' => 'User configurable; defaults to dialog',
@@ -63,7 +55,7 @@
             get_string('uimode', $pluginname),
             get_string('uimode', $pluginname),
             'user:dialog',
-            $choices2
+            $choices1
         ));
      }
  
