@@ -16,6 +16,13 @@
 
 namespace tiny_codepro;
 
+/**
+ * Tiny CodePro plugin version details.
+ *
+ * @package     tiny_codepro
+ * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 use context;
 use editor_tiny\plugin;
 use editor_tiny\plugin_with_buttons;
@@ -36,11 +43,7 @@ function cfgwithdefault(object $cfg, string $key, $default) {
 }
 
 /**
- * Tiny CodePro plugin version details.
- *
- * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * Summary of plugininfo
  */
 class plugininfo extends plugin implements
     plugin_with_buttons,

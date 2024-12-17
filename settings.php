@@ -22,13 +22,13 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
- defined('MOODLE_INTERNAL') || die();
+defined('MOODLE_INTERNAL') || die();
 
- if ($hassiteconfig) {
-     $pluginname = 'tiny_codepro';
-     $settingspage = new admin_settingpage('tiny_codepro_pluginsettings', get_string('manage', $pluginname));
- 
-     if ($ADMIN->fulltree) {
+if ($hassiteconfig) {
+    $pluginname = 'tiny_codepro';
+    $settingspage = new admin_settingpage('tiny_codepro_pluginsettings', get_string('manage', $pluginname));
+
+    if ($ADMIN->fulltree) {
         $settingspage->add(new admin_setting_configcheckbox(
             'tiny_codepro/autoprettify',
             get_string('autoprettify', $pluginname),
@@ -57,7 +57,7 @@
             'user:dialog',
             $choices1
         ));
-     }
- 
-     $ADMIN->add('editortiny', $settingspage);
- }
+    }
+
+    $ADMIN->add('editortiny', $settingspage);
+}
