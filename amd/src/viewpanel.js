@@ -47,23 +47,20 @@ export function createView(editor, translations) {
     let codeEditorElement;
     let codeEditorInstance;
 
-    const autoSaveAction = () => {
-        if (codeEditorInstance) {
-            const codeContent = codeEditorInstance.getValue()
-                .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
-            console.log("Autosave");
-            // Do it in a transaction
-            editor.focus();
-            editor.undoManager.transact(() => {
-                editor.setContent(codeContent);
-            });
-            // Restore cursor position
-            const node = editor.dom.select('span.CmCaReT');
-            if (node) {
-              editor.selection.setCursorLocation(node);
-            }
-            editor.nodeChanged();
+    /**
+     * @param {string} codeContent - HTML code
+     * @returns
+     */
+    const autoSaveAction = (codeContent) => {
+        if (!codeEditorInstance) {
+            return;
         }
+        console.log("Autosave");
+        // Do it in a transaction
+        editor.focus();
+        editor.undoManager.transact(() => {
+            editor.setContent(codeContent);
+        });
     };
 
     const buttons = [
@@ -138,8 +135,31 @@ export function createView(editor, translations) {
             icon: 'tiny_codepro-tinymce',
             buttonType: 'primary',
             onAction: () => {
-                autoSaveAction();
+                console.log("onAction");
+                const shouldSyncCaret = isSyncCaret(editor);
+                const htmlWithMarker = codeEditorInstance.getValue(shouldSyncCaret)
+                    .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
+                autoSaveAction(htmlWithMarker);
+
                 editor.execCommand('ToggleView', false, 'codepro');
+                // After showing the Tiny editor, the scroll position is lost
+                // Restore scroll position
+                console.log("Restore cursor");
+                const currentNode = editor.dom.select('span.CmCaReT')[0];
+                if (!currentNode) {
+                    // Simply set the previous scroll position if selected node is not found
+                    const previousScroll = blackboard.scrolls[editor.id];
+                    editor.contentWindow.scrollTo(0, previousScroll);
+                } else {
+                    // Scroll the iframe's contentWindow until the currentNode is visible
+                    editor.selection.setCursorLocation(currentNode, 0);
+                    editor.selection.collapse();
+                    const iframeHeight = editor.container.querySelector('iframe').clientHeight;
+                    const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
+                    editor.contentWindow.scrollTo(0, scrollPos);
+                    currentNode.remove();
+                }
+                editor.nodeChanged();
             }
         },
     ];
@@ -192,7 +212,10 @@ export function createView(editor, translations) {
 
             const CodeProEditor = await requireCm6Pro();
             const opts = {
-                changesListener: autoSaveAction
+                changesListener: () => {
+                    const html = codeEditorInstance.getValue();
+                    autoSaveAction(html);
+                }
             };
             codeEditorInstance = new CodeProEditor(codeEditorElement, opts);
 

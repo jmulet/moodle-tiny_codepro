@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -129,18 +130,31 @@ const createDialog = async(editor) => {
     // Bind save action to the correct editor
     modal.footer.find("button.btn[data-action]").on("click", (evt) => {
         if (evt.target.classList.contains("btn-primary")) {
-            // eslint-disable-next-line camelcase
-            const updatedCode = codeEditorInstance?.getValue({source_view: true})
-                    .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
+            const shouldSyncCaret = isSyncCaret(editor);
+            const htmlWithMarker = codeEditorInstance.getValue(shouldSyncCaret)
+                .replace(MARKER, '<span class="CmCaReT">&nbsp;</span>');
             // Do it in a transaction
             editor.focus();
             editor.undoManager.transact(() => {
-                editor.setContent(updatedCode ?? '');
+                editor.setContent(htmlWithMarker ?? '');
             });
-            // Restore cursor position
-            const node = editor.dom.select('span.CmCaReT');
-            if (node) {
-              editor.selection.setCursorLocation(node);
+
+            // After showing the Tiny editor, the scroll position is lost
+            // Restore scroll position
+            console.log("Restore cursor");
+            const currentNode = editor.dom.select('span.CmCaReT')[0];
+            if (!currentNode) {
+                // Simply set the previous scroll position if selected node is not found
+                const previousScroll = blackboard.scrolls[editor.id];
+                editor.contentWindow.scrollTo(0, previousScroll);
+            } else {
+                // Scroll the iframe's contentWindow until the currentNode is visible
+                editor.selection.setCursorLocation(currentNode, 0);
+                editor.selection.collapse();
+                const iframeHeight = editor.container.querySelector('iframe').clientHeight;
+                const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
+                editor.contentWindow.scrollTo(0, scrollPos);
+                currentNode.remove();
             }
             editor.nodeChanged();
         }

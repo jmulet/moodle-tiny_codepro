@@ -29129,36 +29129,41 @@ class CodeProEditor {
     }
 
     /**
-     * Gets the html source code
+     * Gets the html source code,
+     * optionaly including a NULL marker at the closest Element to the 
+     * cursor position
+     * @param {boolean} [includeMarker]
      * @returns {string}
      */
-    getValue() {
-        // Insert the NULL marker at the begining of the closest TAG
-        const state = this._editorView.state;
-        const anchor = state.selection.main.from;
-        const tree = syntaxTree(state);
-        let currentNode = tree.resolve(anchor, 1);
-        // eslint-disable-next-line no-console
-        console.log(state.selection.main, currentNode);
-
-        let nodeFound = null;
-        while (!nodeFound && currentNode) {
-            if (currentNode.type.name === 'Element') {
-                nodeFound = currentNode;
-            } else if (currentNode.prevSibling) {
-                currentNode = currentNode.prevSibling;
-            } else {
-                currentNode = currentNode.parent;
-            }
-        }
+    getValue(includeMarker) {
         let pos = null;
-        if (nodeFound) {
+        if (includeMarker) {
+            // Insert the NULL marker at the begining of the closest TAG
+            const state = this._editorView.state;
+            const anchor = state.selection.main.from;
+            const tree = syntaxTree(state);
+            let currentNode = tree.resolve(anchor, -1);
             // eslint-disable-next-line no-console
-            console.log(nodeFound);
-            pos = nodeFound.from;
-            this._editorView.dispatch({
-                changes: {from: pos, to: pos, insert: MARKER}
-            });
+            console.log(state.selection.main, currentNode);
+
+            let nodeFound = null;
+            while (!nodeFound && currentNode) {
+                if (currentNode.type.name === 'Element') {
+                    nodeFound = currentNode;
+                } else if (currentNode.prevSibling) {
+                    currentNode = currentNode.prevSibling;
+                } else {
+                    currentNode = currentNode.parent;
+                }
+            }
+            if (nodeFound) {
+                // eslint-disable-next-line no-console
+                console.log(nodeFound);
+                pos = nodeFound.from;
+                this._editorView.dispatch({
+                    changes: {from: pos, to: pos, insert: MARKER}
+                });
+            }
         }
         const html = this._editorView.state.doc.toString();
         if (pos !== null) {

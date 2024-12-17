@@ -35,6 +35,7 @@ import {getPref} from './preferences';
  * @type {*}
  **/
 export const blackboard = {
+    scrolls: {}
 };
 
 /**
@@ -85,6 +86,9 @@ export const getSetup = async() => {
             if (canUserSwitchUI) {
                 defaultUI = getPref('view', defaultUI.substring(5));
             }
+            // Always store the previous scroll of the editor in case it is lost
+            blackboard.scrolls[editor.id] = editor.contentWindow.scrollY;
+
             if (defaultUI === 'dialog') {
                 // Show editor in a modal dialog
                 showDialog(editor);
