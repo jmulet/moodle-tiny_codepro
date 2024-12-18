@@ -24,31 +24,11 @@
 
 import {getButtonImage} from 'editor_tiny/utils';
 import {get_strings} from 'core/str';
-import {showDialog} from './viewdialog';
+import {ViewDialogManager} from './viewdialog';
 import {component, icon} from './common';
 import {getDefaultUI, isPluginVisible} from './options';
-import {createView} from './viewpanel';
+import {ViewPanelManager} from './viewpanel';
 import {getPref} from './preferences';
-
-/**
- * Share the state among editor Views
- * @type {*}
- **/
-export const blackboard = {
-    scrolls: {}
-};
-
-/**
- * Loads cm6 on demand (The first load will be delayed a little bit)
- * @returns {Promise<CodeProEditor>}
- */
-export const requireCm6Pro = () => {
-    return new Promise((resolve) => {
-        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
-            resolve(CodeProEditor);
-        });
-    });
-};
 
 /**
  * Setups the TinyMCE editor
@@ -66,11 +46,13 @@ export const getSetup = async() => {
             {key: 'themes', component},
             {key: 'linewrap', component},
             {key: 'prettify', component},
+            {key: 'decreasefontsize', component},
+            {key: 'increasefontsize', component}
         ]),
         getButtonImage('icon', component),
     ]);
 
-    const [pluginName, translations] = strs;
+    const [pluginName, ...translations] = strs;
 
     return async(editor) => {
         if (!isPluginVisible(editor)) {
@@ -79,23 +61,20 @@ export const getSetup = async() => {
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
 
-         // Add command to show the code editor.
-         editor.addCommand("mceCodeProEditor", () => {
-            let defaultUI = getDefaultUI(editor) ?? 'dialog';
-            const canUserSwitchUI = defaultUI.startsWith('user:');
-            if (canUserSwitchUI) {
-                defaultUI = getPref('view', defaultUI.substring(5));
-            }
-            // Always store the previous scroll of the editor in case it is lost
-            blackboard.scrolls[editor.id] = editor.contentWindow.scrollY;
+        const viewManagers = {
+            dialog: new ViewDialogManager(editor),
+            panel: new ViewPanelManager(editor, {autosave: true, translations})
+        };
 
-            if (defaultUI === 'dialog') {
-                // Show editor in a modal dialog
-                showDialog(editor);
-            } else {
-                // Show editor as a view panel
-                editor.execCommand('ToggleView', false, 'codepro');
+        // Add command to show the code editor.
+        editor.addCommand("mceCodeProEditor", () => {
+            let uiMode = getDefaultUI(editor) ?? 'dialog';
+            const canUserSwitchUI = uiMode.startsWith('user:');
+            if (canUserSwitchUI) {
+                uiMode = getPref('view', uiMode.substring(5));
             }
+            const currentViewManager = viewManagers[uiMode] ?? viewManagers.dialog;
+            currentViewManager.show();
         });
 
         // Register the Toolbar Button.
@@ -113,11 +92,11 @@ export const getSetup = async() => {
             onAction: () => editor.execCommand("mceCodeProEditor", false)
         });
 
-        // Creates a View for holding the code editor as panel
+        // Creates a View for holding the code editor as a panel
         // Only if it is going to be required
         const defaultUI = getDefaultUI(editor) ?? '';
         if (defaultUI === 'panel' || defaultUI.startsWith('user:')) {
-            editor.ui.registry.addView('codepro', createView(editor, translations));
+            viewManagers.panel.create();
         }
     };
 };

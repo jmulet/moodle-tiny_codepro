@@ -89,4 +89,9 @@ export const isSyncCaret = (editor) => editor.options.get(syncCaret);
  */
 export const getDefaultUI = (editor) => editor.options.get(uiMode);
 
-
+/**
+ * Determines whether the editor is in fullscreen or not
+ * @param {TinyMCE} editor
+ * @returns {boolean}
+ */
+export const isFullscreen = (editor) => editor.container.classList.contains('tox-fullscreen');

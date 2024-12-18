@@ -20,7 +20,7 @@ namespace tiny_codepro\privacy;
  * Tiny CodePro plugin privacy details.
  *
  * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {

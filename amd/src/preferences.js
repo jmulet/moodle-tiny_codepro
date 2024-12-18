@@ -25,6 +25,7 @@ const preferences = {
     theme: "light", /** Light vs dark themes */
     wrap: "true", /** Wrap long lines */
     fs: "false", /** Fullscreen mode */
+    fontsize: 11, /** Editor fontsize */
     view: undefined, /** Which UI is used to display the HTML editor */
 };
 

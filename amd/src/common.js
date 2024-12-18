@@ -25,12 +25,12 @@ import * as Config from 'core/config';
 
 const baseUrl = `${Config.wwwroot}/lib/editor/tiny/plugins/codepro`;
 const component = 'tiny_codepro';
-const MARKER = String.fromCharCode(0);
 
 export default {
     baseUrl,
     component,
     pluginName: `${component}/plugin`,
     icon: `${component}`,
-    MARKER
+    CM_MARKER: String.fromCharCode(0),
+    TINY_MARKER_CLASS: 'tcp_CmCaReT'
 };

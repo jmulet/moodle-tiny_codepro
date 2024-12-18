@@ -18,7 +18,7 @@
  * Tiny WidgetHub plugin version details.
  *
  * @package     tiny_codepro
- * @copyright   2024 Josep Mulet <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

@@ -28,11 +28,15 @@
     Context variables required for this template:
     elementid - The ID of the element to be edited.
     canUserSwitchUI - Whether the user is allowed to switch between dialog and panel UI modes or not.
+    icons - A dictionary of svg icons.
 
     Example context (json):
     {
         "elementid": "id_of_element",
-        "canUserSwitchUI": true
+        "canUserSwitchUI": true,
+        "icons": {
+            key: 'svg icon'
+        }
     }
 }}
 {{< core/modal }}
@@ -45,11 +49,13 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            {{#canUserSwitchUI}}<button class="btn btn-light" data-view="panel" title="{{#str}} openpanel, tiny_codepro {{/str}}"><i class="fa fa-eye"></i></button>{{/canUserSwitchUI}}
-            <button class="btn btn-light" data-fs="false" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><i class="fa fa-arrows-alt"></i></button>
-            <button class="btn btn-light" data-theme="light" title="{{#str}} themes, tiny_codepro {{/str}}"><i class="fa fa-sun-o"></i></button>
-            <button class="btn btn-light" data-wrap="true" title="{{#str}} linewrap, tiny_codepro {{/str}}"><i class="fa fa-exchange"></i></button>
-            <button class="btn btn-light" data-prettify title="{{#str}} prettify, tiny_codepro {{/str}}"><i class="fa fa-magic"></i></button>
+            {{#canUserSwitchUI}}<button class="btn btn-light" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}">{{{icons.eye}}}</button>{{/canUserSwitchUI}}
+            <button class="btn btn-light" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}">{{{icons.fullscreen}}}</button>
+            <button class="btn btn-light" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}">{{{icons.decreasefontsize}}}</button>
+            <button class="btn btn-light" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}">{{{icons.increasefontsize}}}</button>
+            <button class="btn btn-light" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}">{{{icons.sun}}}</button>
+            <button class="btn btn-light" data-action="wrap" title="{{#str}} linewrap, tiny_codepro {{/str}}">{{{icons.exchange}}}</button>
+            <button class="btn btn-light" data-action="prettify" title="{{#str}} prettify, tiny_codepro {{/str}}">{{{icons.magic}}}</button>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>

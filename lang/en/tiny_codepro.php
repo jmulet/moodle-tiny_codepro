@@ -24,8 +24,10 @@
 $string['autoprettify'] = 'Auto prettify when editor opens';
 $string['cancel'] = 'Cancel';
 $string['codepro:viewplugin'] = 'View plugin';
+$string['decreasefontsize'] = 'Decrease font size';
 $string['fullscreen'] = 'Fullscreen';
 $string['helplinktext'] = 'Source code Pro';
+$string['increasefontsize'] = 'Increase font size';
 $string['linewrap'] = 'Line wrap';
 $string['manage'] = 'Source codePro settings';
 $string['opendialog'] = 'Open as dialog';

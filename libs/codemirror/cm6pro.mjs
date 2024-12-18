@@ -31,6 +31,8 @@ import {prettify} from 'htmlfy';
 import {indentationMarkers} from '@replit/codemirror-indentation-markers';
 
 const MARKER = String.fromCharCode(0);
+const MIN_FONTSIZE = 8;
+const MAX_FONTSIZE = 22;
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -59,10 +61,10 @@ export default class CodeProEditor {
      */
     constructor(parentElement, options) {
         // Default configuration
-        const themeName = options?.theme ?? 'light';
         this._config = {
-            theme: [themes[themeName]],
-            lineWrapping: options?.lineWrapping === false ? [] : [EditorView.lineWrapping],
+            themeName: options?.theme ?? 'light',
+            fontSize: options?.fontSize ?? 11,
+            lineWrapping: options?.lineWrapping ?? false,
             changesListener: options?.changesListener
         };
 
@@ -85,8 +87,8 @@ export default class CodeProEditor {
             basicSetup,
             indentationMarkers(),
             htmlLang(),
-            this.linewrapConfig.of(this._config.lineWrapping),
-            this.themeConfig.of(this._config.theme)
+            this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
+            this.themeConfig.of(this._createTheme())
         ];
         if (this._config.changesListener) {
             extensions.push(
@@ -164,8 +166,6 @@ export default class CodeProEditor {
             const anchor = state.selection.main.from;
             const tree = syntaxTree(state);
             let currentNode = tree.resolve(anchor, -1);
-            // eslint-disable-next-line no-console
-            console.log(state.selection.main, currentNode);
 
             let nodeFound = null;
             while (!nodeFound && currentNode) {
@@ -178,8 +178,6 @@ export default class CodeProEditor {
                 }
             }
             if (nodeFound) {
-                // eslint-disable-next-line no-console
-                console.log(nodeFound);
                 pos = nodeFound.from;
                 this._editorView.dispatch({
                     changes: {from: pos, to: pos, insert: MARKER}
@@ -188,8 +186,6 @@ export default class CodeProEditor {
         }
         const html = this._editorView.state.doc.toString();
         if (pos !== null) {
-            // eslint-disable-next-line no-console
-            console.log("dispatching ", pos, pos + 1);
             this._editorView.dispatch({
                 changes: {from: pos, to: pos + 1, insert: ''}
             });
@@ -229,19 +225,81 @@ export default class CodeProEditor {
     }
 
     /**
-     * Sets light or dark themes dynamically
-     * @param {string} theme
+     * Creates light or dark themes dynamically for an specific fontSize
+     * @param {string} [themeName]
+     * @returns {*[] | null} - The theme effects
+     */
+    _createTheme(themeName) {
+        themeName = themeName ?? this._config.themeName ?? 'light';
+        const baseTheme = themes[themeName];
+        if (!baseTheme) {
+            return null;
+        }
+        this._config.themeName = themeName;
+
+        const fontTheme = EditorView.theme({
+            ".cm-content": {
+                fontSize: this._config.fontSize + "pt",
+            },
+            ".cm-gutters": {
+                fontSize: this._config.fontSize + "pt",
+            },
+        });
+        return [baseTheme, fontTheme];
+    }
+
+    /**
+     * Sets light or dark themes dynamically for an specific fontSize
+     * @param {string} [themeName]
      */
     setTheme(themeName) {
-        if (themes[themeName]) {
-            this._config.theme = [themes[themeName]];
-            this._editorView.dispatch({
-                effects: this.themeConfig.reconfigure(this._config.theme)
-            });
-        } else {
+        const theme = this._createTheme(themeName);
+        if (!theme) {
             // eslint-disable-next-line no-console
             console.error("Unknown theme", themeName);
         }
+        this._editorView.dispatch({
+            effects: this.themeConfig.reconfigure(theme)
+        });
+    }
+
+    /**
+     * Sets an specific font size
+     * @param {number} size
+     */
+    setFontsize(size) {
+        this._config.fontSize = size;
+        this.setTheme();
+    }
+
+    /**
+     * Gets the current font size
+     * @returns {number}
+     */
+    getFontsize() {
+        return this._config.fontSize;
+    }
+
+    /**
+     * Increases the font size up to a MAX_FONTSIZE
+     */
+    increaseFontsize() {
+        if (this._config.fontSize > MAX_FONTSIZE) {
+            return;
+        }
+        this._config.fontSize += 1;
+        this.setTheme();
+    }
+
+    /**
+     * Decreases the font size down to a MIN_FONTSIZE
+     */
+    decreaseFontsize() {
+        if (this._config.fontSize < MIN_FONTSIZE) {
+            return;
+        }
+        this._config.fontSize -= 1;
+        this.setTheme();
     }
 
     /**
@@ -249,9 +307,9 @@ export default class CodeProEditor {
      * @param {boolean} bool
      */
     setLineWrapping(bool) {
-        this._config.lineWrapping = bool ? [EditorView.lineWrapping] : [];
+        this._config.lineWrapping = bool;
         this._editorView.dispatch({
-            effects: this.linewrapConfig.reconfigure(this._config.lineWrapping)
+            effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
         });
     }
 

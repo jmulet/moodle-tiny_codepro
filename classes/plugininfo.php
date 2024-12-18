@@ -14,15 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace tiny_codepro;
-
 /**
  * Tiny CodePro plugin version details.
  *
  * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace tiny_codepro;
+
 use context;
 use editor_tiny\plugin;
 use editor_tiny\plugin_with_buttons;
