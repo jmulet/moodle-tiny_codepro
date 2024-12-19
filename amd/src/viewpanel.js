@@ -26,10 +26,11 @@ import {getDefaultUI, isFullscreen} from "./options";
 import {ViewManager} from "./viewmanager";
 
 
-export class ViewDialogManager extends ViewManager {
+export class ViewPanelManager extends ViewManager {
     constructor(editor, opts) {
         super(editor, opts);
         this.translations = this.opts.translations ?? [];
+        this.isViewCreated = false;
     }
 
     _tShow() {
@@ -39,10 +40,16 @@ export class ViewDialogManager extends ViewManager {
         this.editor.execCommand('ToggleView', false, 'codepro');
     }
 
-    _tCreate() {
+    async _tCreate() {
+        // Only one instance per editor has to be registered.
+        if (this.isViewCreated) {
+            return;
+        }
+        this.isViewCreated = true;
         this.#registerIcons();
         const viewSpec = this.#createViewSpec();
-        this.editor.ui.addView("codepro", viewSpec);
+        this.editor.ui.registry.addView("codepro", viewSpec);
+        return;
     }
 
     #createViewSpec() {
@@ -71,7 +78,7 @@ export class ViewDialogManager extends ViewManager {
                     shadowRoot.appendChild(this.codeEditorElement);
                 }
                 // Add the codeEditor (CodeMirror) in the selected UI element
-                this.attachCodeEditor(this.codeEditorElement);
+                await this.attachCodeEditor(this.codeEditorElement);
                 // Obtain the code from Tiny and set it to code editor
                 this.setHTMLCodeOrState();
             },
@@ -82,7 +89,7 @@ export class ViewDialogManager extends ViewManager {
 
     #registerIcons() {
         Object.keys(ViewManager.icons).forEach(key => {
-            this.editor.ui.registry.addIcon(`tiny_codepro-${key}`, ViewDialogManager.icons[key]);
+            this.editor.ui.registry.addIcon(`tiny_codepro-${key}`, ViewManager.icons[key]);
         });
     }
 
@@ -93,24 +100,24 @@ export class ViewDialogManager extends ViewManager {
             {
                 type: 'button',
                 text: ' ',
-                icon: 'fullscreen',
+                icon: 'tiny_codepro-fullscreen',
                 tooltip: fullscreenStr,
                 onAction: () => {
-                    setPref('fs', !isFullscreen(this.editor) + '', true);
+                    setPref('fs', !isFullscreen(this.editor), true);
                     this.editor.execCommand('mceFullScreen');
                 }
             },
             {
                 type: 'button',
                 text: '',
-                icon: 'text-size-decrease',
+                icon: 'tiny_codepro-decreasefontsize',
                 tooltip: decreaseFontsizeStr,
                 onAction: this.decreaseFontsize.bind(this)
             },
             {
                 type: 'button',
                 text: '',
-                icon: 'text-size-increase',
+                icon: 'tiny_codepro-increasefontsize',
                 tooltip: increaseFontsizeStr,
                 onAction: this.increaseFontsize.bind(this)
             },
@@ -153,7 +160,7 @@ export class ViewDialogManager extends ViewManager {
                 text: ' ',
                 icon: 'tiny_codepro-eye',
                 tooltip: opendialogStr,
-                onAction: this.switchUI.bind(this)
+                onAction: this.switchViews.bind(this)
             });
         }
         return buttons;

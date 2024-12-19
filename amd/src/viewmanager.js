@@ -1,5 +1,4 @@
 /* eslint-disable max-len */
-/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -49,7 +48,7 @@ const requireCm6Pro = () => {
 
 
 /**
- * This is an abstract class that is extended
+ * This is an abstract template class that is extended
  * by the actual view managers dialog and panel.
  */
 export class ViewManager {
@@ -59,9 +58,9 @@ export class ViewManager {
         'magic': '<svg xmlns="http://www.w3.org/2000/svg" height="21" width="21" viewBox="0 0 512 512"><path d="M224 96l16-32 32-16-32-16-16-32-16 32-32 16 32 16 16 32zM80 160l26.7-53.3L160 80l-53.3-26.7L80 0 53.3 53.3 0 80l53.3 26.7L80 160zm352 128l-26.7 53.3L352 368l53.3 26.7L432 448l26.7-53.3L512 368l-53.3-26.7L432 288zm70.6-193.8L417.8 9.4C411.5 3.1 403.3 0 395.2 0c-8.2 0-16.4 3.1-22.6 9.4L9.4 372.5c-12.5 12.5-12.5 32.8 0 45.3l84.9 84.9c6.3 6.3 14.4 9.4 22.6 9.4 8.2 0 16.4-3.1 22.6-9.4l363.1-363.2c12.5-12.5 12.5-32.8 0-45.2zM359.5 203.5l-50.9-50.9 86.6-86.6 50.9 50.9-86.6 86.6z"/></svg>',
         'exchange': '<svg xmlns="http://www.w3.org/2000/svg" height="21" width="21" viewBox="0 0 512 512"><path d="M0 168v-16c0-13.3 10.7-24 24-24h360V80c0-21.4 25.9-32 41-17l80 80c9.4 9.4 9.4 24.6 0 33.9l-80 80C410 272 384 261.5 384 240v-48H24c-13.3 0-24-10.7-24-24zm488 152H128v-48c0-21.3-25.9-32.1-41-17l-80 80c-9.4 9.4-9.4 24.6 0 33.9l80 80C102.1 464 128 453.4 128 432v-48h360c13.3 0 24-10.7 24-24v-16c0-13.3-10.7-24-24-24z"/></svg>',
         'eye': '<svg xmlns="http://www.w3.org/2000/svg" height="21" width="21" viewBox="0 0 560 512"><path d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1 -144 144zm0-240a95.3 95.3 0 0 0 -25.3 3.8 47.9 47.9 0 0 1 -66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg>',
-        'fullscreen': '',
-        'decreasefontsize': '',
-        'increasefontsize': '',
+        'fullscreen': '<svg height="21" width="21" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs></defs><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><path d="M15.3203862,9.93650271 L14.0634973,8.67961382 L16.9653333,5.77777778 L14.6666667,5.77777778 C14.1757469,5.77777778 13.7777778,5.37980867 13.7777778,4.88888889 C13.7777778,4.39796911 14.1757469,4 14.6666667,4 L19.1111111,4 C19.6020309,4 20,4.39796911 20,4.88888889 L20,9.33333333 C20,9.82425311 19.6020309,10.2222222 19.1111111,10.2222222 C18.6201913,10.2222222 18.2222222,9.82425311 18.2222222,9.33333333 L18.2222222,7.03466667 L15.3203862,9.93650271 Z M15.3203862,14.0634973 L18.2222222,16.9653333 L18.2222222,14.6666667 C18.2222222,14.1757469 18.6201913,13.7777778 19.1111111,13.7777778 C19.6020309,13.7777778 20,14.1757469 20,14.6666667 L20,19.1111111 C20,19.6020309 19.6020309,20 19.1111111,20 L14.6666667,20 C14.1757469,20 13.7777778,19.6020309 13.7777778,19.1111111 C13.7777778,18.6201913 14.1757469,18.2222222 14.6666667,18.2222222 L16.9653333,18.2222222 L14.0634973,15.3203862 L15.3203862,14.0634973 Z M9.93650271,15.3203862 L7.03466667,18.2222222 L9.33333333,18.2222222 C9.82425311,18.2222222 10.2222222,18.6201913 10.2222222,19.1111111 C10.2222222,19.6020309 9.82425311,20 9.33333333,20 L4.88888889,20 C4.39796911,20 4,19.6020309 4,19.1111111 L4,14.6666667 C4,14.1757469 4.39796911,13.7777778 4.88888889,13.7777778 C5.37980867,13.7777778 5.77777778,14.1757469 5.77777778,14.6666667 L5.77777778,16.9653333 L8.67961382,14.0634973 L9.93650271,15.3203862 Z M8.67961382,9.93650271 L5.77777778,7.03466667 L5.77777778,9.33333333 C5.77777778,9.82425311 5.37980867,10.2222222 4.88888889,10.2222222 C4.39796911,10.2222222 4,9.82425311 4,9.33333333 L4,4.88888889 C4,4.39796911 4.39796911,4 4.88888889,4 L9.33333333,4 C9.82425311,4 10.2222222,4.39796911 10.2222222,4.88888889 C10.2222222,5.37980867 9.82425311,5.77777778 9.33333333,5.77777778 L7.03466667,5.77777778 L9.93650271,8.67961382 L8.67961382,9.93650271 Z" fill="#000000" fill-rule="nonzero"></path></g></svg>',
+        'decreasefontsize': '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M14 5C14.5523 5 15 5.44772 15 6C15 6.55228 14.5523 7 14 7H10V18C10 18.5523 9.55228 19 9 19C8.44772 19 8 18.5523 8 18V7H4C3.44772 7 3 6.55228 3 6C3 5.44772 3.44772 5 4 5H14Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M14 12C13.4477 12 13 12.4477 13 13C13 13.5523 13.4477 14 14 14C17.5468 14 16.4532 14 20 14C20.5523 14 21 13.5523 21 13C21 12.4477 20.5523 12 20 12C16.0094 12 17.8022 12 14 12Z" fill="black"/></svg>',
+        'increasefontsize': '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M14 5C14.5523 5 15 5.44772 15 6C15 6.55228 14.5523 7 14 7H10V18C10 18.5523 9.55228 19 9 19C8.44772 19 8 18.5523 8 18V7H4C3.44772 7 3 6.55228 3 6C3 5.44772 3.44772 5 4 5H14Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M17 9C16.4477 9 16 9.44772 16 10V12H14C13.4477 12 13 12.4477 13 13C13 13.5523 13.4477 14 14 14H16V16C16 16.5523 16.4477 17 17 17C17.5523 17 18 16.5523 18 16V14H20C20.5523 14 21 13.5523 21 13C21 12.4477 20.5523 12 20 12H18V10C18 9.44772 17.5523 9 17 9Z" fill="black"/></svg>',
     };
 
     constructor(editor, opts) {
@@ -77,22 +76,26 @@ export class ViewManager {
         this.isLoading = true;
         // Always store the previous scroll of the editor in case it is lost
         blackboard.scrolls[this.editor.id] = this.editor.contentWindow.scrollY;
-        if (!this.isViewCreated) {
-            await this._tCreate();
-            this.isViewCreated = true;
-        }
+        await this._tCreate();
         // Call the template method to show the UI
         this._tShow();
-        setTimeout(() => this.codeEditor?.focus(), 500);
         this.isLoading = false;
+        setTimeout(() => this.codeEditor?.focus(), 500);
     }
 
+    // Template method that has to be implemented by the actual view manager.
+    async _tCreate() {
+        throw new Error('Method not implemented');
+    }
+
+    // Template method that has to be implemented by the actual view manager.
     _tShow() {
         throw new Error('Method not implemented');
     }
 
-    async _tCreate() {
-        throw new Error('Method not implemented');
+    // Template method that has to be implemented by the actual view manager.
+    _tClose() {
+        throw new Error("Method not implemented");
     }
 
     setHTMLCodeOrState() {
@@ -145,10 +148,6 @@ export class ViewManager {
         this.close();
     }
 
-    _tClose() {
-        throw new Error("Method not implemented");
-    }
-
     close() {
         this.destroyCodeEditor();
         // Execute template method defined in actual implementations
@@ -182,7 +181,7 @@ export class ViewManager {
         const options = {
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
-            lineWrapping: getPref("wrap", "true") === "true",
+            lineWrapping: getPref("wrap", true),
         };
         if (this.opts.autosave) {
             options.changesListener = () => {
@@ -208,9 +207,9 @@ export class ViewManager {
         if (!this.codeEditor) {
             return;
         }
-        const isWrap = getPref('wrap', 'true') === 'true';
+        const isWrap = getPref('wrap', true);
         this.codeEditor.setLineWrapping(!isWrap);
-        setPref("wrap", !isWrap + '', true);
+        setPref("wrap", !isWrap, true);
     }
 
     toggleTheme() {
@@ -233,12 +232,13 @@ export class ViewManager {
         setPref('fontsize', this.codeEditor?.getFontsize() ?? 11, true);
     }
 
-    swithViews() {
+    switchViews() {
         if (!this.codeEditor) {
             return;
         }
         blackboard.state = this.codeEditor.getState();
-        // Close the current view
+        // Destroy code editor and close the current view.
+        this.destroyCodeEditor();
         this._tClose();
         // Toggle user preference
         const uiMode = getPref('view', 'dialog');

@@ -35,7 +35,7 @@
         "elementid": "id_of_element",
         "canUserSwitchUI": true,
         "icons": {
-            key: 'svg icon'
+            "key": "svg icon"
         }
     }
 }}
@@ -49,13 +49,13 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            {{#canUserSwitchUI}}<button class="btn btn-light" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}">{{{icons.eye}}}</button>{{/canUserSwitchUI}}
-            <button class="btn btn-light" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}">{{{icons.fullscreen}}}</button>
-            <button class="btn btn-light" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}">{{{icons.decreasefontsize}}}</button>
-            <button class="btn btn-light" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}">{{{icons.increasefontsize}}}</button>
-            <button class="btn btn-light" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}">{{{icons.sun}}}</button>
-            <button class="btn btn-light" data-action="wrap" title="{{#str}} linewrap, tiny_codepro {{/str}}">{{{icons.exchange}}}</button>
-            <button class="btn btn-light" data-action="prettify" title="{{#str}} prettify, tiny_codepro {{/str}}">{{{icons.magic}}}</button>
+            {{#canUserSwitchUI}}<button class="btn btn-sm btn-light" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}">{{{icons.eye}}}</button>{{/canUserSwitchUI}}
+            <button class="btn btn-sm btn-light" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}">{{{icons.fullscreen}}}</button>
+            <button class="btn btn-sm btn-light" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}">{{{icons.decreasefontsize}}}</button>
+            <button class="btn btn-sm btn-light" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}">{{{icons.increasefontsize}}}</button>
+            <button class="btn btn-sm btn-light" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}">{{{icons.sun}}}</button>
+            <button class="btn btn-sm btn-light" data-action="wrap" title="{{#str}} linewrap, tiny_codepro {{/str}}">{{{icons.exchange}}}</button>
+            <button class="btn btn-sm btn-light" data-action="prettify" title="{{#str}} prettify, tiny_codepro {{/str}}">{{{icons.magic}}}</button>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>

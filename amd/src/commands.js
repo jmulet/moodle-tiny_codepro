@@ -28,7 +28,7 @@ import {ViewDialogManager} from './viewdialog';
 import {component, icon} from './common';
 import {getDefaultUI, isPluginVisible} from './options';
 import {ViewPanelManager} from './viewpanel';
-import {getPref} from './preferences';
+import {getPref, setPref} from './preferences';
 
 /**
  * Setups the TinyMCE editor
@@ -73,6 +73,9 @@ export const getSetup = async() => {
             if (canUserSwitchUI) {
                 uiMode = getPref('view', uiMode.substring(5));
             }
+            // Make sure preference is in sync
+            setPref('view', uiMode);
+
             const currentViewManager = viewManagers[uiMode] ?? viewManagers.dialog;
             currentViewManager.show();
         });
@@ -96,7 +99,7 @@ export const getSetup = async() => {
         // Only if it is going to be required
         const defaultUI = getDefaultUI(editor) ?? '';
         if (defaultUI === 'panel' || defaultUI.startsWith('user:')) {
-            viewManagers.panel.create();
+            viewManagers.panel._tCreate();
         }
     };
 };

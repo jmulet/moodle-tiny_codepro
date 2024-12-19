@@ -43,9 +43,6 @@
 .tiny_codepro-left {
     margin-right: auto !important;
 }
-.tiny_codepro-left > button {
-    width: 40px;
-}
 @media screen and (min-width: 576px) {
     .tiny_codepro-dlg {
         max-width: 85% !important;

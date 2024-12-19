@@ -33,6 +33,11 @@ export class ViewDialogManager extends ViewManager {
         super(editor, opts);
     }
     async _tShow() {
+        // Add the codeEditor (CodeMirror) in the selected UI element
+        await this.attachCodeEditor(this.codeEditorElement);
+        // Obtain the code from Tiny and set it to code editor
+        this.setHTMLCodeOrState();
+        // Make the modal visible
         this.modal.show();
     }
 
@@ -42,13 +47,13 @@ export class ViewDialogManager extends ViewManager {
 
         const data = {
             elementid: Math.random().toString(32).substring(2),
-            canUserSwitchUI
+            canUserSwitchUI,
+            icons: ViewManager.icons
         };
 
         // Show modal with buttons.
         const modal = await createModal({
             templateContext: data,
-            icons: ViewManager.icons
         });
         this.modal = modal;
 
@@ -71,10 +76,10 @@ export class ViewDialogManager extends ViewManager {
 
     #bindActions() {
         this.modal.footer.find("button.btn[data-action]").on("click", (evt) => {
-            const actionName = evt.target.dataset.action;
+            const actionName = evt.currentTarget.dataset.action;
             switch (actionName) {
                 case ("view"):
-                    this.switchView();
+                    this.switchViews();
                     break;
                 case ("fs"):
                     this.#toggleFullscreen();
@@ -106,7 +111,7 @@ export class ViewDialogManager extends ViewManager {
 
     #toggleFullscreen() {
         const $dlgElem = this.modal.getRoot().find(dialogQuery);
-        const isFullscreen = getPref("fs", "false") === "true";
+        const isFullscreen = getPref("fs", false);
         if (!isFullscreen) {
             // Set fullscreen mode
             this.modal.header.hide();
