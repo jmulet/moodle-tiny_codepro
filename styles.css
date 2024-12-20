@@ -27,8 +27,8 @@
 .tiny_codepro-fullscreen .tiny_codepro-editor-area {
     max-height: unset !important;
 }
-.tiny_codepro-dark .modal-content {
-    background: #2e2e2e;
+.tiny_codepro-dark {
+    background: #2e2e2e!important;
 }
 .tiny_codepro-dark .modal-header h5,
 .tiny_codepro-dark .modal-header span {

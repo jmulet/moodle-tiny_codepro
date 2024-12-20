@@ -21,7 +21,7 @@
  * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-import {setPref} from "./preferences";
+import {getPref, setPref} from "./preferences";
 import {getDefaultUI, isFullscreen} from "./options";
 import {ViewManager} from "./viewmanager";
 
@@ -49,7 +49,57 @@ export class ViewPanelManager extends ViewManager {
         this.#registerIcons();
         const viewSpec = this.#createViewSpec();
         this.editor.ui.registry.addView("codepro", viewSpec);
-        return;
+    }
+
+    #createUI(api) {
+        this.codeEditorElement = document.createElement("DIV");
+        const container = api.getContainer();
+        container.classList.add('tiny_codepro-view__pane');
+        const shadowRoot = container.attachShadow({mode: "open"});
+        this.codeEditorElement.classList.add('tiny_codepro-container');
+        const shadowStyles = document.createElement('style');
+        shadowStyles.textContent = `
+        .tiny_codepro-container {
+            height: 100%;
+        }
+        .cm-editor.cm-focused {
+            outline: none!important;
+        }
+        .cm-editor {
+            height: 100%;
+        }`;
+        shadowRoot.appendChild(shadowStyles);
+        shadowRoot.appendChild(this.codeEditorElement);
+    }
+
+    #setButtonsState() {
+        // eslint-disable-next-line no-unused-vars
+        const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, ___, btnAccept] = this.headerButtonElements;
+
+        // Style issue
+        btnDescreaseFontsize.style.marginRight = '0';
+        btnIncreaseFontsize.style.marginLeft = '0';
+
+        // Set the toggle state
+        const isDark = getPref('theme', 'light') === 'dark';
+        const isWrap = getPref('wrap', true);
+        btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
+        btnWrap.querySelector('span').innerHTML = isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
+        if (isDark) {
+            this.parentContainer.classList.add('tiny_codepro-dark');
+        } else {
+            this.parentContainer.classList.remove('tiny_codepro-dark');
+        }
+
+        // Style issue
+        btnAccept.querySelector('svg').style.marginRight = '5px';
+
+        // Sync fullscreen state
+        const isFullscreen = getPref('fs', false);
+        const hasClassFS = this.editor.container.classList.contains('tox-fullscreen');
+        if ((hasClassFS && !isFullscreen) || (!hasClassFS && isFullscreen)) {
+            this.editor.execCommand('mceFullScreen');
+        }
     }
 
     #createViewSpec() {
@@ -58,28 +108,20 @@ export class ViewPanelManager extends ViewManager {
             buttons: buttonsSpec,
             onShow: async(api) => {
                 if (!this.codeEditorElement) {
-                    this.codeEditorElement = document.createElement("DIV");
-                    const container = api.getContainer();
-                    container.classList.add('tiny_codepro-view__pane');
-                    const shadowRoot = container.attachShadow({mode: "open"});
-                    this.codeEditorElement.classList.add('tiny_codepro-container');
-                    const shadowStyles = document.createElement('style');
-                    shadowStyles.textContent = `
-                    .tiny_codepro-container {
-                        height: 100%;
-                    }
-                    .cm-editor.cm-focused {
-                        outline: none!important;
-                    }
-                    .cm-editor {
-                        height: 100%;
-                    }`;
-                    shadowRoot.appendChild(shadowStyles);
-                    shadowRoot.appendChild(this.codeEditorElement);
+                    // Make sure the UI is created.
+                    this.#createUI(api);
                 }
-                // Add the codeEditor (CodeMirror) in the selected UI element
+
+                // Store references to the header buttons to have access from the button actions.
+                const container = api.getContainer();
+                this.parentContainer = container.parentElement;
+                this.headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
+
+                // Hack to turn regular buttons into toggle ones.
+                this.#setButtonsState();
+                // Add the codeEditor (CodeMirror) in the selected UI element.
                 await this.attachCodeEditor(this.codeEditorElement);
-                // Obtain the code from Tiny and set it to code editor
+                // Obtain the code from Tiny and set it to code editor.
                 this.setHTMLCodeOrState();
             },
             onHide: () => {}
@@ -126,14 +168,20 @@ export class ViewPanelManager extends ViewManager {
                 text: ' ',
                 icon: 'tiny_codepro-sun',
                 tooltip: themesStr,
-                onAction: this.toggleTheme.bind(this)
+                onAction: () => {
+                    const btnTheme = this.headerButtonElements[4];
+                    this.toggleTheme(btnTheme, this.parentContainer);
+                }
             },
             {
                 type: 'button',
                 text: ' ',
                 icon: 'tiny_codepro-exchange',
                 tooltip: linewrapStr,
-                onAction: this.toggleLineWrapping.bind(this)
+                onAction: () => {
+                    const btnWrap = this.headerButtonElements[5];
+                    this.toggleLineWrapping(btnWrap);
+                }
             },
             {
                 type: 'button',

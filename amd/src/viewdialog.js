@@ -71,12 +71,30 @@ export class ViewDialogManager extends ViewManager {
         modal.header.css('height', '61.46px');
         modal.header.css('padding', '1rem 1rem');
 
+        const modalContent = this.modal.getRoot().find('.modal-content');
+        const isDark = getPref('theme') === 'dark';
+        if (isDark) {
+            modalContent.addClass('tiny_codepro-dark');
+        } else {
+            modalContent.removeClass('tiny_codepro-dark');
+        }
+
         this.#bindActions();
+
+        if (getPref('fs')) {
+           // Set fullscreen mode
+           this.modal.header.hide();
+           const $dlgElem = this.modal.getRoot().find(dialogQuery);
+           $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
+           $dlgElem.addClass("tiny_codepro-fullscreen");
+        }
     }
 
     #bindActions() {
+        const modalContent = this.modal.getRoot().find('.modal-content')[0];
         this.modal.footer.find("button.btn[data-action]").on("click", (evt) => {
-            const actionName = evt.currentTarget.dataset.action;
+            const btnElem = evt.currentTarget;
+            const actionName = btnElem.dataset.action;
             switch (actionName) {
                 case ("view"):
                     this.switchViews();
@@ -91,10 +109,10 @@ export class ViewDialogManager extends ViewManager {
                     this.increaseFontsize();
                     break;
                 case ("theme"):
-                    this.toggleTheme();
+                    this.toggleTheme(btnElem, modalContent);
                     break;
                 case ("wrap"):
-                    this.toggleLineWrapping();
+                    this.toggleLineWrapping(btnElem);
                     break;
                 case ("prettify"):
                     this.prettify();

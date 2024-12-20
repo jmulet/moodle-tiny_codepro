@@ -24,8 +24,8 @@
 $string['autoprettify'] = 'Formata automàticament quan s\'obri';
 $string['cancel'] = 'Cancel·la';
 $string['codepro:viewplugin'] = 'Veure plugin';
-$string['fullscreen'] = 'Pantalla completa';
 $string['decreasefontsize'] = 'Reduir mida font';
+$string['fullscreen'] = 'Pantalla completa';
 $string['helplinktext'] = 'Source code Pro';
 $string['increasefontsize'] = 'Augmentar mida font';
 $string['linewrap'] = 'Trencar línies llargues';
