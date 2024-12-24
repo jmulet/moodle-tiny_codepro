@@ -1,22 +1,23 @@
 /* stylelint-disable declaration-no-important */
 .tiny_codepro-editor-area {
     width: 100%;
-    min-height: 300px;
-    max-height: 500px;
+    height: 100%;
 }
 .tiny_codepro-themeselector {
     max-width: 150px !important;
     margin-right: auto !important;
 }
 .tiny_codepro-editor-area .cm-editor {
-    height: 100vh;
-    min-height: 300px;
+    height: 100%;
 }
 .tiny_codepro-editor-area .cm-gutter, .tiny_codepro-editor-area .cm-content {
-    min-height: 300px;
+    height: 100%;
 }
 .tiny_codepro-editor-area .cm-editor.cm-focused {
-    outline: none;
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-radius: 4px;
 }
 .tiny_codepro-fullscreen .modal-content {
     height: 100%;

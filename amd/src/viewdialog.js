@@ -33,12 +33,12 @@ export class ViewDialogManager extends ViewManager {
         super(editor, opts);
     }
     async _tShow() {
+        // Make the modal visible
+        this.modal.show();
         // Add the codeEditor (CodeMirror) in the selected UI element
         await this.attachCodeEditor(this.codeEditorElement);
         // Obtain the code from Tiny and set it to code editor
         this.setHTMLCodeOrState();
-        // Make the modal visible
-        this.modal.show();
     }
 
     async _tCreate() {
@@ -66,7 +66,7 @@ export class ViewDialogManager extends ViewManager {
         modal.getRoot().on(ModalEvents.outsideClick, (evt) => {
             evt.preventDefault();
         });
-        modal.body.css("overflow-y", "overlay");
+        modal.body.css("overflow", "hidden");
         // Override styles imposed by body.tox-fullscreen on modals
         modal.header.css('height', '61.46px');
         modal.header.css('padding', '1rem 1rem');

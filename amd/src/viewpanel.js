@@ -63,7 +63,10 @@ export class ViewPanelManager extends ViewManager {
             height: 100%;
         }
         .cm-editor.cm-focused {
-            outline: none!important;
+            border-color: #86b7fe;
+            outline: 0!important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            border-radius: 4px;
         }
         .cm-editor {
             height: 100%;

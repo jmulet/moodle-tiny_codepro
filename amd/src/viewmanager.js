@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -66,12 +67,20 @@ export class ViewManager {
         'increasefontsize': '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M14 5C14.5523 5 15 5.44772 15 6C15 6.55228 14.5523 7 14 7H10V18C10 18.5523 9.55228 19 9 19C8.44772 19 8 18.5523 8 18V7H4C3.44772 7 3 6.55228 3 6C3 5.44772 3.44772 5 4 5H14Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M17 9C16.4477 9 16 9.44772 16 10V12H14C13.4477 12 13 12.4477 13 13C13 13.5523 13.4477 14 14 14H16V16C16 16.5523 16.4477 17 17 17C17.5523 17 18 16.5523 18 16V14H20C20.5523 14 21 13.5523 21 13C21 12.4477 20.5523 12 20 12H18V10C18 9.44772 17.5523 9 17 9Z" fill="black"/></svg>',
     };
 
+    /**
+     * @param {TinyMCE} editor - The TinyMCE editor
+     * @param {{autosave?: boolean, translations?: Record<string, string>}} [opts] - Options
+     */
     constructor(editor, opts) {
         this.editor = editor;
         this.opts = {autosave: false, translations: [], ...(opts ?? {})};
         this.isLoading = false;
     }
 
+    /**
+     * Call this method to make the view visible
+     * @returns {Promise<void>}
+     */
     async show() {
         if (this.isLoading) {
             return;
@@ -86,21 +95,35 @@ export class ViewManager {
         setTimeout(() => this.codeEditor?.focus(), 500);
     }
 
-    // Template method that has to be implemented by the actual view manager.
+    /**
+     * Template method that has to be implemented by the actual view manager.
+     * Logic associated with the creation of the view.
+     * @returns {Promise<void>}
+     */
     async _tCreate() {
         throw new Error('Method not implemented');
     }
 
-    // Template method that has to be implemented by the actual view manager.
+    /**
+     * Template method that has to be implemented by the actual view manager.
+     * Code required to make the actual view visible.
+     */
     _tShow() {
         throw new Error('Method not implemented');
     }
 
-    // Template method that has to be implemented by the actual view manager.
+    /**
+     * Template method that has to be implemented by the actual view manager.
+     * Logic associated with the destruction of the view.
+     */
     _tClose() {
         throw new Error("Method not implemented");
     }
 
+    /**
+     * Sets the HTML code/state from Tiny to CodeMirror editor taking care
+     * of cursor synchronization between both editors.
+     */
     setHTMLCodeOrState() {
         if (blackboard.state) {
             // Restore state from the another view
@@ -134,6 +157,11 @@ export class ViewManager {
         }
     }
 
+    /**
+     * Action called to update the code in the Tiny editor.
+     * Changes are performed in a transaction to take advantage of undo manager.
+     * @param {string} html - HTML code
+     */
     _saveAction(html) {
         // Do it in a transaction
         this.editor.focus();
@@ -142,6 +170,10 @@ export class ViewManager {
         });
     }
 
+    /**
+     * Action called when the user accepts the changes in the CodePro View.
+     * It basically calls _saveAction in addition to handling cursor synchronization.
+     */
     accept() {
         // Add marker if cursor synchronization is enabled.
         const shouldSyncCaret = isSyncCaret(this.editor);
@@ -151,6 +183,11 @@ export class ViewManager {
         this.close();
     }
 
+    /**
+     * This method destroys the CodeMirror instance and executes the logic to close
+     * the current view. It also restores the cursor and scroll positions in the TinyMCE
+     * editor.
+     */
     close() {
         this.destroyCodeEditor();
         // Execute template method defined in actual implementations
@@ -187,6 +224,8 @@ export class ViewManager {
             lineWrapping: getPref("wrap", true),
         };
         if (this.opts.autosave) {
+            /** Autosave based on focus changes */
+            /*
             options.changesListener = () => {
                 if (!this.codeEditor) {
                     return;
@@ -194,18 +233,47 @@ export class ViewManager {
                 const html = this.codeEditor.getValue();
                 this._saveAction(html);
             };
+            */
+            // Autosave before submitting the form.
+            this.submitListenerAction = () => {
+                console.log('Calling submit listener action');
+                if (!this.codeEditor) {
+                    return true;
+                }
+                const html = this.codeEditor.getValue();
+                this._saveAction(html);
+                return true;
+            };
+            this.submitListenerAction = this.submitListenerAction.bind(this);
+            this.editor.container?.closest('form')?.addEventListener('submit', this.submitListenerAction);
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
     }
 
+    /**
+     * This method destroys the CodeMirror instance.
+     */
     destroyCodeEditor() {
+        if (this.submitListenerAction) {
+            // Remove the submit listener
+            this.editor.container?.closest('form')?.removeEventListener('submit', this.submitListenerAction);
+            this.submitListenerAction = null;
+        }
         this.codeEditor?.destroy();
     }
 
+    /**
+     * Action to format or prettify HTML code.
+     */
     prettify() {
         this.codeEditor?.prettify();
     }
 
+    /**
+     * Action to toggle line wrapping in the codeMirror editor.
+     *
+     * @param {HTMLElement} btnElem - The HTML element associated with the toggle button.
+     */
     toggleLineWrapping(btnElem) {
         if (!this.codeEditor) {
             return;
@@ -217,6 +285,12 @@ export class ViewManager {
         btnElem.querySelector('span').innerHTML = isWrap ? ViewManager.icons.rightarrow : ViewManager.icons.exchange;
     }
 
+    /**
+     * Action to toggle theme (light/dark)
+     *
+     * @param {HTMLElement} btnElem - The HTML element associated with the toggle button.
+     * @param {HTMLElement} rootElem - The HTML element associated with the root of the view.
+     */
     toggleTheme(btnElem, rootElem) {
         if (!this.codeEditor) {
             return;
@@ -235,16 +309,25 @@ export class ViewManager {
         }
     }
 
+    /**
+     * Action to decrease fontsize.
+     */
     decreaseFontsize() {
         this.codeEditor?.decreaseFontsize();
         setPref('fontsize', this.codeEditor?.getFontsize() ?? 11, true);
     }
 
+    /**
+     * Action to increase fontsize.
+     */
     increaseFontsize() {
         this.codeEditor?.increaseFontsize();
         setPref('fontsize', this.codeEditor?.getFontsize() ?? 11, true);
     }
 
+    /**
+     * Action that allows to switch between dialog and panel views.
+     */
     switchViews() {
         if (!this.codeEditor) {
             return;

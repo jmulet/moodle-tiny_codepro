@@ -28,7 +28,11 @@ import {SearchCursor} from '@codemirror/search';
 import {html as htmlLang} from "@codemirror/lang-html";
 import {cm6proDark} from './cm6pro-dark-theme';
 import {prettify} from 'htmlfy';
+
+// 3rd party extensions.
 import {indentationMarkers} from '@replit/codemirror-indentation-markers';
+import {colorPicker} from '@replit/codemirror-css-color-picker';
+import {showMinimap} from "@replit/codemirror-minimap";
 
 const MARKER = String.fromCharCode(0);
 const MIN_FONTSIZE = 8;
@@ -83,10 +87,23 @@ export default class CodeProEditor {
     _createState(html) {
         this.themeConfig = new Compartment();
         this.linewrapConfig = new Compartment();
+        const create = () => {
+            const dom = document.createElement('div');
+            return {dom};
+        };
         const extensions = [
             basicSetup,
-            indentationMarkers(),
             htmlLang(),
+            indentationMarkers(),
+            showMinimap.compute(['doc'], () => {
+                return {
+                  create,
+                  displayText: 'blocks',
+                  showOverlay: 'always',
+                  gutters: [{1: '#00FF00', 2:'#00FF00'}],
+                };
+              }),
+            colorPicker,
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme())
         ];

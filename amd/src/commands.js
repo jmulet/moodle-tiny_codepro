@@ -61,9 +61,27 @@ export const getSetup = async() => {
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
 
-        const viewManagers = {
-            dialog: new ViewDialogManager(editor),
-            panel: new ViewPanelManager(editor, {autosave: true, translations})
+        /**
+         * Lazy init viewManagers
+         * @type {Record<string, import('./viewmanager').ViewManager>}
+         */
+        const _viewManagers = {};
+        /**
+         * @param {string} name
+         * @returns {import('./viewmanager').ViewManager}
+         **/
+        const getViewManager = (name) => {
+            let instance = _viewManagers[name];
+            if (instance) {
+                return instance;
+            }
+            if (name === 'panel') {
+               instance = new ViewPanelManager(editor, {autosave: true, translations});
+            } else {
+               instance = new ViewDialogManager(editor);
+            }
+            _viewManagers[name] = instance;
+            return instance;
         };
 
         // Add command to show the code editor.
@@ -75,9 +93,7 @@ export const getSetup = async() => {
             }
             // Make sure preference is in sync
             setPref('view', uiMode);
-
-            const currentViewManager = viewManagers[uiMode] ?? viewManagers.dialog;
-            currentViewManager.show();
+            getViewManager(uiMode).show();
         });
 
         // Register the Toolbar Button.
@@ -99,7 +115,7 @@ export const getSetup = async() => {
         // Only if it is going to be required
         const defaultUI = getDefaultUI(editor) ?? '';
         if (defaultUI === 'panel' || defaultUI.startsWith('user:')) {
-            viewManagers.panel._tCreate();
+            getViewManager('panel')._tCreate();
         }
     };
 };
