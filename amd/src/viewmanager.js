@@ -160,14 +160,18 @@ export class ViewManager {
     /**
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
-     * @param {string} html - HTML code
+     * @param {string} [html] - HTML code
      */
     _saveAction(html) {
+        if (!html) {
+            html = this.codeEditor.getValue();
+        }
         // Do it in a transaction
         this.editor.focus();
         this.editor.undoManager.transact(() => {
             this.editor.setContent(html);
         });
+        this.pendingChanges = false;
     }
 
     /**
@@ -210,6 +214,7 @@ export class ViewManager {
             currentNode.remove();
         }
         this.editor.nodeChanged();
+        this.pendingChanges = false;
     }
 
     /**
@@ -224,28 +229,11 @@ export class ViewManager {
             lineWrapping: getPref("wrap", true),
         };
         if (this.opts.autosave) {
-            /** Autosave based on focus changes */
-            /*
+            // Detect changes on CM editor.
             options.changesListener = () => {
-                if (!this.codeEditor) {
-                    return;
-                }
-                const html = this.codeEditor.getValue();
-                this._saveAction(html);
+                console.log("Setting pendingChanges to " + this.editor.id);
+                this.pendingChanges = true;
             };
-            */
-            // Autosave before submitting the form.
-            this.submitListenerAction = () => {
-                console.log('Calling submit listener action');
-                if (!this.codeEditor) {
-                    return true;
-                }
-                const html = this.codeEditor.getValue();
-                this._saveAction(html);
-                return true;
-            };
-            this.submitListenerAction = this.submitListenerAction.bind(this);
-            this.editor.container?.closest('form')?.addEventListener('submit', this.submitListenerAction);
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
     }
@@ -278,7 +266,7 @@ export class ViewManager {
         if (!this.codeEditor) {
             return;
         }
-        const isWrap = getPref('wrap', true);
+        const isWrap = getPref('wrap', false);
         this.codeEditor.setLineWrapping(!isWrap);
         setPref("wrap", !isWrap, true);
 

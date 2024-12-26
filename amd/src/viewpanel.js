@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -25,6 +26,12 @@ import {getPref, setPref} from "./preferences";
 import {getDefaultUI, isFullscreen} from "./options";
 import {ViewManager} from "./viewmanager";
 
+/**
+ * Keep track of all active viewPanels in the page.
+ * @type {Record<string, ViewManager>}
+ **/
+const activeViewPanels = new Map();
+let submitListenerAction = null;
 
 export class ViewPanelManager extends ViewManager {
     constructor(editor, opts) {
@@ -85,7 +92,7 @@ export class ViewPanelManager extends ViewManager {
 
         // Set the toggle state
         const isDark = getPref('theme', 'light') === 'dark';
-        const isWrap = getPref('wrap', true);
+        const isWrap = getPref('wrap', false);
         btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
         btnWrap.querySelector('span').innerHTML = isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
         if (isDark) {
@@ -113,6 +120,33 @@ export class ViewPanelManager extends ViewManager {
                 if (!this.codeEditorElement) {
                     // Make sure the UI is created.
                     this.#createUI(api);
+                    // Register this panel as active.
+                    activeViewPanels.set(this.editor.id, this);
+                    // Register a global listener to submit event.
+                    // Autosave all editors before submitting the form.
+                    const form = this.editor.container?.closest('form');
+                    console.log("The form", form, this.editor);
+                    if (form && !submitListenerAction) {
+                        submitListenerAction = (evt) => {
+                            console.log('Calling submit listener action', activeViewPanels);
+                            const pendingViewPanels = Array.from(activeViewPanels.values())
+                                .filter(vp => vp.pendingChanges);
+                            if (pendingViewPanels.length) {
+                                evt.preventDefault();
+                                console.log('pending view panels', pendingViewPanels);
+                                pendingViewPanels.forEach(vp => vp._saveAction());
+                                if (form.requestSubmit) {
+                                    // TODO: Problem; which of both submit buttons has been clicked????
+                                    form.requestSubmit();
+                                } else {
+                                    form.submit();
+                                }
+                            }
+                            return true;
+                        };
+                        console.log("Attach submit listener");
+                        form.addEventListener('submit', submitListenerAction.bind(this));
+                    }
                 }
 
                 // Store references to the header buttons to have access from the button actions.
@@ -126,6 +160,7 @@ export class ViewPanelManager extends ViewManager {
                 await this.attachCodeEditor(this.codeEditorElement);
                 // Obtain the code from Tiny and set it to code editor.
                 this.setHTMLCodeOrState();
+                this.pendingChanges = false;
             },
             onHide: () => {}
         };

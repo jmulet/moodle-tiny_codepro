@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+import replace from '@rollup/plugin-replace';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 
 export default [
@@ -14,6 +16,16 @@ export default [
 /* eslint-disable */
             `
         },
-        plugins: [nodeResolve()]
+        plugins: [
+            replace({
+                preventAssignment: true,
+                values: {
+                    "const defaultHighlightStyle = /*@__PURE__*/HighlightStyle.define([":
+                    "const HighlightStyleDefs = HighlightStyle.define;\nconst defaultHighlightStyle = /*@__PURE__*/HighlightStyleDefs(["
+                },
+                delimiters: ['', '']
+            }),
+            nodeResolve()
+        ]
     }
 ];

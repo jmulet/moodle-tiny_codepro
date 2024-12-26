@@ -19825,7 +19825,8 @@ const treeHighlighter = /*@__PURE__*/Prec.high(/*@__PURE__*/ViewPlugin.fromClass
 /**
 A default highlight style (works well with light themes).
 */
-const defaultHighlightStyle = /*@__PURE__*/HighlightStyle.define([
+const HighlightStyleDefs = HighlightStyle.define;
+const defaultHighlightStyle = /*@__PURE__*/HighlightStyleDefs([
     { tag: tags$1.meta,
         color: "#404740" },
     { tag: tags$1.link,
@@ -30349,6 +30350,8 @@ const colorPickerTheme = /*@__PURE__*/EditorView.baseTheme({
         '&::-webkit-color-swatch': {
             border: 'none',
         },
+        // TODO: Fix it! - Gives an error on chrome and safari
+        // Only include it if we are sure the browser is mozilla.
         /*'&::-moz-color-swatch': {
             border: 'none',
         },*/
@@ -31611,13 +31614,11 @@ class CodeProEditor {
      * @member {HTMLElement} _parentElement
      * @member {string} _source
      * @member {CodeMirrorView} _editorView
-     * @member {boolean} _pendingChanges
      * @member {Record<string,*>} _config
      */
     _parentElement;
     _source;
     _editorView;
-    _pendingChanges;
     _config;
     /**
      * @param {HTMLElement} parentElement
@@ -31665,19 +31666,14 @@ class CodeProEditor {
               }),
             colorPicker,
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
-            this.themeConfig.of(this._createTheme())
+            this.themeConfig.of(this._createTheme()),
         ];
         if (this._config.changesListener) {
-            extensions.push(
-                EditorView.updateListener.of((viewUpdate) => {
-                    this._pendingChanges ||= viewUpdate.docChanged;
-                    if (this._pendingChanges && viewUpdate.focusChanged) {
-                        // E.g. do save changes into Tiny editor.
-                        this._config.changesListener(this.getValue());
-                        this._pendingChanges = false;
-                    }
-                })
-            );
+            extensions.push(EditorView.updateListener.of((viewUpdate) => {
+                if (viewUpdate.docChanged) {
+                    this._config.changesListener();
+                }
+            }));
         }
         return EditorState.create({
             doc: html$1 ?? '',
@@ -31725,7 +31721,6 @@ class CodeProEditor {
         const view = this._editorView;
         view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
         this.scrollToCaretPosition();
-        this._pendingChanges = false;
     }
 
     /**
@@ -31908,7 +31903,11 @@ class CodeProEditor {
             }
             text = this.getValue();
         }
-        return prettify(text);
+        return prettify(text, {
+                ignore: ['style', 'script'],
+                strict: false,
+                tab_size: 2
+          });
     }
     /**
      * Dispatch the prettified html into the view

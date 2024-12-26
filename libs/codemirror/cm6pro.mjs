@@ -51,13 +51,11 @@ export default class CodeProEditor {
      * @member {HTMLElement} _parentElement
      * @member {string} _source
      * @member {CodeMirrorView} _editorView
-     * @member {boolean} _pendingChanges
      * @member {Record<string,*>} _config
      */
     _parentElement;
     _source;
     _editorView;
-    _pendingChanges;
     _config;
     /**
      * @param {HTMLElement} parentElement
@@ -105,19 +103,14 @@ export default class CodeProEditor {
               }),
             colorPicker,
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
-            this.themeConfig.of(this._createTheme())
+            this.themeConfig.of(this._createTheme()),
         ];
         if (this._config.changesListener) {
-            extensions.push(
-                EditorView.updateListener.of((viewUpdate) => {
-                    this._pendingChanges ||= viewUpdate.docChanged;
-                    if (this._pendingChanges && viewUpdate.focusChanged) {
-                        // E.g. do save changes into Tiny editor.
-                        this._config.changesListener(this.getValue());
-                        this._pendingChanges = false;
-                    }
-                })
-            );
+            extensions.push(EditorView.updateListener.of((viewUpdate) => {
+                if (viewUpdate.docChanged) {
+                    this._config.changesListener();
+                }
+            }));
         }
         return EditorState.create({
             doc: html ?? '',
@@ -165,7 +158,6 @@ export default class CodeProEditor {
         const view = this._editorView;
         view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
         this.scrollToCaretPosition();
-        this._pendingChanges = false;
     }
 
     /**
@@ -348,7 +340,11 @@ export default class CodeProEditor {
             }
             text = this.getValue();
         }
-        return prettify(text);
+        return prettify(text, {
+                ignore: ['style', 'script'],
+                strict: false,
+                tab_size: 2
+          });
     }
     /**
      * Dispatch the prettified html into the view
