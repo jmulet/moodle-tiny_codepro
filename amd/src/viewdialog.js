@@ -35,10 +35,12 @@ export class ViewDialogManager extends ViewManager {
     async _tShow() {
         // Make the modal visible
         this.modal.show();
+        this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
         await this.attachCodeEditor(this.codeEditorElement);
         // Obtain the code from Tiny and set it to code editor
         this.setHTMLCodeOrState();
+        this._hideSpinner(this.modal.body[0]);
     }
 
     async _tCreate() {
@@ -66,10 +68,15 @@ export class ViewDialogManager extends ViewManager {
         modal.getRoot().on(ModalEvents.outsideClick, (evt) => {
             evt.preventDefault();
         });
-        modal.body.css("overflow", "hidden");
+        modal.body.css({
+            'overflow': 'hidden',
+            'position': 'relative'
+        });
         // Override styles imposed by body.tox-fullscreen on modals
-        modal.header.css('height', '61.46px');
-        modal.header.css('padding', '1rem 1rem');
+        modal.header.css({
+            'height': '61.46px',
+            'padding': '1rem 1rem'
+        });
 
         const modalContent = this.modal.getRoot().find('.modal-content');
         const isDark = getPref('theme') === 'dark';

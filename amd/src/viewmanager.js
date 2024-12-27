@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -129,7 +128,9 @@ export class ViewManager {
             // Restore state from the another view
             this.codeEditor.setState(blackboard.state);
             blackboard.state = null;
+            this.pendingChanges = true;
         } else {
+            this.pendingChanges = false;
             const syncCaret = isSyncCaret(this.editor);
             let markerNode;
             if (syncCaret) {
@@ -226,12 +227,12 @@ export class ViewManager {
         const options = {
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
-            lineWrapping: getPref("wrap", true),
+            lineWrapping: getPref("wrap", false),
+            minimap: !this.opts.autosave && getPref("minimap", true)
         };
         if (this.opts.autosave) {
             // Detect changes on CM editor.
             options.changesListener = () => {
-                console.log("Setting pendingChanges to " + this.editor.id);
                 this.pendingChanges = true;
             };
         }
@@ -329,6 +330,25 @@ export class ViewManager {
         setPref('view', uiMode === 'dialog' ? 'panel' : 'dialog', true);
         // Call the action again
         this.editor.execCommand('mceCodeProEditor', false);
+    }
+
+    /**
+     * Shows a loading spinner in the container
+     * @param {HTMLElement} container
+     */
+    _showSpinner(container) {
+        const loader = document.createElement('SPAN');
+        loader.classList.add('tiny_codepro-loader');
+        container.append(loader);
+    }
+
+    /**
+     * Removes the loading spinner from the container
+     * @param {HTMLElement} container
+     */
+    _hideSpinner(container) {
+        const loader = container.querySelector('span.tiny_codepro-loader');
+        loader?.remove();
     }
 }
 

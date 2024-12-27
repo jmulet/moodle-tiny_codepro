@@ -67,6 +67,7 @@ export default class CodeProEditor {
             themeName: options?.theme ?? 'light',
             fontSize: options?.fontSize ?? 11,
             lineWrapping: options?.lineWrapping ?? false,
+            minimap: options?.minimap ?? true,
             changesListener: options?.changesListener
         };
 
@@ -85,25 +86,16 @@ export default class CodeProEditor {
     _createState(html) {
         this.themeConfig = new Compartment();
         this.linewrapConfig = new Compartment();
-        const create = () => {
-            const dom = document.createElement('div');
-            return {dom};
-        };
+        this.minimapConfig = new Compartment();
+
         const extensions = [
             basicSetup,
             htmlLang(),
             indentationMarkers(),
-            showMinimap.compute(['doc'], () => {
-                return {
-                  create,
-                  displayText: 'blocks',
-                  showOverlay: 'always',
-                  gutters: [{1: '#00FF00', 2:'#00FF00'}],
-                };
-              }),
             colorPicker,
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme()),
+            this.minimapConfig.of(this._setupMinimap())
         ];
         if (this._config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
@@ -115,6 +107,28 @@ export default class CodeProEditor {
         return EditorState.create({
             doc: html ?? '',
             extensions
+        });
+    }
+
+    /**
+     *
+     * @returns {*}
+     */
+    _setupMinimap() {
+        if (!this._config.minimap) {
+            return [];
+        }
+        const create = () => {
+            const dom = document.createElement('div');
+            return {dom};
+        };
+        return showMinimap.compute(['doc'], () => {
+            return {
+              create,
+              displayText: 'blocks',
+              showOverlay: 'always',
+              gutters: [],
+            };
         });
     }
 
@@ -319,6 +333,17 @@ export default class CodeProEditor {
         this._config.lineWrapping = bool;
         this._editorView.dispatch({
             effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
+        });
+    }
+
+    /**
+     * Show/hide minimap dynamically
+     * @param {boolean} bool
+     */
+    setMinimap(bool) {
+        this._config.minimap = bool;
+        this._editorView.dispatch({
+            effects: this.minimapConfig.reconfigure(this._setupMinimap())
         });
     }
 

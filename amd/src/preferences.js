@@ -26,6 +26,7 @@ const preferences = {
     wrap: false, /** Wrap long lines */
     fs: false, /** Fullscreen mode */
     fontsize: 11, /** Editor fontsize */
+    minimap: true, /** VScode like minimap */
     view: undefined, /** Which UI is used to display the HTML editor */
 };
 

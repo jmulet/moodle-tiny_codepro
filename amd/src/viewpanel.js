@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -77,6 +76,32 @@ export class ViewPanelManager extends ViewManager {
         }
         .cm-editor {
             height: 100%;
+        }
+        .tiny_codepro-loader {
+            position: absolute;
+            z-index: 100;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #999;
+            box-shadow: 32px 0 #999, -32px 0 #999;
+            animation: tiny_codepro-flash 0.5s ease-out infinite alternate;
+        }
+        @keyframes tiny_codepro-flash {
+            0% {
+            background-color: #FFF2;
+            box-shadow: 32px 0 #FFF2, -32px 0 #999;
+            }
+            50% {
+            background-color: #999;
+            box-shadow: 32px 0 #FFF2, -32px 0 #FFF2;
+            }
+            100% {
+            background-color: #FFF2;
+            box-shadow: 32px 0 #999, -32px 0 #FFF2;
+            }
         }`;
         shadowRoot.appendChild(shadowStyles);
         shadowRoot.appendChild(this.codeEditorElement);
@@ -125,27 +150,23 @@ export class ViewPanelManager extends ViewManager {
                     // Register a global listener to submit event.
                     // Autosave all editors before submitting the form.
                     const form = this.editor.container?.closest('form');
-                    console.log("The form", form, this.editor);
                     if (form && !submitListenerAction) {
                         submitListenerAction = (evt) => {
-                            console.log('Calling submit listener action', activeViewPanels);
                             const pendingViewPanels = Array.from(activeViewPanels.values())
                                 .filter(vp => vp.pendingChanges);
                             if (pendingViewPanels.length) {
                                 evt.preventDefault();
-                                console.log('pending view panels', pendingViewPanels);
-                                pendingViewPanels.forEach(vp => vp._saveAction());
-                                if (form.requestSubmit) {
-                                    // TODO: Problem; which of both submit buttons has been clicked????
-                                    form.requestSubmit();
-                                } else {
-                                    form.submit();
-                                }
+                                pendingViewPanels.forEach(viewPanel => viewPanel._saveAction());
+                                setTimeout(() => {
+                                    if (form.requestSubmit) {
+                                        form.requestSubmit(evt.submitter);
+                                    } else {
+                                        evt.submitter?.click();
+                                    }
+                                }, 0);
                             }
-                            return true;
                         };
-                        console.log("Attach submit listener");
-                        form.addEventListener('submit', submitListenerAction.bind(this));
+                        form.addEventListener('submit', submitListenerAction);
                     }
                 }
 
@@ -156,11 +177,12 @@ export class ViewPanelManager extends ViewManager {
 
                 // Hack to turn regular buttons into toggle ones.
                 this.#setButtonsState();
+                this._showSpinner(container.shadowRoot);
                 // Add the codeEditor (CodeMirror) in the selected UI element.
                 await this.attachCodeEditor(this.codeEditorElement);
                 // Obtain the code from Tiny and set it to code editor.
                 this.setHTMLCodeOrState();
-                this.pendingChanges = false;
+                this._hideSpinner(container.shadowRoot);
             },
             onHide: () => {}
         };
