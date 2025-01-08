@@ -26,7 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
     $pluginname = 'tiny_codepro';
-    $settingspage = new admin_settingpage('tiny_codepro_pluginsettings', get_string('manage', $pluginname));
+    $ADMIN->add('editortiny', new admin_category('tiny_codepro', get_string('settings', $pluginname))); 
+    $settingspage = new admin_settingpage('tiny_codepro_settings', get_string('settings', $pluginname));
 
     if ($ADMIN->fulltree) {
         $settingspage->add(new admin_setting_configcheckbox(
@@ -67,5 +68,5 @@ if ($hassiteconfig) {
         ));
     }
 
-    $ADMIN->add('editortiny', $settingspage);
+    $ADMIN->add('tiny_codepro', $settingspage);
 }
