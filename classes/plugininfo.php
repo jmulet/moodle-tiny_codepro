@@ -102,6 +102,7 @@ class plugininfo extends plugin implements
             $params['autoprettify'] = cfgwithdefault($cfg, 'autoprettify', 1) == 1;
             $params['synccaret'] = cfgwithdefault($cfg, 'synccaret', 1) == 1;
             $params['uimode'] = cfgwithdefault($cfg, 'uimode', 'user:dialog');
+            $params['customelements'] = cfgwithdefault($cfg, 'customelements', '');
         }
 
         return $params;

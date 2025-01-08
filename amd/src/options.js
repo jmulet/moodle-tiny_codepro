@@ -28,6 +28,7 @@ const showPlugin = getPluginOptionName(pluginName, 'showplugin');
 const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
 const uiMode = getPluginOptionName(pluginName, 'uimode');
 const syncCaret = getPluginOptionName(pluginName, 'synccaret');
+const customElements = getPluginOptionName(pluginName, 'customElements');
 
 
 export const register = (editor) => {
@@ -51,6 +52,11 @@ export const register = (editor) => {
     registerOption(uiMode, {
         processor: 'string',
         "default": 'user:dialog',
+    });
+
+    registerOption(customElements, {
+        processor: 'string',
+        "default": '',
     });
 };
 
@@ -95,3 +101,10 @@ export const getDefaultUI = (editor) => editor.options.get(uiMode);
  * @returns {boolean}
  */
 export const isFullscreen = (editor) => editor.container.classList.contains('tox-fullscreen');
+
+/**
+ * The custom non-HTML standard elements
+ * @param {TinyMCE} editor
+ * @returns {string}
+ */
+export const getCustomElements = (editor) => editor.options.get(customElements);

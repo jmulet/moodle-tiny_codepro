@@ -21,9 +21,12 @@
  * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-$string['autoprettify'] = 'Formatear automáticamente al abrirse';
+$string['autoprettify'] = 'Auto formato';
+$string['autoprettify_desc'] = 'Formatear automáticamente el código al abrirse';
 $string['cancel'] = 'Cancelar';
 $string['codepro:viewplugin'] = 'Ver plugin';
+$string['customelements'] = 'Elementos adicionales';
+$string['customelements_def'] = 'Elementos HTML adicionales separados por coma';
 $string['decreasefontsize'] = 'Disminuir tamaño fuente';
 $string['fullscreen'] = 'Pantalla completa';
 $string['helplinktext'] = 'Source code Pro';
@@ -37,6 +40,8 @@ $string['pluginname'] = 'Source code Pro';
 $string['prettify'] = 'Formatear el código';
 $string['privacy:metadata'] = 'Este plugin no guarda ningún dato asociado con el usuario.';
 $string['save'] = 'Guardar';
-$string['synccaret'] = 'Sincroniza la posición del cursor entre los editores';
+$string['synccaret'] = 'Posición cursor';
+$string['synccaret_def'] = 'Sincroniza la posición del cursor entre los editores';
 $string['themes'] = 'Temas claro/oscuro';
-$string['uimode'] = 'UI (diálogo/panel) utilitzado para mostrar el código';
+$string['uimode'] = 'Modo UI';
+$string['uimode_def'] = 'Modo UI (diálogo/panel) utilitzado para mostrar el código';

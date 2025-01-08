@@ -32,20 +32,20 @@ if ($hassiteconfig) {
         $settingspage->add(new admin_setting_configcheckbox(
             'tiny_codepro/autoprettify',
             get_string('autoprettify', $pluginname),
-            get_string('autoprettify', $pluginname),
+            get_string('autoprettify_def', $pluginname),
             1
         ));
 
         $settingspage->add(new admin_setting_configcheckbox(
             'tiny_codepro/synccaret',
             get_string('synccaret', $pluginname),
-            get_string('synccaret', $pluginname),
+            get_string('synccaret_def', $pluginname),
             1
         ));
 
         $choices1 = [
             'dialog' => 'Open as dialog',
-            'panel' => 'Open as view panel',
+            'panel' => 'Open as panel',
             'user:dialog' => 'User configurable; defaults to dialog',
             'user:panel' => 'User configurable; defaults to panel',
         ];
@@ -53,9 +53,17 @@ if ($hassiteconfig) {
         $settingspage->add(new admin_setting_configselect(
             'tiny_codepro/uimode',
             get_string('uimode', $pluginname),
-            get_string('uimode', $pluginname),
+            get_string('uimode_def', $pluginname),
             'user:dialog',
             $choices1
+        ));
+
+        $settingspage->add(new admin_setting_configtext(
+            'tiny_codepro/customelements',
+            get_string('customelements', $pluginname),
+            get_string('customelements_def', $pluginname),
+            '',
+            PARAM_TEXT
         ));
     }
 

@@ -26,7 +26,7 @@ import {getButtonImage} from 'editor_tiny/utils';
 import {get_strings} from 'core/str';
 import {ViewDialogManager} from './viewdialog';
 import {component, icon} from './common';
-import {getDefaultUI, isPluginVisible} from './options';
+import {getCustomElements, getDefaultUI, isPluginVisible} from './options';
 import {ViewPanelManager} from './viewpanel';
 import {getPref, setPref} from './preferences';
 
@@ -58,6 +58,13 @@ export const getSetup = async() => {
         if (!isPluginVisible(editor)) {
             return;
         }
+
+        // Add custom elements to the editor
+        const customElements = (getCustomElements(editor) ?? '').trim();
+        if (customElements) {
+            editor.addCustomElements(customElements);
+        }
+
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
 
