@@ -38,8 +38,6 @@ export class ViewDialogManager extends ViewManager {
         this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
         await this.attachCodeEditor(this.codeEditorElement);
-        // Obtain the code from Tiny and set it to code editor
-        this.setHTMLCodeOrState();
         this._hideSpinner(this.modal.body[0]);
     }
 
@@ -70,7 +68,8 @@ export class ViewDialogManager extends ViewManager {
         });
         modal.body.css({
             'overflow': 'hidden',
-            'position': 'relative'
+            'position': 'relative',
+            'min-height': '200px',
         });
         // Override styles imposed by body.tox-fullscreen on modals
         modal.header.css({
@@ -99,6 +98,13 @@ export class ViewDialogManager extends ViewManager {
 
     #bindActions() {
         const modalContent = this.modal.getRoot().find('.modal-content')[0];
+        // Setting references to Dom elements
+        this.domElements = {
+            root: modalContent,
+            btnTheme: this.modal.footer.find("button.btn[data-action='theme']")[0],
+            btnWrap: this.modal.footer.find("button.btn[data-action='wrap']")[0],
+        };
+
         this.modal.footer.find("button.btn[data-action]").on("click", (evt) => {
             const btnElem = evt.currentTarget;
             const actionName = btnElem.dataset.action;
@@ -116,10 +122,10 @@ export class ViewDialogManager extends ViewManager {
                     this.increaseFontsize();
                     break;
                 case ("theme"):
-                    this.toggleTheme(btnElem, modalContent);
+                    this.toggleTheme();
                     break;
                 case ("wrap"):
-                    this.toggleLineWrapping(btnElem);
+                    this.toggleLineWrapping();
                     break;
                 case ("prettify"):
                     this.prettify();
@@ -148,7 +154,7 @@ export class ViewDialogManager extends ViewManager {
             $dlgElem.removeClass("tiny_codepro-fullscreen");
             $dlgElem.addClass("modal-dialog modal-lg modal-dialog-scrollable");
         }
-        setPref("fs", !isFullscreen, true);
+        setPref("fs", !isFullscreen);
     }
 
     #unbindActions() {

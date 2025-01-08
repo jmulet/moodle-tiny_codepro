@@ -108,8 +108,7 @@ export class ViewPanelManager extends ViewManager {
     }
 
     #setButtonsState() {
-        // eslint-disable-next-line no-unused-vars
-        const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, ___, btnAccept] = this.headerButtonElements;
+        const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, btnAccept} = this.domElements;
 
         // Style issue
         btnDescreaseFontsize.style.marginRight = '0';
@@ -173,15 +172,23 @@ export class ViewPanelManager extends ViewManager {
                 // Store references to the header buttons to have access from the button actions.
                 const container = api.getContainer();
                 this.parentContainer = container.parentElement;
-                this.headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
+                const headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
+                // eslint-disable-next-line no-unused-vars
+                const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, ___, btnAccept] = headerButtonElements;
+                this.domElements = {
+                    root: this.parentContainer,
+                    btnDescreaseFontsize,
+                    btnIncreaseFontsize,
+                    btnTheme,
+                    btnWrap,
+                    btnAccept
+                };
 
                 // Hack to turn regular buttons into toggle ones.
                 this.#setButtonsState();
                 this._showSpinner(container.shadowRoot);
                 // Add the codeEditor (CodeMirror) in the selected UI element.
                 await this.attachCodeEditor(this.codeEditorElement);
-                // Obtain the code from Tiny and set it to code editor.
-                this.setHTMLCodeOrState();
                 this._hideSpinner(container.shadowRoot);
             },
             onHide: () => {}
@@ -205,7 +212,7 @@ export class ViewPanelManager extends ViewManager {
                 icon: 'tiny_codepro-fullscreen',
                 tooltip: fullscreenStr,
                 onAction: () => {
-                    setPref('fs', !isFullscreen(this.editor), true);
+                    setPref('fs', !isFullscreen(this.editor));
                     this.editor.execCommand('mceFullScreen');
                 }
             },
@@ -228,20 +235,14 @@ export class ViewPanelManager extends ViewManager {
                 text: ' ',
                 icon: 'tiny_codepro-sun',
                 tooltip: themesStr,
-                onAction: () => {
-                    const btnTheme = this.headerButtonElements[4];
-                    this.toggleTheme(btnTheme, this.parentContainer);
-                }
+                onAction: this.toggleTheme.bind(this)
             },
             {
                 type: 'button',
                 text: ' ',
                 icon: 'tiny_codepro-exchange',
                 tooltip: linewrapStr,
-                onAction: () => {
-                    const btnWrap = this.headerButtonElements[5];
-                    this.toggleLineWrapping(btnWrap);
-                }
+                onAction: this.toggleLineWrapping.bind(this)
             },
             {
                 type: 'button',

@@ -2,6 +2,11 @@
 import replace from '@rollup/plugin-replace';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 
+const banner = `
+/** @ts-ignore */
+/* eslint-disable */
+`;
+
 export default [
     {
         input: 'cm6pro.mjs',
@@ -11,10 +16,7 @@ export default [
             format: 'esm',
             name: 'cm6pro',
             plugins: [],
-            banner: `
-/** @ts-ignore */
-/* eslint-disable */
-            `
+            banner
         },
         plugins: [
             replace({
@@ -25,6 +27,20 @@ export default [
                 },
                 delimiters: ['', '']
             }),
+            nodeResolve()
+        ]
+    },
+    {
+        input: 'htmlfy.mjs',
+        output: {
+            sourcemap: false,
+            file: '../../amd/src/htmlfy-lazy.js',
+            format: 'esm',
+            name: 'htmlfy',
+            plugins: [],
+            banner
+        },
+        plugins: [
             nodeResolve()
         ]
     }

@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable camelcase */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -22,7 +24,7 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setPref, getPref} from "./preferences";
+import {setPref, getPref, savePrefs} from "./preferences";
 import {isSyncCaret, isAutoFormatHTML} from "./options";
 import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
 
@@ -34,15 +36,53 @@ export const blackboard = {
     scrolls: {}
 };
 
+let _CodeProEditor = null;
 /**
  * Loads cm6 on demand (The first load will be delayed a little bit)
  * @returns {Promise<CodeProEditor>}
  */
 const requireCm6Pro = () => {
+    if (_CodeProEditor) {
+        return Promise.resolve(_CodeProEditor);
+    }
     return new Promise((resolve) => {
         require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
+            _CodeProEditor = CodeProEditor;
             resolve(CodeProEditor);
         });
+    });
+};
+
+let _htmlFormatter = null;
+/**
+ * Loads HTML formatter on demand  (The first load will be delayed a little bit).
+ * To avoid loading multiple formatters, take advantge of that shipped with tiny_html plugin.
+ * If this plugin is not available, fallback on htmlfy.
+ * @returns {Promise<(str: string) => string>}
+ */
+const requireHTMLFormatter = () => {
+    if (_htmlFormatter) {
+        return Promise.resolve(_htmlFormatter);
+    }
+    return new Promise((resolve) => {
+        const fallback = () => {
+            require(['tiny_codepro/htmlfy-lazy'], (prettify) => {
+                _htmlFormatter = (src) => prettify(src, {
+                    ignore: ['style', 'script', 'pre', 'code'],
+                    strict: false,
+                    tab_size: 2
+                });
+                resolve(_htmlFormatter);
+            }, () => resolve(null));
+        };
+        require(['tiny_html/beautify/beautify-html'], (beautify) => {
+            _htmlFormatter = beautify.html_beautify;
+            if (_htmlFormatter) {
+                resolve(_htmlFormatter);
+                return;
+            }
+            fallback();
+        }, fallback);
     });
 };
 
@@ -120,45 +160,6 @@ export class ViewManager {
     }
 
     /**
-     * Sets the HTML code/state from Tiny to CodeMirror editor taking care
-     * of cursor synchronization between both editors.
-     */
-    setHTMLCodeOrState() {
-        if (blackboard.state) {
-            // Restore state from the another view
-            this.codeEditor.setState(blackboard.state);
-            blackboard.state = null;
-            this.pendingChanges = true;
-        } else {
-            this.pendingChanges = false;
-            const syncCaret = isSyncCaret(this.editor);
-            let markerNode;
-            if (syncCaret) {
-                // Insert caret marker and retrieve html code to pass to CodeMirror
-                markerNode = document.createElement("SPAN");
-                markerNode.innerHTML = '&nbsp;';
-                markerNode.classList.add(TINY_MARKER_CLASS);
-                const currentNode = this.editor.selection.getStart();
-                currentNode.append(markerNode);
-            }
-            /** @type {string} */
-            // eslint-disable-next-line camelcase
-            let html = this.editor.getContent({source_view: true});
-            if (syncCaret) {
-                const reg = new RegExp(`<span\\s+class="${TINY_MARKER_CLASS}"([^>]*)>([^<]*)<\\/span>`, "gm");
-                html = html.replace(reg, CM_MARKER);
-                markerNode.remove();
-            }
-
-            // According to global preference prettify code when opening thethis.editor
-            if (isAutoFormatHTML(this.editor)) {
-                html = this.codeEditor?.prettifyCode(html);
-            }
-            this.codeEditor?.setValue(html);
-        }
-    }
-
-    /**
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
      * @param {string} [html] - HTML code
@@ -182,10 +183,11 @@ export class ViewManager {
     accept() {
         // Add marker if cursor synchronization is enabled.
         const shouldSyncCaret = isSyncCaret(this.editor);
-        const htmlWithMarker = this.codeEditor.getValue(shouldSyncCaret)
+        const htmlWithMarker = this.codeEditor.getValue(shouldSyncCaret ? 1 : 0)
             .replace(CM_MARKER, `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
         this._saveAction(htmlWithMarker);
         this.close();
+        return true;
     }
 
     /**
@@ -216,6 +218,7 @@ export class ViewManager {
         }
         this.editor.nodeChanged();
         this.pendingChanges = false;
+        return true;
     }
 
     /**
@@ -224,11 +227,25 @@ export class ViewManager {
      */
     async attachCodeEditor(codeEditorElement) {
         const CodeProEditor = await requireCm6Pro();
+        const commands = {
+            minimap: this.toggleMinimap.bind(this),
+            prettify: this.prettify.bind(this),
+            linewrapping: this.toggleLineWrapping.bind(this),
+            theme: this.toggleTheme.bind(this),
+            accept: this.accept.bind(this),
+            cancel: this.close.bind(this),
+            savePrefs
+        };
+
+        const doc = blackboard.state ? blackboard.state.html : await this._retrieveHtml();
+
         const options = {
+            doc,
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
             lineWrapping: getPref("wrap", false),
-            minimap: !this.opts.autosave && getPref("minimap", true)
+            minimap: !this.opts.autosave && getPref("minimap", true),
+            commands
         };
         if (this.opts.autosave) {
             // Detect changes on CM editor.
@@ -237,6 +254,51 @@ export class ViewManager {
             };
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
+
+        this.pendingChanges = false;
+        if (blackboard.state) {
+            // Restore state from the another view
+            this.codeEditor.setSelection(blackboard.state.selection);
+            this.pendingChanges = true;
+        }
+        blackboard.state = null;
+    }
+
+    /**
+     * Obtains the HTML code/state from Tiny to CodeMirror editor taking care
+     * of cursor synchronization between both editors.
+     * @returns {Promise<string>}
+     */
+    async _retrieveHtml() {
+        const syncCaret = isSyncCaret(this.editor);
+        let markerNode;
+        if (syncCaret) {
+            // Insert caret marker and retrieve html code to pass to CodeMirror
+            markerNode = document.createElement("SPAN");
+            markerNode.innerHTML = '&nbsp;';
+            markerNode.classList.add(TINY_MARKER_CLASS);
+            const currentNode = this.editor.selection.getStart();
+            currentNode.append(markerNode);
+        }
+        /** @type {string} */
+
+        let html = this.editor.getContent({source_view: true});
+        if (syncCaret) {
+            const reg = new RegExp(`<span\\s+class="${TINY_MARKER_CLASS}"([^>]*)>([^<]*)<\\/span>`, "gm");
+            html = html.replace(reg, CM_MARKER);
+            markerNode.remove();
+        }
+
+        // According to global preference prettify code when opening the editor
+        if (isAutoFormatHTML(this.editor)) {
+            const prettifier = await requireHTMLFormatter();
+            if (prettifier) {
+                html = prettifier(html);
+            } else {
+                console.error('No HTML formatter available');
+            }
+        }
+        return html;
     }
 
     /**
@@ -254,48 +316,61 @@ export class ViewManager {
     /**
      * Action to format or prettify HTML code.
      */
-    prettify() {
-        this.codeEditor?.prettify();
+    async prettify() {
+        const prettifier = await requireHTMLFormatter();
+        if (!prettifier) {
+            console.error("No code formatter available");
+            return true;
+        }
+        const html = this.codeEditor.getValue(2);
+        this.codeEditor.setValue(prettifier(html));
+        return true;
     }
 
     /**
      * Action to toggle line wrapping in the codeMirror editor.
      *
-     * @param {HTMLElement} btnElem - The HTML element associated with the toggle button.
      */
-    toggleLineWrapping(btnElem) {
+    toggleLineWrapping() {
         if (!this.codeEditor) {
-            return;
+            return true;
         }
-        const isWrap = getPref('wrap', false);
-        this.codeEditor.setLineWrapping(!isWrap);
-        setPref("wrap", !isWrap, true);
+        const isWrap = this.codeEditor.toggleLineWrapping();
+        setPref('wrap', isWrap);
 
-        btnElem.querySelector('span').innerHTML = isWrap ? ViewManager.icons.rightarrow : ViewManager.icons.exchange;
+        this.domElements.btnWrap.querySelector('span').innerHTML =
+            isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
+
+        return true;
+    }
+
+    toggleMinimap() {
+        if (!this.codeEditor) {
+            return true;
+        }
+        const isMinimap = this.codeEditor.toggleMinimap();
+        setPref('minimap', isMinimap);
+        return true;
     }
 
     /**
      * Action to toggle theme (light/dark)
      *
-     * @param {HTMLElement} btnElem - The HTML element associated with the toggle button.
-     * @param {HTMLElement} rootElem - The HTML element associated with the root of the view.
      */
-    toggleTheme(btnElem, rootElem) {
+    toggleTheme() {
         if (!this.codeEditor) {
-            return;
+            return true;
         }
-        const isDark = getPref('theme', 'light') === 'dark';
-        const theme = isDark ? 'light' : 'dark';
-
-        this.codeEditor.setTheme(theme);
-        setPref('theme', theme, true);
-
-        btnElem.querySelector('span').innerHTML = isDark ? ViewManager.icons.sun : ViewManager.icons.moon;
+        const theme = this.codeEditor.toggleTheme();
+        setPref('theme', theme);
+        const isDark = theme === 'dark';
+        this.domElements.btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
         if (isDark) {
-            rootElem.classList.remove('tiny_codepro-dark');
+            this.domElements.root.classList.add('tiny_codepro-dark');
         } else {
-            rootElem.classList.add('tiny_codepro-dark');
+            this.domElements.root.classList.remove('tiny_codepro-dark');
         }
+        return true;
     }
 
     /**
@@ -303,7 +378,7 @@ export class ViewManager {
      */
     decreaseFontsize() {
         this.codeEditor?.decreaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize() ?? 11, true);
+        setPref('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**
@@ -311,7 +386,7 @@ export class ViewManager {
      */
     increaseFontsize() {
         this.codeEditor?.increaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize() ?? 11, true);
+        setPref('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**

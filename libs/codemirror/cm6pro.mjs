@@ -21,13 +21,13 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {EditorView, basicSetup} from "codemirror";
-import {EditorState, Compartment} from '@codemirror/state';
+import {basicSetup} from "codemirror";
+import {EditorView, keymap} from "@codemirror/view";
+import {EditorState, Compartment, Prec} from '@codemirror/state';
 import {syntaxTree} from '@codemirror/language';
 import {SearchCursor} from '@codemirror/search';
 import {html as htmlLang} from "@codemirror/lang-html";
 import {cm6proDark} from './cm6pro-dark-theme';
-import {prettify} from 'htmlfy';
 
 // 3rd party extensions.
 import {indentationMarkers} from '@replit/codemirror-indentation-markers';
@@ -43,10 +43,16 @@ const themes = {
     'dark': cm6proDark
 };
 
+// The wrapper class
 export default class CodeProEditor {
     static getThemes() {
         return ['light', 'dark'];
     }
+    static Marker = {
+        none: 0,
+        atElement: 1,
+        atCursor: 2
+    };
     /**
      * @member {HTMLElement} _parentElement
      * @member {string} _source
@@ -68,14 +74,18 @@ export default class CodeProEditor {
             fontSize: options?.fontSize ?? 11,
             lineWrapping: options?.lineWrapping ?? false,
             minimap: options?.minimap ?? true,
-            changesListener: options?.changesListener
+            changesListener: options?.changesListener,
+            commands: options.commands
         };
 
         this._parentElement = parentElement;
         this._editorView = new EditorView({
-            state: this._createState(),
+            state: this._createState(options.doc),
             parent: this._parentElement
         });
+        if (options.doc) {
+            this.scrollToCaretPosition();
+        }
     }
 
     /**
@@ -95,7 +105,8 @@ export default class CodeProEditor {
             colorPicker,
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme()),
-            this.minimapConfig.of(this._setupMinimap())
+            this.minimapConfig.of(this._createMinimap()),
+            Prec.high(keymap.of(this._createKeyMap()))
         ];
         if (this._config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
@@ -104,31 +115,83 @@ export default class CodeProEditor {
                 }
             }));
         }
+
         return EditorState.create({
             doc: html ?? '',
             extensions
         });
     }
 
+    _createKeyMap() {
+        return [
+            {
+                key: "Shift-Alt-m",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.minimap
+            },
+            {
+                key: "Shift-Alt-p",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.prettify
+            },
+            {
+                key: "Shift-Alt-w",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.linewrapping
+            },
+            {
+                key: "Shift-Alt-t",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.theme
+            },
+            {
+                key: "Shift-Alt-a",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.accept
+            },
+            {
+                key: "Shift-Alt-d",
+                preventDefault: true,
+                stopPropagation: true,
+                run: () => {
+                    // Stores the preferences from this editor
+                    this._config.commands.savePrefs();
+                    return true;
+                }
+            },
+            {
+                key: "Shift-Alt-c",
+                preventDefault: true,
+                stopPropagation: true,
+                run: this._config.commands.cancel
+            },
+        ];
+    }
+
     /**
-     *
      * @returns {*}
      */
-    _setupMinimap() {
+    _createMinimap() {
         if (!this._config.minimap) {
             return [];
         }
+
         const create = () => {
             const dom = document.createElement('div');
             return {dom};
         };
         return showMinimap.compute(['doc'], () => {
-            return {
-              create,
-              displayText: 'blocks',
-              showOverlay: 'always',
-              gutters: [],
-            };
+            return ({
+                create,
+                displayText: 'blocks',
+                showOverlay: 'always',
+                gutters: [],
+            });
         });
     }
 
@@ -143,24 +206,24 @@ export default class CodeProEditor {
      * Scrolls to the caret position defined by NULL ut8 char
      */
     scrollToCaretPosition() {
-       // Search the position of the NULL caret
-       const state = this._editorView.state;
-       const searchCursor = new SearchCursor(state.doc, MARKER);
-       searchCursor.next();
-       const value = searchCursor.value;
-       if (value) {
+        // Search the position of the NULL caret
+        const state = this._editorView.state;
+        const searchCursor = new SearchCursor(state.doc, MARKER);
+        searchCursor.next();
+        const value = searchCursor.value;
+        if (value) {
             // Update the view by removing this marker and scrolling to its position
             this._editorView.dispatch({
-               changes: {from: value.from, to: value.to, insert: ''},
-               selection: {anchor: value.from},
-               scrollIntoView: true
+                changes: {from: value.from, to: value.to, insert: ''},
+                selection: {anchor: value.from},
+                scrollIntoView: true
             });
-       } else {
+        } else {
             // Simply ensure that the cursor position is into view
             this._editorView.dispatch({
                 scrollIntoView: true
             });
-       }
+        }
     }
 
     /**
@@ -175,38 +238,50 @@ export default class CodeProEditor {
     }
 
     /**
-     * Gets the html source code,
-     * optionaly including a NULL marker at the closest Element to the
-     * cursor position
-     * @param {boolean} [includeMarker]
+     * Gets the html source code
+     * @param {number} [marker]
      * @returns {string}
      */
-    getValue(includeMarker) {
-        let pos = null;
-        if (includeMarker) {
-            // Insert the NULL marker at the begining of the closest TAG
-            const state = this._editorView.state;
-            const anchor = state.selection.main.from;
-            const tree = syntaxTree(state);
-            let currentNode = tree.resolve(anchor, -1);
+    getValue(marker) {
+        if (marker === CodeProEditor.Marker.atElement) {
+            return this._getValueWithMarkerAtElement();
+        } else if (marker === CodeProEditor.Marker.atCursor) {
+            return this._getValueWithMarkerAtCursor();
+        }
+        return this._editorView.state.doc.toString();
+    }
 
-            let nodeFound = null;
-            while (!nodeFound && currentNode) {
-                if (currentNode.type.name === 'Element') {
-                    nodeFound = currentNode;
-                } else if (currentNode.prevSibling) {
-                    currentNode = currentNode.prevSibling;
-                } else {
-                    currentNode = currentNode.parent;
-                }
-            }
-            if (nodeFound) {
-                pos = nodeFound.from;
-                this._editorView.dispatch({
-                    changes: {from: pos, to: pos, insert: MARKER}
-                });
+    /**
+     * Gets the html source code,
+     * including a NULL marker at the closest Element to the
+     * cursor position
+     * @returns {string}
+     */
+    _getValueWithMarkerAtElement() {
+        let pos = null;
+        // Insert the NULL marker at the begining of the closest TAG
+        const state = this._editorView.state;
+        const anchor = state.selection.main.from;
+        const tree = syntaxTree(state);
+        let currentNode = tree.resolve(anchor, -1);
+
+        let nodeFound = null;
+        while (!nodeFound && currentNode) {
+            if (currentNode.type.name === 'Element') {
+                nodeFound = currentNode;
+            } else if (currentNode.prevSibling) {
+                currentNode = currentNode.prevSibling;
+            } else {
+                currentNode = currentNode.parent;
             }
         }
+        if (nodeFound) {
+            pos = nodeFound.from;
+            this._editorView.dispatch({
+                changes: {from: pos, to: pos, insert: MARKER}
+            });
+        }
+
         const html = this._editorView.state.doc.toString();
         if (pos !== null) {
             this._editorView.dispatch({
@@ -217,16 +292,30 @@ export default class CodeProEditor {
     }
 
     /**
-     * Sets the state properties. Not directly the whole state
-     * to prevent plugins from being restarted
-     * @param {*} stateProps
+     * Gets the html source code,
+     * including a NULL marker at the cursor position
+     * @returns {string}
      */
-    setState(stateProps) {
-        const {html, selection} = stateProps;
-        const view = this._editorView;
-        const newState = this._createState(html, selection);
-        view.setState(newState);
+    _getValueWithMarkerAtCursor() {
+        const cursor = this._editorView.state.selection.main.head;
+        this._editorView.dispatch({
+            changes: {from: cursor, insert: MARKER},
+        });
 
+        const html = this._editorView.state.doc.toString();
+        if (cursor !== null) {
+            this._editorView.dispatch({
+                changes: {from: cursor, to: cursor + 1, insert: ''}
+            });
+        }
+        return html;
+    }
+
+    /**
+     * Sets the selection
+     * @param {*} selection
+     */
+    setSelection(selection) {
         // Restore selection
         this._editorView.dispatch({
             selection,
@@ -287,6 +376,15 @@ export default class CodeProEditor {
     }
 
     /**
+     * Toogles light or dark themes dynamically for an specific fontSize
+     */
+    toggleTheme() {
+        const themeName = this._config.themeName === 'light' ? 'dark' : 'light';
+        this.setTheme(themeName);
+        return themeName;
+    }
+
+    /**
      * Sets an specific font size
      * @param {number} size
      */
@@ -327,55 +425,26 @@ export default class CodeProEditor {
 
     /**
      * Enable/disable linewrapping dynamically
-     * @param {boolean} bool
      */
-    setLineWrapping(bool) {
-        this._config.lineWrapping = bool;
+    toggleLineWrapping() {
+        this._config.lineWrapping = !this._config.lineWrapping;
         this._editorView.dispatch({
-            effects: this.linewrapConfig.reconfigure(bool ? [EditorView.lineWrapping] : [])
+            effects: this.linewrapConfig.reconfigure(this._config.lineWrapping ? [EditorView.lineWrapping] : [])
         });
+        return this._config.lineWrapping;
     }
 
     /**
      * Show/hide minimap dynamically
-     * @param {boolean} bool
      */
-    setMinimap(bool) {
-        this._config.minimap = bool;
+    toggleMinimap() {
+        this._config.minimap = !this._config.minimap;
         this._editorView.dispatch({
-            effects: this.minimapConfig.reconfigure(this._setupMinimap())
+            effects: this.minimapConfig.reconfigure(this._createMinimap()),
+            scrollIntoView: true
         });
-    }
-
-    /**
-     * Returns the prettified code as a string
-     * @param {string} [text]
-     * @param {boolean} [addMarker]
-     * @returns {string}
-     */
-    prettifyCode(text, addMarker) {
-        if (!text) {
-            if (addMarker) {
-                // Must add the marker to the current selection position in order to restore scroll
-                // after the code has been formatted.
-                const cursor = this._editorView.state.selection.main.head;
-                this._editorView.dispatch({
-                    changes: {from: cursor, insert: MARKER},
-                });
-            }
-            text = this.getValue();
-        }
-        return prettify(text, {
-                ignore: ['style', 'script'],
-                strict: false,
-                tab_size: 2
-          });
-    }
-    /**
-     * Dispatch the prettified html into the view
-     */
-    prettify() {
-        this.setValue(this.prettifyCode(null, true));
+        this._editorView.focus();
+        return this._config.minimap;
     }
 
     /**

@@ -21,26 +21,30 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-const preferences = {
+const defaultPrefs = {
     theme: "light", /** Light vs dark themes */
-    wrap: false, /** Wrap long lines */
+    wrap: true, /** Wrap long lines */
     fs: false, /** Fullscreen mode */
     fontsize: 11, /** Editor fontsize */
     minimap: true, /** VScode like minimap */
     view: undefined, /** Which UI is used to display the HTML editor */
 };
 
-const storedPreferences = localStorage.getItem("tiny-codepro");
-if (storedPreferences) {
+const loadPrefs = () => {
+    const storedPreferences = localStorage.getItem("tiny-codepro");
     let storedParsed = {};
-    try {
-        storedParsed = JSON.parse(storedPreferences);
-    } catch (ex) {
-        // eslint-disable-next-line no-console
-        console.error("Cannot parse JSON", storedPreferences);
+    if (storedPreferences) {
+        try {
+            storedParsed = JSON.parse(storedPreferences);
+        } catch (ex) {
+            // eslint-disable-next-line no-console
+            console.error("Cannot parse JSON", storedPreferences);
+        }
     }
-    Object.assign(preferences, storedParsed);
-}
+    return {...defaultPrefs, ...storedParsed};
+};
+
+const preferences = loadPrefs();
 
 /**
  * @param {string} key The preference key
@@ -66,7 +70,10 @@ const savePrefs = () => {
 const setPref = (key, value, save) => {
     preferences[key] = value;
     if (save) {
-        savePrefs();
+        // Only save this preference, keep the remaining ones intact
+        const oldPrefs = loadPrefs();
+        oldPrefs[key] = value;
+        localStorage.setItem("tiny-codepro", JSON.stringify(oldPrefs));
     }
 };
 
