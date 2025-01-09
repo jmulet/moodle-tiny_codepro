@@ -28,7 +28,7 @@ const showPlugin = getPluginOptionName(pluginName, 'showplugin');
 const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
 const uiMode = getPluginOptionName(pluginName, 'uimode');
 const syncCaret = getPluginOptionName(pluginName, 'synccaret');
-const customElements = getPluginOptionName(pluginName, 'customElements');
+const customElements = getPluginOptionName(pluginName, 'customelements');
 
 
 export const register = (editor) => {

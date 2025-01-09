@@ -26,21 +26,20 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
     $pluginname = 'tiny_codepro';
-    $ADMIN->add('editortiny', new admin_category('tiny_codepro', get_string('settings', $pluginname))); 
-    $settingspage = new admin_settingpage('tiny_codepro_settings', get_string('settings', $pluginname));
-
+    $ADMIN->add('editortiny', new admin_category('tiny_codepro', new lang_string('pluginname', $pluginname))); 
+   
     if ($ADMIN->fulltree) {
-        $settingspage->add(new admin_setting_configcheckbox(
+        $settings->add(new admin_setting_configcheckbox(
             'tiny_codepro/autoprettify',
-            get_string('autoprettify', $pluginname),
-            get_string('autoprettify_def', $pluginname),
+            new lang_string('autoprettify', $pluginname),
+            new lang_string('autoprettify_def', $pluginname),
             1
         ));
 
-        $settingspage->add(new admin_setting_configcheckbox(
+        $settings->add(new admin_setting_configcheckbox(
             'tiny_codepro/synccaret',
-            get_string('synccaret', $pluginname),
-            get_string('synccaret_def', $pluginname),
+            new lang_string('synccaret', $pluginname),
+            new lang_string('synccaret_def', $pluginname),
             1
         ));
 
@@ -51,22 +50,20 @@ if ($hassiteconfig) {
             'user:panel' => 'User configurable; defaults to panel',
         ];
 
-        $settingspage->add(new admin_setting_configselect(
+        $settings->add(new admin_setting_configselect(
             'tiny_codepro/uimode',
-            get_string('uimode', $pluginname),
-            get_string('uimode_def', $pluginname),
+            new lang_string('uimode', $pluginname),
+            new lang_string('uimode_def', $pluginname),
             'user:dialog',
             $choices1
         ));
 
-        $settingspage->add(new admin_setting_configtext(
+        $settings->add(new admin_setting_configtext(
             'tiny_codepro/customelements',
-            get_string('customelements', $pluginname),
-            get_string('customelements_def', $pluginname),
+            new lang_string('customelements', $pluginname),
+            new lang_string('customelements_def', $pluginname),
             '',
             PARAM_TEXT
         ));
     }
-
-    $ADMIN->add('tiny_codepro', $settingspage);
 }

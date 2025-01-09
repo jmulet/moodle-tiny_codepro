@@ -62,7 +62,7 @@ export const getSetup = async() => {
         // Add custom elements to the editor
         const customElements = (getCustomElements(editor) ?? '').trim();
         if (customElements) {
-            editor.addCustomElements(customElements);
+            editor.once('BeforeSetContent', () => editor.parser?.schema?.addCustomElements(customElements));
         }
 
         // Register the Icon.
