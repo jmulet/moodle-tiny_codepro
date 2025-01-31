@@ -29877,13 +29877,12 @@ const colorPickerTheme = /*@__PURE__*/EditorView.baseTheme({
         '&::-webkit-color-swatch': {
             border: 'none',
         },
-        // TODO: Fix it! - Gives an error on chrome and safari
-        // Only include it if we are sure the browser is mozilla.
-        /*'&::-moz-color-swatch': {
+        /*
+        '&::-moz-color-swatch': {
             border: 'none',
-        },*/
+        },
+        */
     },
-    
 });
 const makeColorPicker = (options) => ViewPlugin.fromClass(class ColorPickerViewPlugin {
     constructor(view) {
@@ -31530,10 +31529,13 @@ class CodeProEditor {
     toggleMinimap() {
         this._config.minimap = !this._config.minimap;
         this._editorView.dispatch({
-            effects: this.minimapConfig.reconfigure(this._createMinimap()),
-            scrollIntoView: true
+            effects: this.minimapConfig.reconfigure(this._createMinimap())
         });
         this._editorView.focus();
+        // Issue:: Need to scroll to ensure minimap is rerendered
+        this._editorView.dispatch({
+            scrollIntoView: true
+        });
         return this._config.minimap;
     }
 

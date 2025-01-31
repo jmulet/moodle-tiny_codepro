@@ -27,13 +27,13 @@
 
     Context variables required for this template:
     elementid - The ID of the element to be edited.
-    canUserSwitchUI - Whether the user is allowed to switch between dialog and panel UI modes or not.
+    canuserswitchui - Whether the user is allowed to switch between dialog and panel UI modes or not.
     icons - A dictionary of svg icons.
 
     Example context (json):
     {
         "elementid": "id_of_element",
-        "canUserSwitchUI": true,
+        "canuserswitchui": true,
         "icons": {
             "key": "svg icon"
         }
@@ -49,7 +49,7 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            {{#canUserSwitchUI}}<button class="btn btn-sm btn-secondary" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}"><span>{{{icons.eye}}}</span></button>{{/canUserSwitchUI}}
+            {{#canuserswitchui}}<button class="btn btn-sm btn-secondary" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}"><span>{{{icons.eye}}}</span></button>{{/canuserswitchui}}
             <button class="btn btn-sm btn-secondary" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><span>{{{icons.fullscreen}}}</span></button>
             <button class="btn btn-sm btn-secondary" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}"><span>{{{icons.decreasefontsize}}}</span></button>
             <button class="btn btn-sm btn-secondary" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}"><span>{{{icons.increasefontsize}}}</span></button>

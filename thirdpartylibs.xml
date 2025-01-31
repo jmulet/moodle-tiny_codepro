@@ -1,10 +1,26 @@
 <?xml version="1.0"?>
 <libraries>
     <library>
+        <location>amd/src/cm6pro-lazy.js</location>
+        <name>cm6pro</name>
+        <version>6.0.1</version>
+        <license>MIT</license>
+        <licenseversion></licenseversion>
+    </library>
+    <library>
+        <location>amd/src/htmlfy-lazy.js</location>
+        <name>htmlfy</name>
+        <version>0.6.0</version>
+        <license>MIT</license>
+        <licenseversion></licenseversion>
+        <repository>https://github.com/j4w8n/htmlfy</repository>
+    </library>
+    <library>
         <location>libs/codemirror/</location>
         <name>codemirror</name>
         <version>6.0.1</version>
         <license>MIT</license>
         <licenseversion></licenseversion>
+        <repository>https://github.com/codemirror/basic-setup</repository>
     </library>
 </libraries>

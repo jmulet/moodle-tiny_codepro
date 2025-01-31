@@ -248,10 +248,13 @@ export class ViewManager {
             commands
         };
         if (this.opts.autosave) {
-            // Detect changes on CM editor.
+            // View-panel case. Detect changes on CM editor.
             options.changesListener = () => {
                 this.pendingChanges = true;
             };
+            // Always enable linewrapping in panel view
+            options.lineWrapping = true;
+            options.commands.linewrapping = () => false;
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
 

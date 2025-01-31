@@ -39,7 +39,7 @@ use editor_tiny\plugin_with_menuitems;
  *
  * @return mixed The value of the key if it exists, or the default value.
  */
-function cfgwithdefault(object $cfg, string $key, $default) {
+function tiny_codepro_cfgwithdefault(object $cfg, string $key, $default) {
     return property_exists($cfg, $key) ? $cfg->$key : $default;
 }
 
@@ -99,10 +99,10 @@ class plugininfo extends plugin implements
 
         if ($showplugin) {
             $cfg = get_config('tiny_codepro');
-            $params['autoprettify'] = cfgwithdefault($cfg, 'autoprettify', 1) == 1;
-            $params['synccaret'] = cfgwithdefault($cfg, 'synccaret', 1) == 1;
-            $params['uimode'] = cfgwithdefault($cfg, 'uimode', 'user:dialog');
-            $params['customelements'] = cfgwithdefault($cfg, 'customelements', '');
+            $params['autoprettify'] = tiny_codepro_cfgwithdefault($cfg, 'autoprettify', 1) == 1;
+            $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 1) == 1;
+            $params['uimode'] = tiny_codepro_cfgwithdefault($cfg, 'uimode', 'user:dialog');
+            $params['customelements'] = tiny_codepro_cfgwithdefault($cfg, 'customelements', '');
         }
 
         return $params;

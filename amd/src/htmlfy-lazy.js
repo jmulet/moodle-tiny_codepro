@@ -3,12 +3,15 @@
 /* eslint-disable */
 
 /**
- * @type {import('types').DefaultConfig}
+ * @type {import('htmlfy').Config}
  */
 const CONFIG = {
   ignore: [],
+  ignore_with: '_!i-£___£%_',
   strict: false,
   tab_size: 2,
+  tag_wrap: false,
+  tag_wrap_width: 80,
   trim: []
 };
 
@@ -18,10 +21,7 @@ const CONFIG = {
  * @param {string} content Content to evaluate.
  * @returns {boolean} A boolean.
  */
-const isHtml = (content) => {
-  const regex = /<(?<Element>[A-Za-z]+\b)[^>]*(?:.|\n)*?<\/{1}\k<Element>>/;
-  return regex.test(content)
-};
+const isHtml = (content) => /<(?<Element>[A-Za-z]+\b)[^>]*(?:.|\n)*?<\/{1}\k<Element>>/.test(content);
 
 /**
  * Generic utility which merges two objects.
@@ -32,7 +32,7 @@ const isHtml = (content) => {
  */
 const mergeObjects = (current, updates) => {
   if (!current || !updates)
-    throw new Error("Both 'current' and 'updates' must be passed-in to merge()")
+    throw new Error("Both 'current' and 'updates' must be passed-in to mergeObjects()")
 
   /**
    * @type {any}
@@ -59,7 +59,7 @@ const mergeObjects = (current, updates) => {
 /**
  * Merge a user config with the default config.
  * 
- * @param {import('types').DefaultConfig} dconfig The default config.
+ * @param {import('htmlfy').Config} dconfig The default config.
  * @param {import('htmlfy').UserConfig} config The user config.
  * @returns {import('htmlfy').Config}
  */
@@ -72,38 +72,32 @@ const mergeConfig = (dconfig, config) => {
 };
 
 /**
- * Ignores elements by protecting or unprotecting their entities.
+ * Replace entities with ignore string.
  * 
  * @param {string} html 
- * @param {string[]} ignore
- * @param {string} [mode]
+ * @param {import('htmlfy').Config} config
  * @returns {string}
  */
-const ignoreElement = (html, ignore, mode = 'protect') => {
+const setIgnoreElement = (html, config) => {
+  const ignore = config.ignore;
+  const ignore_string = config.ignore_with;
+
   for (let e = 0; e < ignore.length; e++) {
     const regex = new RegExp(`<${ignore[e]}[^>]*>((.|\n)*?)<\/${ignore[e]}>`, "g");
-    html = html.replace(regex, mode === 'protect' ? protectElement : unprotectElement);
+
+    html = html.replace(regex, (/** @type {string} */match, /** @type {any} */capture) => {
+      return match.replace(capture, (match) => {
+        return match
+          .replace(/</g, '-' + ignore_string + 'lt-')
+          .replace(/>/g, '-' + ignore_string + 'gt-')
+          .replace(/\n/g, '-' + ignore_string + 'nl-')
+          .replace(/\r/g, '-' + ignore_string + 'cr-')
+          .replace(/\s/g, '-' + ignore_string + 'ws-')
+      })
+    });
   }
-
+  
   return html
-};
-
-/**
- * Protect an element by inserting entities.
- * 
- * @param {string} match 
- * @param {any} capture 
- * @returns 
- */
-const protectElement = (match, capture) => {
-  return match.replace(capture, (match) => {
-    return match
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '&#10;')
-      .replace(/\r/g, '&#13;')
-      .replace(/\s/g, '&nbsp;')
-  })
 };
 
 /**
@@ -128,21 +122,32 @@ const trimify = (html, trim) => {
 };
 
 /**
- * Unprotect an element by removing entities.
+ * Replace ignore string with entities.
  * 
- * @param {string} match 
- * @param {any} capture 
- * @returns 
+ * @param {string} html 
+ * @param {import('htmlfy').Config} config
+ * @returns {string}
  */
-const unprotectElement = (match, capture) => {
-  return match.replace(capture, (match) => {
-    return match
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#10;/g, '\n')
-      .replace(/&#13;/g, '\r')
-      .replace(/&nbsp;/g, ' ')
-  })
+const unsetIgnoreElement = (html, config) => {
+  const ignore = config.ignore;
+  const ignore_string = config.ignore_with;
+
+  for (let e = 0; e < ignore.length; e++) {
+    const regex = new RegExp(`<${ignore[e]}[^>]*>((.|\n)*?)<\/${ignore[e]}>`, "g");
+
+    html = html.replace(regex, (/** @type {string} */match, /** @type {any} */capture) => {
+      return match.replace(capture, (match) => {
+        return match
+          .replace(new RegExp('-' + ignore_string + 'lt-', "g"), '<')
+          .replace(new RegExp('-' + ignore_string + 'gt-', "g"), '>')
+          .replace(new RegExp('-' + ignore_string + 'nl-', "g"), '\n')
+          .replace(new RegExp('-' + ignore_string + 'cr-', "g"), '\r')
+          .replace(new RegExp('-' + ignore_string + 'ws-', "g"), ' ')
+      })
+    });
+  }
+  
+  return html
 };
 
 /**
@@ -155,16 +160,22 @@ const validateConfig = (config) => {
   if (typeof config !== 'object') throw new Error('Config must be an object.')
 
   const config_empty = !(
-    Object.hasOwn(config, 'tab_size') || 
-    Object.hasOwn(config, 'strict') || 
     Object.hasOwn(config, 'ignore') || 
-    Object.hasOwn(config, 'trim'));
+    Object.hasOwn(config, 'ignore_with') || 
+    Object.hasOwn(config, 'strict') || 
+    Object.hasOwn(config, 'tab_size') || 
+    Object.hasOwn(config, 'tag_wrap') || 
+    Object.hasOwn(config, 'tag_wrap_width') || 
+    Object.hasOwn(config, 'trim')
+  );
+
   if (config_empty) return CONFIG
 
   let tab_size = config.tab_size;
 
   if (tab_size) {
-    if (typeof tab_size !== 'number') throw new Error('Tab size must be a number.')
+    if (typeof tab_size !== 'number') throw new Error(`tab_size must be a number, not ${typeof config.tab_size}.`)
+
     const safe = Number.isSafeInteger(tab_size);
     if (!safe) throw new Error(`Tab size ${tab_size} is not safe. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isSafeInteger for more info.`)
 
@@ -178,10 +189,21 @@ const validateConfig = (config) => {
     config.tab_size = tab_size;
   }
 
-  if (Object.hasOwn(config, 'strict') && typeof config.strict !== 'boolean')
-    throw new Error('Strict config must be a boolean.')
   if (Object.hasOwn(config, 'ignore') && (!Array.isArray(config.ignore) || !config.ignore?.every((e) => typeof e === 'string')))
     throw new Error('Ignore config must be an array of strings.')
+
+  if (Object.hasOwn(config, 'ignore_with') && typeof config.ignore_with !== 'string')
+    throw new Error(`Ignore_with config must be a string, not ${typeof config.ignore_with}.`)
+
+  if (Object.hasOwn(config, 'strict') && typeof config.strict !== 'boolean')
+    throw new Error(`Strict config must be a boolean, not ${typeof config.strict}.`)
+
+  if (Object.hasOwn(config, 'tag_wrap') && typeof config.tag_wrap !== 'boolean')
+    throw new Error(`tag_wrap config must be a boolean, not ${typeof config.tag_wrap}.`)
+
+  if (Object.hasOwn(config, 'tag_wrap_width') && typeof config.tag_wrap_width !== 'number')
+    throw new Error(`tag_wrap_width config must be a number, not ${typeof config.tag_wrap_width}.`)
+
   if (Object.hasOwn(config, 'trim') && (!Array.isArray(config.trim) || !config.trim?.every((e) => typeof e === 'string')))
     throw new Error('Trim config must be an array of strings.')
 
@@ -199,18 +221,16 @@ const void_elements = [
  * Ensure void elements are "self-closing".
  * 
  * @param {string} html The HTML string to evaluate.
- * @param {boolean} html_check Check to see if the content contains any HTML, before processing.
+ * @param {boolean} check_html Check to see if the content contains any HTML, before processing.
  * @returns {string}
  * @example <br> => <br />
  */
-const closify = (html, html_check = true) => {
-  if (html_check)
-    if (!isHtml(html)) return html
+const closify = (html, check_html = true) => {
+  if (check_html && !isHtml(html)) return html
   
   return html.replace(/<([a-zA-Z\-0-9]+)[^>]*>/g, (match, name) => {
-    if (void_elements.indexOf(name) > -1) {
+    if (void_elements.indexOf(name) > -1)
       return (`${match.substring(0, match.length - 1)} />`).replace(/\/\s\//g, '/')
-    }
 
     return match.replace(/[\s]?\/>/g, `></${name}>`)
   })
@@ -276,12 +296,11 @@ const entify = (html, minify = false) => {
  * by removing line returns, tabs, and relevant spaces.
  * 
  * @param {string} html The HTML string to minify.
- * @param {boolean} html_check Check to see if the content contains any HTML, before processing.
+ * @param {boolean} check_html Check to see if the content contains any HTML, before processing.
  * @returns {string} A minified HTML string.
  */
-const minify = (html, html_check = true) => {
-  if (html_check)
-    if (!isHtml(html)) return html
+const minify = (html, check_html = true) => {
+  if (check_html && !isHtml(html)) return html
 
   /**
    * Ensure textarea content is specially minified and protected
@@ -353,8 +372,7 @@ const enqueue = (html) => {
 const preprocess = (html) => {
   html = closify(html, false);
 
-  if (trim.length > 0)
-    html = trimify(html, trim);
+  if (trim.length > 0) html = trimify(html, trim);
 
   html = minify(html, false);
   html = enqueue(html);
@@ -365,10 +383,14 @@ const preprocess = (html) => {
 /**
  * 
  * @param {string} html The HTML string to process.
- * @param {number} step 
+ * @param {import('htmlfy').Config} config 
  * @returns {string}
  */
-const process = (html, step) => {
+const process = (html, config) => {
+  const step = config.tab_size;
+  const wrap = config.tag_wrap;
+  const wrap_width = config.tag_wrap_width;
+
   /* Track current number of indentations needed. */
   let indents = '';
 
@@ -415,19 +437,42 @@ const process = (html, step) => {
         const result = match
           .replace(`[#-# : ${index} : `, '')
           .replace(' : #-#]', '');
+        
+        const tag_regex = /<[A-Za-z]+\b[^>]*(?:.|\n)*?\/?>/g; /* Is opening tag or void element. */
 
-        /* Pad the string with spaces and return. */
-        return result.padStart(result.length + (step * offset))
+        /* Wrap the attributes of open tags and void elements. */
+        if (wrap && tag_regex.test(source) && source.length > wrap_width) {
+          const attribute_regex = /\s{1}[A-Za-z-]+(?:=".*?")?/g; /* Matches all tag/element attributes. */
+          const tag_parts = source.split(attribute_regex).filter(Boolean);
+          const attributes = source.matchAll(attribute_regex);
+          const padding = step * offset;
+          const inner_padding = padding + step;
+
+          let wrapped = tag_parts[0].padStart(tag_parts[0].length + padding) + `\n`;
+          for (const a of attributes) {
+            /* Must declare separately so we can pad this string before adding it to `wrapped`. */
+            const a_string = a[0].trim().padStart(a[0].trim().length + inner_padding) + `\n`;
+            wrapped += a_string;
+          }
+          const e_string = tag_parts[1].padStart(tag_parts[1].trim().length + padding + (strict ? 1 : 0));
+          wrapped += e_string;
+
+          return wrapped
+        } else {
+          /* Pad the string with spaces and return. */
+          return result.padStart(result.length + (step * offset))
+        }
       });
   });
 
   /* Remove line returns, tabs, and consecutive spaces within html elements or their content. */
-  html = html.replace(/>[^<]*?[^><\/\s][^<]*?<\/|>\s+[^><\s]|<script[^>]*>\s+<\/script>|<(\w+)>\s+<\/(\w+)|<([\w\-]+)[^>]*[^\/]>\s+<\/([\w\-]+)>/g,
+  html = html.replace(
+    />[^<]*?[^><\/\s][^<]*?<\/|>\s+[^><\s]|<script[^>]*>\s+<\/script>|<(\w+)>\s+<\/(\w+)|<([\w\-]+)[^>]*[^\/]>\s+<\/([\w\-]+)>/g,
     match => match.replace(/\n|\t|\s{2,}/g, '')
   );
 
   /* Remove self-closing nature of void elements. */
-  if (strict) html = html.replace(/\s\/>/g, '>');
+  if (strict) html = html.replace(/\s\/>|\/>/g, '>');
 
   const lead_newline_check = html.substring(0, 1);
   const tail_newline_check = html.substring(html.length - 1);
@@ -459,18 +504,14 @@ const prettify = (html, config) => {
   const ignore = validated_config.ignore.length > 0;
   trim = validated_config.trim;
 
-  /* Protect ignored elements. */
-  if (ignore) {
-    html = ignoreElement(html, validated_config.ignore);
-  }
+  /* Preserve ignored elements. */
+  if (ignore) html = setIgnoreElement(html, validated_config);
 
   html = preprocess(html);
-  html = process(html, validated_config.tab_size);
+  html = process(html, validated_config);
 
-  /* Unprotect ignored elements. */
-  if (ignore) {
-    html = ignoreElement(html, validated_config.ignore, 'unprotect');
-  }
+  /* Revert ignored elements. */
+  if (ignore) html = unsetIgnoreElement(html, validated_config);
 
   return html
 };

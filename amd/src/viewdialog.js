@@ -43,11 +43,11 @@ export class ViewDialogManager extends ViewManager {
 
     async _tCreate() {
         const defaultUI = getDefaultUI(this.editor) ?? 'dialog';
-        const canUserSwitchUI = defaultUI.startsWith('user:');
+        const canuserswitchui = defaultUI.startsWith('user:');
 
         const data = {
             elementid: Math.random().toString(32).substring(2),
-            canUserSwitchUI,
+            canuserswitchui,
             icons: ViewManager.icons
         };
 

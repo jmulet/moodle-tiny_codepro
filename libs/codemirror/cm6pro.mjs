@@ -440,10 +440,13 @@ export default class CodeProEditor {
     toggleMinimap() {
         this._config.minimap = !this._config.minimap;
         this._editorView.dispatch({
-            effects: this.minimapConfig.reconfigure(this._createMinimap()),
-            scrollIntoView: true
+            effects: this.minimapConfig.reconfigure(this._createMinimap())
         });
         this._editorView.focus();
+        // Issue:: Need to scroll to ensure minimap is rerendered
+        this._editorView.dispatch({
+            scrollIntoView: true
+        });
         return this._config.minimap;
     }
 

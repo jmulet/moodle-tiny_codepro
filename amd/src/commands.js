@@ -94,8 +94,8 @@ export const getSetup = async() => {
         // Add command to show the code editor.
         editor.addCommand("mceCodeProEditor", () => {
             let uiMode = getDefaultUI(editor) ?? 'dialog';
-            const canUserSwitchUI = uiMode.startsWith('user:');
-            if (canUserSwitchUI) {
+            const canuserswitchui = uiMode.startsWith('user:');
+            if (canuserswitchui) {
                 uiMode = getPref('view', uiMode.substring(5));
             }
             // Make sure preference is in sync

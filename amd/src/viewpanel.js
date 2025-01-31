@@ -108,7 +108,7 @@ export class ViewPanelManager extends ViewManager {
     }
 
     #setButtonsState() {
-        const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, btnAccept} = this.domElements;
+        const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept} = this.domElements;
 
         // Style issue
         btnDescreaseFontsize.style.marginRight = '0';
@@ -116,9 +116,7 @@ export class ViewPanelManager extends ViewManager {
 
         // Set the toggle state
         const isDark = getPref('theme', 'light') === 'dark';
-        const isWrap = getPref('wrap', false);
         btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
-        btnWrap.querySelector('span').innerHTML = isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
         if (isDark) {
             this.parentContainer.classList.add('tiny_codepro-dark');
         } else {
@@ -174,13 +172,12 @@ export class ViewPanelManager extends ViewManager {
                 this.parentContainer = container.parentElement;
                 const headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
                 // eslint-disable-next-line no-unused-vars
-                const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnWrap, ___, btnAccept] = headerButtonElements;
+                const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, ___, btnAccept] = headerButtonElements;
                 this.domElements = {
                     root: this.parentContainer,
                     btnDescreaseFontsize,
                     btnIncreaseFontsize,
                     btnTheme,
-                    btnWrap,
                     btnAccept
                 };
 
@@ -203,6 +200,7 @@ export class ViewPanelManager extends ViewManager {
     }
 
     #createButtons() {
+        // eslint-disable-next-line no-unused-vars
         const [opendialogStr, fullscreenStr, themesStr, linewrapStr, prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
 
         const buttons = [
@@ -237,13 +235,7 @@ export class ViewPanelManager extends ViewManager {
                 tooltip: themesStr,
                 onAction: this.toggleTheme.bind(this)
             },
-            {
-                type: 'button',
-                text: ' ',
-                icon: 'tiny_codepro-exchange',
-                tooltip: linewrapStr,
-                onAction: this.toggleLineWrapping.bind(this)
-            },
+            // Linewrapping causes problems in panel view
             {
                 type: 'button',
                 text: ' ',
@@ -262,8 +254,8 @@ export class ViewPanelManager extends ViewManager {
 
         // If user is allowed to switch views, add the button
         const defaultUI = getDefaultUI(this.editor) ?? 'dialog';
-        const canUserSwitchUI = defaultUI.startsWith('user:');
-        if (canUserSwitchUI) {
+        const canuserswitchui = defaultUI.startsWith('user:');
+        if (canuserswitchui) {
             buttons.unshift({
                 type: 'button',
                 text: ' ',

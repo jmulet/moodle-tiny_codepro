@@ -33,5 +33,7 @@ Prevents from opening the code editor before the content is set in Tiny editor
 
 == 2.0.0 ==
 Allow custom HTML elements through configuration
-New ui based on Tiny view component
-
+New UI based on Tiny view component
+Cursor synchronization between Tiny and CodeMirror editors
+Configure fontsize
+Editor extensions such as color picker and minitab
