@@ -26,8 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
     $pluginname = 'tiny_codepro';
-    $ADMIN->add('editortiny', new admin_category('tiny_codepro', new lang_string('pluginname', $pluginname))); 
-   
+    $ADMIN->add('editortiny', new admin_category('tiny_codepro', new lang_string('pluginname', $pluginname)));
+
     if ($ADMIN->fulltree) {
         $settings->add(new admin_setting_configcheckbox(
             'tiny_codepro/autoprettify',

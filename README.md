@@ -75,14 +75,18 @@ The plugin also integrates with the [htmlfy](https://github.com/j4w8n/htmlfy#rea
 
 ## Configuration
 
-This plugin includes the following user configuration options:
+Administradors can set these options
+
+<img src="./pix/pict06.png" alt="Administrator options" style="max-width:350px;">
+
+Additionally, the capability `tiny/codepro:viewplugin` controls visibility for specific roles.
+
+Regular users can configure:
 
 - **Default UI Mode**: Choose between "Dialog" and "Panel" mode.
 - **User Mode Switching**: Allow users to switch UI modes.
 - **Theme Selection**: Set a default theme or allow users to toggle between light and dark modes.
 - **Font Size Configuration**: Adjust font sizes for better readability.
-
-Additionally, the capability `tiny/codepro:viewplugin` controls visibility for specific roles.
 
 ## Build & Development
 
