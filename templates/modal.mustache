@@ -27,10 +27,16 @@
 
     Context variables required for this template:
     elementid - The ID of the element to be edited.
+    canuserswitchui - Whether the user is allowed to switch between dialog and panel UI modes or not.
+    icons - A dictionary of svg icons.
 
     Example context (json):
     {
-        "elementid": "id_of_element"
+        "elementid": "id_of_element",
+        "canuserswitchui": true,
+        "icons": {
+            "key": "svg icon"
+        }
     }
 }}
 {{< core/modal }}
@@ -43,16 +49,13 @@
     {{/body}}
     {{$footer}}
         <div class="tiny_codepro-left">
-            <button class="btn btn-light" data-fs="false" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><i class="fa fa-arrows-alt"></i></button>
-            <button class="btn btn-light" data-theme="light" title="{{#str}} themes, tiny_codepro {{/str}}"><i class="fa fa-sun-o"></i></button>
-            <button class="btn btn-light" data-wrap="true" title="{{#str}} linewrap, tiny_codepro {{/str}}"><i class="fa fa-exchange"></i></button>
-            <div class="btn-group">
-                <button class="btn btn-light" data-prettify title="{{#str}} prettify, tiny_codepro {{/str}}"><i class="fa fa-magic"></i></button>
-                <button data-auto-prettify class="btn btn-light dropdown-toggle-split"
-                    title="{{#str}} autoprettify, tiny_codepro {{/str}}" style="padding: 1px; width: 20px; border-left: 1px solid gray;">
-                    <small><i class="fas fa fa-times"></i></small>
-                </button>
-            </div>
+            {{#canuserswitchui}}<button class="btn btn-sm btn-secondary" data-action="view" title="{{#str}} openpanel, tiny_codepro {{/str}}"><span>{{{icons.eye}}}</span></button>{{/canuserswitchui}}
+            <button class="btn btn-sm btn-secondary" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><span>{{{icons.fullscreen}}}</span></button>
+            <button class="btn btn-sm btn-secondary" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}"><span>{{{icons.decreasefontsize}}}</span></button>
+            <button class="btn btn-sm btn-secondary" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}"><span>{{{icons.increasefontsize}}}</span></button>
+            <button class="btn btn-sm btn-secondary" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}"><span>{{{icons.sun}}}</span></button>
+            <button class="btn btn-sm btn-secondary" data-action="wrap" title="{{#str}} linewrap, tiny_codepro {{/str}}"><span>{{{icons.exchange}}}</span></button>
+            <button class="btn btn-sm btn-secondary" data-action="prettify" title="{{#str}} prettify, tiny_codepro {{/str}}"><span>{{{icons.magic}}}</span></button>
         </div>
         <button class="btn btn-secondary" data-action="cancel">{{#str}} cancel, tiny_codepro {{/str}}</button>
         <button class="btn btn-primary" data-action="save">{{#str}} save, tiny_codepro {{/str}}</button>

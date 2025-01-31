@@ -15,15 +15,18 @@
     "simply-beautiful"
   ],
   "author": "Josep Mulet Pol",
-  "license": "GNU",
+  "license": "MIT",
   "dependencies": {
     "@codemirror/lang-html": "^6.4.9",
+    "@replit/codemirror-css-color-picker": "^6.3.0",
     "@replit/codemirror-indentation-markers": "^6.5.3",
+    "@replit/codemirror-minimap": "^0.5.2",
     "codemirror": "^6.0.1",
-    "htmlfy": "^0.3.2"
+    "htmlfy": "^0.6.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-replace": "^6.0.2",
     "rollup": "^3.26.2"
   }
 }

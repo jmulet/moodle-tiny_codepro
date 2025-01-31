@@ -14,6 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Tiny CodePro plugin version details.
+ *
+ * @package     tiny_codepro
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace tiny_codepro;
 
 use context;
@@ -23,11 +31,20 @@ use editor_tiny\plugin_with_configuration;
 use editor_tiny\plugin_with_menuitems;
 
 /**
- * Tiny CodePro plugin version details.
+ * Gets the value of a configuration key with a default fallback.
  *
- * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @param object $cfg       The configuration object.
+ * @param string $key       The key to check in the configuration object.
+ * @param mixed  $default   The default value to return if the key is not found.
+ *
+ * @return mixed The value of the key if it exists, or the default value.
+ */
+function tiny_codepro_cfgwithdefault(object $cfg, string $key, $default) {
+    return property_exists($cfg, $key) ? $cfg->$key : $default;
+}
+
+/**
+ * Summary of plugininfo
  */
 class plugininfo extends plugin implements
     plugin_with_buttons,
@@ -78,8 +95,16 @@ class plugininfo extends plugin implements
         // Decide if to enable the plugin?
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 
-        return [
-            'showplugin' => $showplugin,
-        ];
+        $params = ['showplugin' => $showplugin];
+
+        if ($showplugin) {
+            $cfg = get_config('tiny_codepro');
+            $params['autoprettify'] = tiny_codepro_cfgwithdefault($cfg, 'autoprettify', 1) == 1;
+            $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 1) == 1;
+            $params['uimode'] = tiny_codepro_cfgwithdefault($cfg, 'uimode', 'user:dialog');
+            $params['customelements'] = tiny_codepro_cfgwithdefault($cfg, 'customelements', '');
+        }
+
+        return $params;
     }
 }

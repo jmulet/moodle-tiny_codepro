@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -17,37 +18,96 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import {getButtonImage} from 'editor_tiny/utils';
-import {get_string as getString} from 'core/str';
-import {handleAction} from './ui';
+import {get_strings} from 'core/str';
+import {ViewDialogManager} from './viewdialog';
 import {component, icon} from './common';
-import {isPluginVisible} from './options';
+import {getCustomElements, getDefaultUI, isPluginVisible} from './options';
+import {ViewPanelManager} from './viewpanel';
+import {getPref, setPref} from './preferences';
 
+/**
+ * Setups the TinyMCE editor
+ * @returns {Promise<(editor: TinyMCE)=>void>}
+ */
 export const getSetup = async() => {
     const [
-        pluginName,
+        strs,
         buttonImage,
     ] = await Promise.all([
-        getString('pluginname', component),
+        get_strings([
+            {key: 'pluginname', component},
+            {key: 'opendialog', component},
+            {key: 'fullscreen', component},
+            {key: 'themes', component},
+            {key: 'linewrap', component},
+            {key: 'prettify', component},
+            {key: 'decreasefontsize', component},
+            {key: 'increasefontsize', component}
+        ]),
         getButtonImage('icon', component),
     ]);
 
-    return (editor) => {
+    const [pluginName, ...translations] = strs;
+
+    return async(editor) => {
         if (!isPluginVisible(editor)) {
             return;
         }
+
+        // Add custom elements to the editor
+        const customElements = (getCustomElements(editor) ?? '').trim();
+        if (customElements) {
+            editor.once('BeforeSetContent', () => editor.parser?.schema?.addCustomElements(customElements));
+        }
+
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);
+
+        /**
+         * Lazy init viewManagers
+         * @type {Record<string, import('./viewmanager').ViewManager>}
+         */
+        const _viewManagers = {};
+        /**
+         * @param {string} name
+         * @returns {import('./viewmanager').ViewManager}
+         **/
+        const getViewManager = (name) => {
+            let instance = _viewManagers[name];
+            if (instance) {
+                return instance;
+            }
+            if (name === 'panel') {
+               instance = new ViewPanelManager(editor, {autosave: true, translations});
+            } else {
+               instance = new ViewDialogManager(editor);
+            }
+            _viewManagers[name] = instance;
+            return instance;
+        };
+
+        // Add command to show the code editor.
+        editor.addCommand("mceCodeProEditor", () => {
+            let uiMode = getDefaultUI(editor) ?? 'dialog';
+            const canuserswitchui = uiMode.startsWith('user:');
+            if (canuserswitchui) {
+                uiMode = getPref('view', uiMode.substring(5));
+            }
+            // Make sure preference is in sync
+            setPref('view', uiMode);
+            getViewManager(uiMode).show();
+        });
 
         // Register the Toolbar Button.
         editor.ui.registry.addButton(component, {
             icon,
             tooltip: pluginName,
-            onAction: () => handleAction(editor)
+            onAction: () => editor.execCommand("mceCodeProEditor", false)
         });
 
         // Add the Menu Item.
@@ -55,7 +115,14 @@ export const getSetup = async() => {
         editor.ui.registry.addMenuItem(component, {
             icon,
             text: pluginName,
-            onAction: () => handleAction(editor)
+            onAction: () => editor.execCommand("mceCodeProEditor", false)
         });
+
+        // Creates a View for holding the code editor as a panel
+        // Only if it is going to be required
+        const defaultUI = getDefaultUI(editor) ?? '';
+        if (defaultUI === 'panel' || defaultUI.startsWith('user:')) {
+            getViewManager('panel')._tCreate();
+        }
     };
 };

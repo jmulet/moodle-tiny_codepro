@@ -14,23 +14,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny CodePro plugin.
+ * Tiny CodePro plugin. Htmlfy, a lightweight HTML formatter.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2024 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import * as Config from 'core/config';
-
-const baseUrl = `${Config.wwwroot}/lib/editor/tiny/plugins/codepro`;
-const component = 'tiny_codepro';
-
-export default {
-    baseUrl,
-    component,
-    pluginName: `${component}/plugin`,
-    icon: `${component}`,
-    CM_MARKER: String.fromCharCode(0),
-    TINY_MARKER_CLASS: 'tcp_CmCaReT'
-};
+import {prettify} from 'htmlfy';
+export default prettify;

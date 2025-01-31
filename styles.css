@@ -1,22 +1,23 @@
 /* stylelint-disable declaration-no-important */
 .tiny_codepro-editor-area {
     width: 100%;
-    min-height: 300px;
-    max-height: 500px;
+    height: 100%;
 }
 .tiny_codepro-themeselector {
     max-width: 150px !important;
     margin-right: auto !important;
 }
 .tiny_codepro-editor-area .cm-editor {
-    height: 100vh;
-    min-height: 300px;
+    height: 100%;
 }
 .tiny_codepro-editor-area .cm-gutter, .tiny_codepro-editor-area .cm-content {
-    min-height: 300px;
+    height: 100%;
 }
 .tiny_codepro-editor-area .cm-editor.cm-focused {
-    outline: none;
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-radius: 4px;
 }
 .tiny_codepro-fullscreen .modal-content {
     height: 100%;
@@ -27,8 +28,8 @@
 .tiny_codepro-fullscreen .tiny_codepro-editor-area {
     max-height: unset !important;
 }
-.tiny_codepro-dark .modal-content {
-    background: #2e2e2e;
+.tiny_codepro-dark {
+    background: #2e2e2e!important;
 }
 .tiny_codepro-dark .modal-header h5,
 .tiny_codepro-dark .modal-header span {
@@ -43,9 +44,6 @@
 .tiny_codepro-left {
     margin-right: auto !important;
 }
-.tiny_codepro-left > button {
-    width: 40px;
-}
 @media screen and (min-width: 576px) {
     .tiny_codepro-dlg {
         max-width: 85% !important;
@@ -58,4 +56,34 @@
     width: 100%;
     height: 100%;
     max-width: 100% !important;
+}
+/** Ensure a minimum height in pane view **/
+.tox.tox-tinymce:has(.tox-view-wrap:not([aria-hidden])):has(.tiny_codepro-view__pane) {
+    min-height: 400px;
+}
+.tiny_codepro-loader {
+    position: absolute;
+    z-index: 100;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #999;
+    box-shadow: 32px 0 #999, -32px 0 #999;
+    animation: tiny_codepro-flash 0.5s ease-out infinite alternate;
+  }
+@keyframes tiny_codepro-flash {
+    0% {
+      background-color: #FFF2;
+      box-shadow: 32px 0 #FFF2, -32px 0 #999;
+    }
+    50% {
+      background-color: #999;
+      box-shadow: 32px 0 #FFF2, -32px 0 #FFF2;
+    }
+    100% {
+      background-color: #FFF2;
+      box-shadow: 32px 0 #999, -32px 0 #FFF2;
+    }
 }
