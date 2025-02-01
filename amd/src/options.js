@@ -93,7 +93,14 @@ export const isSyncCaret = (editor) => editor.options.get(syncCaret);
  * @param {TinyMCE} editor
  * @returns {string}
  */
-export const getDefaultUI = (editor) => editor.options.get(uiMode);
+export const getDefaultUI = (editor) => {
+    // Version Moodle 4.1 uses Tiny 6.2.0.
+    // View API is available only since Tiny 6.3.0
+    if (typeof editor.ui.registry.addView !== 'function') {
+        return 'dialog';
+    }
+    return editor.options.get(uiMode);
+};
 
 /**
  * Determines whether the editor is in fullscreen or not
