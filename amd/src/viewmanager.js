@@ -206,15 +206,18 @@ export class ViewManager {
         if (!currentNode) {
             // Simply set the previous scroll position if selected node is not found
             const previousScroll = blackboard.scrolls[this.editor.id];
-            this.editor.contentWindow.scrollTo(0, previousScroll);
+            setTimeout(() => this.editor.contentWindow.scrollTo(0, previousScroll), 50);
         } else {
             // Scroll the iframe's contentWindow until the currentNode is visible
             this.editor.selection.setCursorLocation(currentNode, 0);
             this.editor.selection.collapse();
             const iframeHeight = this.editor.container.querySelector('iframe').clientHeight;
-            const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
-            this.editor.contentWindow.scrollTo(0, scrollPos);
-            currentNode.remove();
+            setTimeout(() => {
+                // Images take some time to adquire correct height
+                const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
+                this.editor.contentWindow.scrollTo(0, scrollPos);
+                currentNode.remove();
+            }, 50);
         }
         this.editor.nodeChanged();
         this.pendingChanges = false;

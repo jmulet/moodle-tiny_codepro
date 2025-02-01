@@ -102,6 +102,10 @@ npx grunt amd
 
 Refer to the documentation in `libs/codemirror` for details on modifying the CodeMirror dependency.
 
+## Credits
+
+Thanks to CodeMirror and the awesome CodeMirror plugins developed by [Replit](https://github.com/orgs/replit/repositories?q=codemirror). All icons are obtained from FontAwesome 6 free plugins. Many thanks also to the developers of the [htmlfy](https://www.npmjs.com/package/htmlfy) npm module.
+
 ---
 
 Enjoy coding with **Source Code Pro**!
