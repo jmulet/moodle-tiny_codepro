@@ -171,6 +171,7 @@ export class ViewPanelManager extends ViewManager {
                 const container = api.getContainer();
                 this.parentContainer = container.parentElement;
                 const headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
+
                 // eslint-disable-next-line no-unused-vars
                 const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, ___, btnAccept] = headerButtonElements;
                 this.domElements = {

@@ -57,6 +57,9 @@
     height: 100%;
     max-width: 100% !important;
 }
+.tiny_codepro-view__pane {
+    overflow: hidden;
+}
 /** Ensure a minimum height in pane view **/
 .tox.tox-tinymce:has(.tox-view-wrap:not([aria-hidden])):has(.tiny_codepro-view__pane) {
     min-height: 400px;

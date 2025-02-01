@@ -43,11 +43,12 @@ if ($hassiteconfig) {
             1
         ));
 
+        $userconf = new lang_string('opt_confuser', $pluginname);
         $choices1 = [
-            'dialog' => 'Open as dialog',
-            'panel' => 'Open as panel',
-            'user:dialog' => 'User configurable; defaults to dialog',
-            'user:panel' => 'User configurable; defaults to panel',
+            'dialog' => new lang_string('opendialog', $pluginname),
+            'panel' => new lang_string('openpanel', $pluginname),
+            'user:dialog' => new lang_string('opt_defdialog', $pluginname) . ' + ' . $userconf,
+            'user:panel' => new lang_string('opt_defpanel', $pluginname) . ' + ' . $userconf,
         ];
 
         $settings->add(new admin_setting_configselect(
