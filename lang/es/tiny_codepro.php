@@ -24,6 +24,7 @@
 $string['autoprettify'] = 'Auto formato';
 $string['autoprettify_desc'] = 'Formatear automáticamente el código al abrirse';
 $string['cancel'] = 'Cancelar';
+$string['codepro:use'] = 'Ver plugin';
 $string['codepro:viewplugin'] = 'Ver plugin';
 $string['customelements'] = 'Elementos adicionales';
 $string['customelements_def'] = 'Elementos HTML adicionales separados por coma';

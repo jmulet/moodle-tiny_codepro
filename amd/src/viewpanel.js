@@ -170,7 +170,11 @@ export class ViewPanelManager extends ViewManager {
                 // Store references to the header buttons to have access from the button actions.
                 const container = api.getContainer();
                 this.parentContainer = container.parentElement;
-                const headerButtonElements = this.parentContainer.querySelectorAll('.tox-view__header button');
+                // Set a hardcoded height
+                if (this.parentContainer) {
+                    this.parentContainer.style.height = '350px';
+                }
+                const headerButtonElements = this.parentContainer?.querySelectorAll('.tox-view__header button') ?? [];
 
                 // eslint-disable-next-line no-unused-vars
                 const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, ___, btnAccept] = headerButtonElements;
@@ -189,7 +193,12 @@ export class ViewPanelManager extends ViewManager {
                 await this.attachCodeEditor(this.codeEditorElement);
                 this._hideSpinner(container.shadowRoot);
             },
-            onHide: () => {}
+            onHide: () => {
+                // Remove hardcoded height
+                if (this.parentContainer) {
+                    this.parentContainer.style.height = '';
+                }
+            }
         };
         return viewSpec;
     }

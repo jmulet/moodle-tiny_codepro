@@ -24,6 +24,7 @@
 $string['autoprettify'] = 'Auto prettify';
 $string['autoprettify_def'] = 'Auto prettify the code when editor opens';
 $string['cancel'] = 'Cancel';
+$string['codepro:use'] = 'View plugin';
 $string['codepro:viewplugin'] = 'View plugin';
 $string['customelements'] = 'Custom elements';
 $string['customelements_def'] = 'Custom HTML elements separated by comma';
