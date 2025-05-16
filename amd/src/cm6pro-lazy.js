@@ -31175,6 +31175,16 @@ class CodeProEditor {
         if (options.doc) {
             this.scrollToCaretPosition();
         }
+
+        // Make sure that any changes on the parent dimensions, will triger a view requestMeasure
+        this.resizeObserver = new ResizeObserver(() => {
+            // No need to check entries here, as we only observe one element
+            if (this._editorView) {
+                this._editorView.scheduleMeasure();
+            }
+        });
+        // Start observing the parent element
+        this.resizeObserver.observe(parentElement);
     }
 
     /**
@@ -31289,6 +31299,9 @@ class CodeProEditor {
      */
     destroy() {
         this._editorView.destroy();
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
     }
 
     /**
