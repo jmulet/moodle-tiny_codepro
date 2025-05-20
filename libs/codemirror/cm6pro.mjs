@@ -91,7 +91,7 @@ export default class CodeProEditor {
         this.resizeObserver = new ResizeObserver(() => {
             // No need to check entries here, as we only observe one element
             if (this._editorView) {
-                this._editorView.scheduleMeasure();
+                this._editorView.requestMeasure();
             }
         });
         // Start observing the parent element
@@ -116,7 +116,8 @@ export default class CodeProEditor {
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme()),
             this.minimapConfig.of(this._createMinimap()),
-            Prec.high(keymap.of(this._createKeyMap()))
+            Prec.high(keymap.of(this._createKeyMap())),
+            EditorView.editorAttributes.of({'class': "tiny_codepro-editorview"})
         ];
         if (this._config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {

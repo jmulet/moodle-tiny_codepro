@@ -37,7 +37,7 @@ export class ViewDialogManager extends ViewManager {
         this.modal.show();
         this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
-        await this.attachCodeEditor(this.codeEditorElement);
+        await this.attachCodeEditor(this.modal.body[0]); // this.codeEditorElement);
         this._hideSpinner(this.modal.body[0]);
     }
 
@@ -57,7 +57,7 @@ export class ViewDialogManager extends ViewManager {
         });
         this.modal = modal;
 
-        this.codeEditorElement = modal.body.find('.tiny_codepro-editor-area')[0];
+        this.codeEditorElement = modal.body[0];
 
         modal.getRoot().find(".modal-dialog.modal-lg").addClass("tiny_codepro-dlg");
         // Disable keyboard events (ESC key) on this modal
@@ -67,14 +67,15 @@ export class ViewDialogManager extends ViewManager {
             evt.preventDefault();
         });
         modal.body.css({
+            'display': 'flex',
+            'height': 'calc(90vh - 200px)',
+            'flex-grow': '1',
             'overflow': 'hidden',
-            'position': 'relative',
-            'min-height': '200px',
         });
         // Override styles imposed by body.tox-fullscreen on modals
         modal.header.css({
             'height': '61.46px',
-            'padding': '1rem 1rem'
+            'padding': '1rem 1rem',
         });
 
         const modalContent = this.modal.getRoot().find('.modal-content');
