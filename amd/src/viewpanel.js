@@ -127,8 +127,8 @@ export class ViewPanelManager extends ViewManager {
         btnAccept.querySelector('svg').style.marginRight = '5px';
 
         // Sync fullscreen state
-        const isFullscreen = getPref('fs', false);
-        if (isFullscreen) {
+        const isFS = getPref('fs', false);
+        if (isFS) {
             this.domElements.btnWrap.style.display = 'initial';
             if (this.parentContainer) {
                 this.parentContainer.style.height = '';
@@ -142,7 +142,7 @@ export class ViewPanelManager extends ViewManager {
             }
         }
         const hasClassFS = this.editor.container.classList.contains('tox-fullscreen');
-        if ((hasClassFS && !isFullscreen) || (!hasClassFS && isFullscreen)) {
+        if ((hasClassFS && !isFS) || (!hasClassFS && isFS)) {
             this.editor.execCommand('mceFullScreen');
         }
     }
@@ -233,7 +233,6 @@ export class ViewPanelManager extends ViewManager {
                 tooltip: fullscreenStr,
                 onAction: () => {
                     const isFS = !isFullscreen(this.editor);
-                    setPref('fs', isFS);
                     if (isFS) {
                         this.domElements.btnWrap.style.display = 'initial';
                         if (this.parentContainer) {
@@ -247,10 +246,11 @@ export class ViewPanelManager extends ViewManager {
                             this.parentContainer.style.height = HARDCODED_HEIGHT;
                         }
                         // Always show with linewrapping on
-                        if (!getPref('wrap', true)) {
+                        if (!this.codeEditor._config.lineWrapping) {
                             this.toggleLineWrapping();
                         }
                     }
+                    setPref('fs', isFS);
                     this.editor.execCommand('mceFullScreen');
                 }
             },

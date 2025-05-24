@@ -255,9 +255,12 @@ export class ViewManager {
             options.changesListener = () => {
                 this.pendingChanges = true;
             };
-            // Always enable linewrapping in panel view
-            options.lineWrapping = true;
-            options.commands.linewrapping = () => false;
+            // TODO: Always enable linewrapping in panel view when not in Fullscreen
+            const isFS = getPref('fs', false);
+            if (!isFS) {
+                options.lineWrapping = true;
+                // options.commands.linewrapping = () => false;
+            }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
 
@@ -339,7 +342,8 @@ export class ViewManager {
      *
      */
     toggleLineWrapping() {
-        if (!this.codeEditor) {
+        if (!this.codeEditor || (!getPref('fs', false) && this.opts.autosave)) {
+            // Panel mode which is not in fullscreen, should always be wrapping on
             return true;
         }
         const isWrap = this.codeEditor.toggleLineWrapping();
