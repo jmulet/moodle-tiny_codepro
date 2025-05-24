@@ -63,6 +63,7 @@
     max-width: 100% !important;
 }
 .tiny_codepro-view__pane {
+    height: 350px;
     overflow: hidden;
 }
 /** Ensure a minimum height in pane view **/

@@ -29,6 +29,7 @@ import {ViewManager} from "./viewmanager";
  * Keep track of all active viewPanels in the page.
  * @type {Record<string, ViewManager>}
  **/
+const HARDCODED_HEIGHT = '350px';
 const activeViewPanels = new Map();
 let submitListenerAction = null;
 
@@ -58,16 +59,11 @@ export class ViewPanelManager extends ViewManager {
     }
 
     #createUI(api) {
-        this.codeEditorElement = document.createElement("DIV");
         const container = api.getContainer();
         container.classList.add('tiny_codepro-view__pane');
         const shadowRoot = container.attachShadow({mode: "open"});
-        this.codeEditorElement.classList.add('tiny_codepro-container');
         const shadowStyles = document.createElement('style');
         shadowStyles.textContent = `
-        .tiny_codepro-container {
-            height: 100%;
-        }
         .cm-editor.cm-focused {
             border-color: #86b7fe;
             outline: 0!important;
@@ -76,6 +72,10 @@ export class ViewPanelManager extends ViewManager {
         }
         .cm-editor {
             height: 100%;
+            width: 100%;
+        }
+        .cm-scroller {
+            overscroll-behavior: contain;
         }
         .tiny_codepro-loader {
             position: absolute;
@@ -104,7 +104,7 @@ export class ViewPanelManager extends ViewManager {
             }
         }`;
         shadowRoot.appendChild(shadowStyles);
-        shadowRoot.appendChild(this.codeEditorElement);
+        this.codeEditorElement = shadowRoot;
     }
 
     #setButtonsState() {
@@ -128,6 +128,19 @@ export class ViewPanelManager extends ViewManager {
 
         // Sync fullscreen state
         const isFullscreen = getPref('fs', false);
+        if (isFullscreen) {
+            this.domElements.btnWrap.style.display = 'initial';
+            if (this.parentContainer) {
+                this.parentContainer.style.height = '';
+            }
+        } else {
+            // Unable linewrapping if not in fullscreen
+            this.domElements.btnWrap.style.display = 'none';
+            // Set a hardcoded height
+            if (this.parentContainer) {
+                this.parentContainer.style.height = HARDCODED_HEIGHT;
+            }
+        }
         const hasClassFS = this.editor.container.classList.contains('tox-fullscreen');
         if ((hasClassFS && !isFullscreen) || (!hasClassFS && isFullscreen)) {
             this.editor.execCommand('mceFullScreen');
@@ -170,28 +183,27 @@ export class ViewPanelManager extends ViewManager {
                 // Store references to the header buttons to have access from the button actions.
                 const container = api.getContainer();
                 this.parentContainer = container.parentElement;
-                // Set a hardcoded height
-                if (this.parentContainer) {
-                    this.parentContainer.style.height = '350px';
-                }
-                const headerButtonElements = this.parentContainer?.querySelectorAll('.tox-view__header button') ?? [];
 
-                // eslint-disable-next-line no-unused-vars
-                const [_, __, btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, ___, btnAccept] = headerButtonElements;
+                const headerButtonElements = this.parentContainer?.querySelectorAll('.tox-view__header button') ?? [];
+                // Convert NodeList to an array for easier reverse access
+                const buttonsArray = Array.from(headerButtonElements);
+                const bLen = buttonsArray.length;
+
                 this.domElements = {
                     root: this.parentContainer,
-                    btnDescreaseFontsize,
-                    btnIncreaseFontsize,
-                    btnTheme,
-                    btnAccept
+                    btnDescreaseFontsize: buttonsArray[bLen - 6],
+                    btnIncreaseFontsize: buttonsArray[bLen - 5],
+                    btnTheme: buttonsArray[bLen - 4],
+                    btnWrap: buttonsArray[bLen - 3],
+                    btnAccept: buttonsArray[bLen - 1],
                 };
 
                 // Hack to turn regular buttons into toggle ones.
                 this.#setButtonsState();
-                this._showSpinner(container.shadowRoot);
+                this._showSpinner(this.codeEditorElement);
                 // Add the codeEditor (CodeMirror) in the selected UI element.
                 await this.attachCodeEditor(this.codeEditorElement);
-                this._hideSpinner(container.shadowRoot);
+                this._hideSpinner(this.codeEditorElement);
             },
             onHide: () => {
                 // Remove hardcoded height
@@ -220,7 +232,25 @@ export class ViewPanelManager extends ViewManager {
                 icon: 'tiny_codepro-fullscreen',
                 tooltip: fullscreenStr,
                 onAction: () => {
-                    setPref('fs', !isFullscreen(this.editor));
+                    const isFS = !isFullscreen(this.editor);
+                    setPref('fs', isFS);
+                    if (isFS) {
+                        this.domElements.btnWrap.style.display = 'initial';
+                        if (this.parentContainer) {
+                            this.parentContainer.style.height = '';
+                        }
+                    } else {
+                        // Unable linewrapping if not in fullscreen
+                        this.domElements.btnWrap.style.display = 'none';
+                        // Set a hardcoded height
+                        if (this.parentContainer) {
+                            this.parentContainer.style.height = HARDCODED_HEIGHT;
+                        }
+                        // Always show with linewrapping on
+                        if (!getPref('wrap', true)) {
+                            this.toggleLineWrapping();
+                        }
+                    }
                     this.editor.execCommand('mceFullScreen');
                 }
             },
@@ -246,6 +276,13 @@ export class ViewPanelManager extends ViewManager {
                 onAction: this.toggleTheme.bind(this)
             },
             // Linewrapping causes problems in panel view
+            {
+                type: 'button',
+                text: ' ',
+                icon: 'tiny_codepro-exchange',
+                tooltip: linewrapStr,
+                onAction: this.toggleLineWrapping.bind(this)
+            },
             {
                 type: 'button',
                 text: ' ',

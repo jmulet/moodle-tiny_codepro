@@ -329,7 +329,8 @@ export class ViewManager {
             return true;
         }
         const html = this.codeEditor.getValue(2);
-        this.codeEditor.setValue(prettifier(html));
+        const pretty = prettifier(html);
+        this.codeEditor.setValue(pretty);
         return true;
     }
 

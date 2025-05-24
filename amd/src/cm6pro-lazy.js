@@ -31184,7 +31184,11 @@ class CodeProEditor {
             }
         });
         // Start observing the parent element
-        this.resizeObserver.observe(parentElement);
+        let observeElement = parentElement;
+        if (parentElement instanceof ShadowRoot) {
+            observeElement = parentElement.host;
+        }
+        this.resizeObserver.observe(observeElement);
     }
 
     /**
