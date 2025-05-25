@@ -70,6 +70,11 @@
 .tox.tox-tinymce:has(.tox-view-wrap:not([aria-hidden])):has(.tiny_codepro-view__pane) {
     min-height: 350px;
 }
+/** Fix panel not scrolling in fullscreen for Moodle <4.5 **/
+.tox-fullscreen .tox-view-wrap, .tox-fullscreen .tox-view-wrap > div {
+    height: 100%;
+}
+
 .tiny_codepro-loader {
     position: absolute;
     z-index: 100;

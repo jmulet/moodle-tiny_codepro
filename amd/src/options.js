@@ -22,16 +22,21 @@
  */
 
 import {getPluginOptionName} from 'editor_tiny/options';
-import {pluginName} from './common';
+import {pluginName, isPanelCapable} from './common';
 
 const showPlugin = getPluginOptionName(pluginName, 'showplugin');
 const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
 const uiMode = getPluginOptionName(pluginName, 'uimode');
 const syncCaret = getPluginOptionName(pluginName, 'synccaret');
 const customElements = getPluginOptionName(pluginName, 'customelements');
+const panelCapable = getPluginOptionName(pluginName, 'panelcapable');
 
-
-export const register = (editor) => {
+/**
+ * @param {TinyMCE} editor
+ * @param {string} majorVersion
+ * @param {string} minorVersion
+ */
+export const register = (editor, majorVersion, minorVersion) => {
     const registerOption = editor.options.register;
 
     registerOption(showPlugin, {
@@ -57,6 +62,11 @@ export const register = (editor) => {
     registerOption(customElements, {
         processor: 'string',
         "default": '',
+    });
+
+    registerOption(panelCapable, {
+        processor: 'boolean',
+        "default": isPanelCapable(majorVersion, minorVersion),
     });
 };
 
@@ -95,8 +105,8 @@ export const isSyncCaret = (editor) => editor.options.get(syncCaret);
  */
 export const getDefaultUI = (editor) => {
     // Version Moodle 4.1 uses Tiny 6.2.0.
-    // View API is available only since Tiny 6.3.0
-    if (typeof editor.ui.registry.addView !== 'function') {
+    // View API is available only since Tiny 6.6.2
+    if (typeof editor.ui.registry.addView !== 'function' || !editor.options.get(panelCapable)) {
         return 'dialog';
     }
     return editor.options.get(uiMode);

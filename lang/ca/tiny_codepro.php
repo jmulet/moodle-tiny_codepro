@@ -48,4 +48,4 @@ $string['synccaret'] = 'Posició cursor';
 $string['synccaret_def'] = 'Sincronitza la posició del cursor entre els editors';
 $string['themes'] = 'Temes clar/obscur';
 $string['uimode'] = 'Mode UI';
-$string['uimode_def'] = 'UI (diàleg/panell) utilitzat per mostrar el codi';
+$string['uimode_def'] = 'UI (diàleg/panell) utilitzat per mostrar el codi. Panell disponible només a partir de Moodle 4.3';

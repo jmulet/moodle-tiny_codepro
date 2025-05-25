@@ -90,8 +90,6 @@ class plugininfo extends plugin implements
         array $fpoptions,
         ?\editor_tiny\editor $editor = null
     ): array {
-        global $USER, $COURSE, $PAGE;
-
         // Decide if to enable the plugin?
         $showplugin = has_capability('tiny/codepro:viewplugin', $context);
 

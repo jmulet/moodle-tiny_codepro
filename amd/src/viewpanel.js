@@ -108,6 +108,7 @@ export class ViewPanelManager extends ViewManager {
     }
 
     #setButtonsState() {
+        // eslint-disable-next-line no-unused-vars
         const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept} = this.domElements;
 
         // Style issue
@@ -116,7 +117,8 @@ export class ViewPanelManager extends ViewManager {
 
         // Set the toggle state
         const isDark = getPref('theme', 'light') === 'dark';
-        btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
+        ViewManager.safeInnerHTML(btnTheme, 'span', isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
+
         if (isDark) {
             this.parentContainer.classList.add('tiny_codepro-dark');
         } else {
@@ -124,7 +126,10 @@ export class ViewPanelManager extends ViewManager {
         }
 
         // Style issue
-        btnAccept.querySelector('svg').style.marginRight = '5px';
+        const btnAcceptSvg = btnAccept?.querySelector('svg');
+        if (btnAcceptSvg) {
+            btnAcceptSvg.style.marginRight = '5px';
+        }
 
         // Sync fullscreen state
         const isFS = getPref('fs', false);
@@ -239,9 +244,9 @@ export class ViewPanelManager extends ViewManager {
                             this.parentContainer.style.height = '';
                         }
                     } else {
-                        // Unable linewrapping if not in fullscreen
+                        // Unable linewrapping if not in fullscreen.
                         this.domElements.btnWrap.style.display = 'none';
-                        // Set a hardcoded height
+                        // Set a hardcoded height.
                         if (this.parentContainer) {
                             this.parentContainer.style.height = HARDCODED_HEIGHT;
                         }

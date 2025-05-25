@@ -37,7 +37,7 @@ export class ViewDialogManager extends ViewManager {
         this.modal.show();
         this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
-        await this.attachCodeEditor(this.modal.body[0]); // this.codeEditorElement);
+        await this.attachCodeEditor(this.modal.body[0]);
         this._hideSpinner(this.modal.body[0]);
 
         // Update the two-state icons
@@ -45,7 +45,7 @@ export class ViewDialogManager extends ViewManager {
             this.domElements.btnWrap.querySelector('span').innerHTML = ViewManager.icons.rightarrow;
         }
         if (this.codeEditor._config.themeName === 'dark') {
-            this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
+             this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
         }
     }
 

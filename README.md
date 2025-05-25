@@ -31,7 +31,7 @@ autocompletion, block folding, and more.
 The code editor can be displayed in two different modes:
 
 1. **Dialog Mode**: A single editor instance is displayed in a modal. Changes must be explicitly confirmed or rejected.
-2. **Panel Mode**: Multiple editor instances can be used simultaneously, with changes applied automatically.
+2. **Panel Mode**: Multiple editor instances can be used simultaneously, with changes applied automatically. (Available from Moodle 4.3)
 
 An administrator setting allows choosing the default mode or enabling users to switch between both modes.
 
@@ -53,7 +53,7 @@ An administrator setting allows choosing the default mode or enabling users to s
 | `Shift-Alt-A` | Accept changes |
 | `Shift-Alt-C` | Cancel changes |
 
-*Please note that line wrapping is always enabled in panel mode.
+*Please note that line wrapping can only be toggled in panel mode when in fullscreen mode.
 
 ## Installation
 

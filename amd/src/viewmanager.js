@@ -107,6 +107,21 @@ export class ViewManager {
     };
 
     /**
+     * @param {HTMLElement | null | undefined} element
+     * @param {string} query
+     * @param {string | undefined} html
+     */
+    static safeInnerHTML(element, query, html) {
+        if (!element) {
+            return;
+        }
+        const find = element.querySelector(query);
+        if (find) {
+            find.innerHTML = html || '';
+        }
+    }
+
+    /**
      * @param {TinyMCE} editor - The TinyMCE editor
      * @param {{autosave?: boolean, translations?: Record<string, string>}} [opts] - Options
      */
@@ -255,7 +270,7 @@ export class ViewManager {
             options.changesListener = () => {
                 this.pendingChanges = true;
             };
-            // TODO: Always enable linewrapping in panel view when not in Fullscreen
+            // Always enable linewrapping in panel view when not in Fullscreen
             const isFS = getPref('fs', false);
             if (!isFS) {
                 options.lineWrapping = true;
@@ -349,8 +364,8 @@ export class ViewManager {
         const isWrap = this.codeEditor.toggleLineWrapping();
         setPref('wrap', isWrap);
 
-        this.domElements.btnWrap.querySelector('span').innerHTML =
-            isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
+        ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span',
+            isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow);
 
         return true;
     }
@@ -375,7 +390,9 @@ export class ViewManager {
         const theme = this.codeEditor.toggleTheme();
         setPref('theme', theme);
         const isDark = theme === 'dark';
-        this.domElements.btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
+        ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span',
+            isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
+
         if (isDark) {
             this.domElements.root.classList.add('tiny_codepro-dark');
         } else {
