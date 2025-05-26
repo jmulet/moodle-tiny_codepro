@@ -59,8 +59,8 @@ if ($hassiteconfig) {
             $choices1
         ));
 
-        // Controlling TinyMCE content filtering options. 
-        
+        // Controlling TinyMCE content filtering options.
+
         $settings->add(new admin_setting_configtext(
             'tiny_codepro/extendedvalidelements',
             new lang_string('extendedvalidelements', $pluginname),
