@@ -231,7 +231,16 @@ export class ViewManager {
                 // Images take some time to adquire correct height
                 const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
                 this.editor.contentWindow.scrollTo(0, scrollPos);
-                currentNode.remove();
+
+                // In some cases the currentNode is included into a <p></p> block by TinyMCE that should be also removed.
+                const parentNode = currentNode.parentNode;
+                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`) {
+                    parentNode.remove();
+                } else {
+                    currentNode.remove();
+                }
+                // Make sure that no other `span.${TINY_MARKER_CLASS}` is in page.
+                this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => n.remove());
             }, 50);
         }
         this.editor.nodeChanged();

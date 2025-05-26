@@ -45,3 +45,4 @@ Issue #26: JS Error with UI-Mode set to "Open as Panel" on opening the code view
 Allow toggle line wrapping in panel mode & fullscreen
 New admin options to configure TinyMCE HTML filtering: valid_elements, valid_children
 Other minor improvements and bug fixes
+Issue #27: Saving adds additional paragraphs/spans to html content 
