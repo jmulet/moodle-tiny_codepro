@@ -100,9 +100,11 @@ class plugininfo extends plugin implements
             $params['autoprettify'] = tiny_codepro_cfgwithdefault($cfg, 'autoprettify', 1) == 1;
             $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 1) == 1;
             $params['uimode'] = tiny_codepro_cfgwithdefault($cfg, 'uimode', 'user:dialog');
-            $params['customelements'] = tiny_codepro_cfgwithdefault($cfg, 'customelements', '');
+            // Content filtering options.
+            $params['customelements'] = trim(tiny_codepro_cfgwithdefault($cfg, 'customelements', ''));
+            $params['extendedvalidelements'] = trim(tiny_codepro_cfgwithdefault($cfg, 'extendedvalidelements', ''));
+            $params['validchildren'] = trim(tiny_codepro_cfgwithdefault($cfg, 'validchildren', ''));
         }
-
         return $params;
     }
 }

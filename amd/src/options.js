@@ -28,6 +28,8 @@ const showPlugin = getPluginOptionName(pluginName, 'showplugin');
 const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
 const uiMode = getPluginOptionName(pluginName, 'uimode');
 const syncCaret = getPluginOptionName(pluginName, 'synccaret');
+const validElements = getPluginOptionName(pluginName, 'extendedvalidelements');
+const validChildren = getPluginOptionName(pluginName, 'validchildren');
 const customElements = getPluginOptionName(pluginName, 'customelements');
 const panelCapable = getPluginOptionName(pluginName, 'panelcapable');
 
@@ -59,6 +61,16 @@ export const register = (editor, majorVersion, minorVersion) => {
         "default": 'user:dialog',
     });
 
+    registerOption(validElements, {
+        processor: 'string',
+        "default": '',
+    });
+
+    registerOption(validChildren, {
+        processor: 'string',
+        "default": '',
+    });
+
     registerOption(customElements, {
         processor: 'string',
         "default": '',
@@ -68,6 +80,7 @@ export const register = (editor, majorVersion, minorVersion) => {
         processor: 'boolean',
         "default": isPanelCapable(majorVersion, minorVersion),
     });
+
 };
 
 
@@ -118,6 +131,20 @@ export const getDefaultUI = (editor) => {
  * @returns {boolean}
  */
 export const isFullscreen = (editor) => editor.container.classList.contains('tox-fullscreen');
+
+/**
+ * The valid HTML elements
+ * @param {TinyMCE} editor
+ * @returns {string}
+ */
+export const getValidElements = (editor) => editor.options.get(validElements);
+
+/**
+ * The valid HTML children definition
+ * @param {TinyMCE} editor
+ * @returns {string}
+ */
+export const getValidChildren = (editor) => editor.options.get(validChildren);
 
 /**
  * The custom non-HTML standard elements
