@@ -53,12 +53,12 @@ export class ViewPanelManager extends ViewManager {
             return;
         }
         this.isViewCreated = true;
-        this.#registerIcons();
-        const viewSpec = this.#createViewSpec();
+        this._registerIcons();
+        const viewSpec = this._createViewSpec();
         this.editor.ui.registry.addView("codepro", viewSpec);
     }
 
-    #createUI(api) {
+    _createUI(api) {
         const container = api.getContainer();
         container.classList.add('tiny_codepro-view__pane');
         const shadowRoot = container.attachShadow({mode: "open"});
@@ -107,7 +107,7 @@ export class ViewPanelManager extends ViewManager {
         this.codeEditorElement = shadowRoot;
     }
 
-    #setButtonsState() {
+    _setButtonsState() {
         // eslint-disable-next-line no-unused-vars
         const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept} = this.domElements;
 
@@ -152,14 +152,14 @@ export class ViewPanelManager extends ViewManager {
         }
     }
 
-    #createViewSpec() {
-        const buttonsSpec = this.#createButtons();
+    _createViewSpec() {
+        const buttonsSpec = this._createButtons();
         const viewSpec = {
             buttons: buttonsSpec,
             onShow: async(api) => {
                 if (!this.codeEditorElement) {
                     // Make sure the UI is created.
-                    this.#createUI(api);
+                    this._createUI(api);
                     // Register this panel as active.
                     activeViewPanels.set(this.editor.id, this);
                     // Register a global listener to submit event.
@@ -204,7 +204,7 @@ export class ViewPanelManager extends ViewManager {
                 };
 
                 // Hack to turn regular buttons into toggle ones.
-                this.#setButtonsState();
+                this._setButtonsState();
                 this._showSpinner(this.codeEditorElement);
                 // Add the codeEditor (CodeMirror) in the selected UI element.
                 await this.attachCodeEditor(this.codeEditorElement);
@@ -220,13 +220,13 @@ export class ViewPanelManager extends ViewManager {
         return viewSpec;
     }
 
-    #registerIcons() {
+    _registerIcons() {
         Object.keys(ViewManager.icons).forEach(key => {
             this.editor.ui.registry.addIcon(`tiny_codepro-${key}`, ViewManager.icons[key]);
         });
     }
 
-    #createButtons() {
+    _createButtons() {
         // eslint-disable-next-line no-unused-vars
         const [opendialogStr, fullscreenStr, themesStr, linewrapStr, prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
 

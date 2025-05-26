@@ -94,7 +94,7 @@ export class ViewDialogManager extends ViewManager {
             modalContent.removeClass('tiny_codepro-dark');
         }
 
-        this.#bindActions();
+        this._bindActions();
 
         if (getPref('fs')) {
            // Set fullscreen mode
@@ -105,7 +105,7 @@ export class ViewDialogManager extends ViewManager {
         }
     }
 
-    #bindActions() {
+    _bindActions() {
         const modalContent = this.modal.getRoot().find('.modal-content')[0];
         // Setting references to Dom elements
         this.domElements = {
@@ -122,7 +122,7 @@ export class ViewDialogManager extends ViewManager {
                     this.switchViews();
                     break;
                 case ("fs"):
-                    this.#toggleFullscreen();
+                    this._toggleFullscreen();
                     break;
                 case ("font-"):
                     this.decreaseFontsize();
@@ -149,7 +149,7 @@ export class ViewDialogManager extends ViewManager {
         });
     }
 
-    #toggleFullscreen() {
+    _toggleFullscreen() {
         const $dlgElem = this.modal.getRoot().find(dialogQuery);
         const isFullscreen = getPref("fs", false);
         if (!isFullscreen) {
@@ -166,12 +166,12 @@ export class ViewDialogManager extends ViewManager {
         setPref("fs", !isFullscreen);
     }
 
-    #unbindActions() {
+    _unbindActions() {
         this.modal.footer.find("button.btn[data-action]").off("click");
     }
 
     _tClose() {
-        this.#unbindActions();
+        this._unbindActions();
         this.modal.destroy();
     }
 }
