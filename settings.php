@@ -73,9 +73,7 @@ if ($hassiteconfig) {
             'tiny_codepro/validchildren',
             new lang_string('validchildren', $pluginname),
             new lang_string('validchildren_def', $pluginname),
-            '+a[div|p|h1|h2|h3|h4|h5|h6|ul|ol|li],+button[div|p|span|strong|em],+td[div|p|ul|ol|table],' .
-            '+th[div|p|ul|ol|table],+p[div|ul|ol|table],+h1[div|p|span],+h2[div|p|span],+h3[div|p|span],' .
-            '+h4[div|p|span],+h5[div|p|span],+h6[div|p|span]',
+            '+button[div|p|span|strong|em]',
             PARAM_TEXT
         ));
 
