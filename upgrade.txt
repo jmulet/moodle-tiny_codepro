@@ -31,9 +31,18 @@ Solve ModalFactory.create deprecation on newer versions of Moodle
 Set the CodeMirror cursor to the selected Tiny position
 Prevents from opening the code editor before the content is set in Tiny editor
 
-== 2.0.0 ==
+== 2.0.1 ==
 Allow custom HTML elements through configuration
 New UI based on Tiny view component
 Cursor synchronization between Tiny and CodeMirror editors
 Configure fontsize
 Editor extensions such as color picker and minitab
+
+== 2.1.0 ==
+Create capability :use for Moodle 5.0 compatibility
+Issue #23: Scroller in CodePro not working in some cases
+Issue #26: JS Error with UI-Mode set to "Open as Panel" on opening the code view
+Allow toggle line wrapping in panel mode & fullscreen
+New admin options to configure TinyMCE HTML filtering: valid_elements, valid_children
+Other minor improvements and bug fixes
+Issue #27: Saving adds additional paragraphs/spans to html content 

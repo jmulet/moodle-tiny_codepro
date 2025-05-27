@@ -26,7 +26,7 @@ import {getButtonImage} from 'editor_tiny/utils';
 import {get_strings} from 'core/str';
 import {ViewDialogManager} from './viewdialog';
 import {component, icon} from './common';
-import {getCustomElements, getDefaultUI, isPluginVisible} from './options';
+import {getValidElements, getValidChildren, getCustomElements, getDefaultUI, isPluginVisible} from './options';
 import {ViewPanelManager} from './viewpanel';
 import {getPref, setPref} from './preferences';
 
@@ -59,11 +59,27 @@ export const getSetup = async() => {
             return;
         }
 
-        // Add custom elements to the editor
-        const customElements = (getCustomElements(editor) ?? '').trim();
-        if (customElements) {
-            editor.once('BeforeSetContent', () => editor.parser?.schema?.addCustomElements(customElements));
-        }
+        editor.once('BeforeSetContent', () => {
+            const schema = editor.parser?.schema;
+            if (!schema) {
+                return;
+            }
+            // Apply HTML filtering options to the editor parser instance.
+            const validElements = (getValidElements(editor) ?? '').trim();
+            if (validElements) {
+                schema.addValidElements(validElements);
+            }
+
+            const validChildren = (getValidChildren(editor) ?? '').trim();
+            if (validChildren) {
+                schema.addValidChildren(validChildren);
+            }
+
+            const customElements = (getCustomElements(editor) ?? '').trim();
+            if (customElements) {
+                schema.addCustomElements(customElements);
+            }
+        });
 
         // Register the Icon.
         editor.ui.registry.addIcon(icon, buttonImage.html);

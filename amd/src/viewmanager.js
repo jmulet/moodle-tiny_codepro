@@ -107,6 +107,21 @@ export class ViewManager {
     };
 
     /**
+     * @param {HTMLElement | null | undefined} element
+     * @param {string} query
+     * @param {string | undefined} html
+     */
+    static safeInnerHTML(element, query, html) {
+        if (!element) {
+            return;
+        }
+        const find = element.querySelector(query);
+        if (find) {
+            find.innerHTML = html || '';
+        }
+    }
+
+    /**
      * @param {TinyMCE} editor - The TinyMCE editor
      * @param {{autosave?: boolean, translations?: Record<string, string>}} [opts] - Options
      */
@@ -216,7 +231,16 @@ export class ViewManager {
                 // Images take some time to adquire correct height
                 const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
                 this.editor.contentWindow.scrollTo(0, scrollPos);
-                currentNode.remove();
+
+                // In some cases the currentNode is included into a <p></p> block by TinyMCE that should be also removed.
+                const parentNode = currentNode.parentNode;
+                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`) {
+                    parentNode.remove();
+                } else {
+                    currentNode.remove();
+                }
+                // Make sure that no other `span.${TINY_MARKER_CLASS}` is in page.
+                this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => n.remove());
             }, 50);
         }
         this.editor.nodeChanged();
@@ -255,9 +279,12 @@ export class ViewManager {
             options.changesListener = () => {
                 this.pendingChanges = true;
             };
-            // Always enable linewrapping in panel view
-            options.lineWrapping = true;
-            options.commands.linewrapping = () => false;
+            // Always enable linewrapping in panel view when not in Fullscreen
+            const isFS = getPref('fs', false);
+            if (!isFS) {
+                options.lineWrapping = true;
+                // options.commands.linewrapping = () => false;
+            }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
 
@@ -329,7 +356,8 @@ export class ViewManager {
             return true;
         }
         const html = this.codeEditor.getValue(2);
-        this.codeEditor.setValue(prettifier(html));
+        const pretty = prettifier(html);
+        this.codeEditor.setValue(pretty);
         return true;
     }
 
@@ -338,14 +366,15 @@ export class ViewManager {
      *
      */
     toggleLineWrapping() {
-        if (!this.codeEditor) {
+        if (!this.codeEditor || (!getPref('fs', false) && this.opts.autosave)) {
+            // Panel mode which is not in fullscreen, should always be wrapping on
             return true;
         }
         const isWrap = this.codeEditor.toggleLineWrapping();
         setPref('wrap', isWrap);
 
-        this.domElements.btnWrap.querySelector('span').innerHTML =
-            isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow;
+        ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span',
+            isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow);
 
         return true;
     }
@@ -370,7 +399,9 @@ export class ViewManager {
         const theme = this.codeEditor.toggleTheme();
         setPref('theme', theme);
         const isDark = theme === 'dark';
-        this.domElements.btnTheme.querySelector('span').innerHTML = isDark ? ViewManager.icons.moon : ViewManager.icons.sun;
+        ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span',
+            isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
+
         if (isDark) {
             this.domElements.root.classList.add('tiny_codepro-dark');
         } else {

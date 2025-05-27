@@ -37,8 +37,16 @@ export class ViewDialogManager extends ViewManager {
         this.modal.show();
         this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
-        await this.attachCodeEditor(this.codeEditorElement);
+        await this.attachCodeEditor(this.modal.body[0]);
         this._hideSpinner(this.modal.body[0]);
+
+        // Update the two-state icons
+        if (!this.codeEditor._config.lineWrapping) {
+            this.domElements.btnWrap.querySelector('span').innerHTML = ViewManager.icons.rightarrow;
+        }
+        if (this.codeEditor._config.themeName === 'dark') {
+             this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
+        }
     }
 
     async _tCreate() {
@@ -57,7 +65,7 @@ export class ViewDialogManager extends ViewManager {
         });
         this.modal = modal;
 
-        this.codeEditorElement = modal.body.find('.tiny_codepro-editor-area')[0];
+        this.codeEditorElement = modal.body[0];
 
         modal.getRoot().find(".modal-dialog.modal-lg").addClass("tiny_codepro-dlg");
         // Disable keyboard events (ESC key) on this modal
@@ -67,14 +75,15 @@ export class ViewDialogManager extends ViewManager {
             evt.preventDefault();
         });
         modal.body.css({
+            'display': 'flex',
+            'height': 'calc(90vh - 200px)',
+            'flex-grow': '1',
             'overflow': 'hidden',
-            'position': 'relative',
-            'min-height': '200px',
         });
         // Override styles imposed by body.tox-fullscreen on modals
         modal.header.css({
             'height': '61.46px',
-            'padding': '1rem 1rem'
+            'padding': '1rem 1rem',
         });
 
         const modalContent = this.modal.getRoot().find('.modal-content');
@@ -85,7 +94,7 @@ export class ViewDialogManager extends ViewManager {
             modalContent.removeClass('tiny_codepro-dark');
         }
 
-        this.#bindActions();
+        this._bindActions();
 
         if (getPref('fs')) {
            // Set fullscreen mode
@@ -96,7 +105,7 @@ export class ViewDialogManager extends ViewManager {
         }
     }
 
-    #bindActions() {
+    _bindActions() {
         const modalContent = this.modal.getRoot().find('.modal-content')[0];
         // Setting references to Dom elements
         this.domElements = {
@@ -113,7 +122,7 @@ export class ViewDialogManager extends ViewManager {
                     this.switchViews();
                     break;
                 case ("fs"):
-                    this.#toggleFullscreen();
+                    this._toggleFullscreen();
                     break;
                 case ("font-"):
                     this.decreaseFontsize();
@@ -140,7 +149,7 @@ export class ViewDialogManager extends ViewManager {
         });
     }
 
-    #toggleFullscreen() {
+    _toggleFullscreen() {
         const $dlgElem = this.modal.getRoot().find(dialogQuery);
         const isFullscreen = getPref("fs", false);
         if (!isFullscreen) {
@@ -157,12 +166,12 @@ export class ViewDialogManager extends ViewManager {
         setPref("fs", !isFullscreen);
     }
 
-    #unbindActions() {
+    _unbindActions() {
         this.modal.footer.find("button.btn[data-action]").off("click");
     }
 
     _tClose() {
-        this.#unbindActions();
+        this._unbindActions();
         this.modal.destroy();
     }
 }

@@ -86,6 +86,20 @@ export default class CodeProEditor {
         if (options.doc) {
             this.scrollToCaretPosition();
         }
+
+        // Make sure that any changes on the parent dimensions, will triger a view requestMeasure
+        this.resizeObserver = new ResizeObserver(() => {
+            // No need to check entries here, as we only observe one element
+            if (this._editorView) {
+                this._editorView.requestMeasure();
+            }
+        });
+        // Start observing the parent element
+        let observeElement = parentElement;
+        if (parentElement instanceof ShadowRoot) {
+            observeElement = parentElement.host;
+        }
+        this.resizeObserver.observe(observeElement);
     }
 
     /**
@@ -106,7 +120,8 @@ export default class CodeProEditor {
             this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme()),
             this.minimapConfig.of(this._createMinimap()),
-            Prec.high(keymap.of(this._createKeyMap()))
+            Prec.high(keymap.of(this._createKeyMap())),
+            EditorView.editorAttributes.of({'class': "tiny_codepro-editorview"})
         ];
         if (this._config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
@@ -200,6 +215,9 @@ export default class CodeProEditor {
      */
     destroy() {
         this._editorView.destroy();
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
     }
 
     /**

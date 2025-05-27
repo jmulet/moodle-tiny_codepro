@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -46,7 +47,7 @@ export default new Promise(async(resolve) => {
 
     tinyMCE.PluginManager.add(pluginName, (editor) => {
         // Register options.
-        registerOptions(editor);
+        registerOptions(editor, tinyMCE.majorVersion, tinyMCE.minorVersion);
         // Resolve the Plugin and include configuration.
         setupCommands(editor);
         return pluginMetadata;

@@ -59,6 +59,24 @@ if ($hassiteconfig) {
             $choices1
         ));
 
+        // Controlling TinyMCE content filtering options.
+
+        $settings->add(new admin_setting_configtext(
+            'tiny_codepro/extendedvalidelements',
+            new lang_string('extendedvalidelements', $pluginname),
+            new lang_string('extendedvalidelements_def', $pluginname),
+            '*[*]',
+            PARAM_TEXT
+        ));
+
+        $settings->add(new admin_setting_configtext(
+            'tiny_codepro/validchildren',
+            new lang_string('validchildren', $pluginname),
+            new lang_string('validchildren_def', $pluginname),
+            '+button[div|p|span|strong|em]',
+            PARAM_TEXT
+        ));
+
         $settings->add(new admin_setting_configtext(
             'tiny_codepro/customelements',
             new lang_string('customelements', $pluginname),
