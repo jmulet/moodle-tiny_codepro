@@ -102,6 +102,11 @@ export class ViewPanelManager extends ViewManager {
             background-color: #FFF2;
             box-shadow: 32px 0 #999, -32px 0 #FFF2;
             }
+        }
+        @media only screen and (max-width: 767px) {
+            .cm-gutters.cm-minimap-gutter {
+                display: none!important;
+            }
         }`;
         shadowRoot.appendChild(shadowStyles);
         this.codeEditorElement = shadowRoot;
