@@ -199,7 +199,7 @@ export class ViewManager {
         // Add marker if cursor synchronization is enabled.
         const shouldSyncCaret = isSyncCaret(this.editor);
         const htmlWithMarker = this.codeEditor.getValue(shouldSyncCaret ? 1 : 0)
-            .replace(CM_MARKER, `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
+            .replace(CM_MARKER, `<span class="${TINY_MARKER_CLASS}">&#xfeff;</span>`);
         this._saveAction(htmlWithMarker);
         this.close();
         return true;
@@ -234,7 +234,7 @@ export class ViewManager {
 
                 // In some cases the currentNode is included into a <p></p> block by TinyMCE that should be also removed.
                 const parentNode = currentNode.parentNode;
-                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`) {
+                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&#xfeff;</span>`) {
                     parentNode.remove();
                 } else {
                     currentNode.remove();
@@ -308,7 +308,7 @@ export class ViewManager {
         if (syncCaret) {
             // Insert caret marker and retrieve html code to pass to CodeMirror
             markerNode = document.createElement("SPAN");
-            markerNode.innerHTML = '&nbsp;';
+            markerNode.innerHTML = '&#xfeff;';
             markerNode.classList.add(TINY_MARKER_CLASS);
             const currentNode = this.editor.selection.getStart();
             currentNode.append(markerNode);

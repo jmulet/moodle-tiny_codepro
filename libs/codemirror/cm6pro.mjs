@@ -21,22 +21,82 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {basicSetup} from "codemirror";
-import {EditorView, keymap} from "@codemirror/view";
-import {EditorState, Compartment, Prec} from '@codemirror/state';
-import {syntaxTree} from '@codemirror/language';
-import {SearchCursor} from '@codemirror/search';
-import {html as htmlLang} from "@codemirror/lang-html";
-import {cm6proDark} from './cm6pro-dark-theme';
+import { basicSetup } from "codemirror";
+import { EditorView, keymap } from "@codemirror/view";
+import { EditorState, Transaction, Compartment, Prec } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
+import { SearchCursor } from '@codemirror/search';
+import { html as htmlLang } from "@codemirror/lang-html";
+import { cm6proDark } from './cm6pro-dark-theme';
 
 // 3rd party extensions.
-import {indentationMarkers} from '@replit/codemirror-indentation-markers';
-import {colorPicker} from '@replit/codemirror-css-color-picker';
-import {showMinimap} from "@replit/codemirror-minimap";
+import { indentationMarkers } from '@replit/codemirror-indentation-markers';
+import { colorPicker } from '@replit/codemirror-css-color-picker';
+import { showMinimap } from "@replit/codemirror-minimap";
 
-const MARKER = String.fromCharCode(0);
 const MIN_FONTSIZE = 8;
 const MAX_FONTSIZE = 22;
+
+
+function printTreePathToRoot(node, doc) {
+      const path = [];
+  const cursor = node.cursor();
+
+  // Step up to the root, capturing each level's context
+  do {
+    const siblings = [];
+
+    // Capture all siblings at this level
+    const siblingCursor = cursor.node.parent?.cursor();
+    if (siblingCursor?.firstChild()) {
+      do {
+        const sFrom = siblingCursor.from;
+        const sTo = siblingCursor.to;
+        const sText = doc.sliceString(sFrom, sTo).replace(/\n/g, "\\n");
+        const isCurrent = siblingCursor.from === cursor.from && siblingCursor.to === cursor.to;
+        siblings.push(`${isCurrent ? "👉 " : "   "}${siblingCursor.name} [${sFrom}, ${sTo}]: "${sText}"`);
+      } while (siblingCursor.nextSibling());
+    }
+
+    path.push(siblings);
+  } while (cursor.parent());
+
+  // Print from leaf to root
+  console.log("Tree path from node to root with siblings:");
+  path.forEach((siblings, level) => {
+    const indent = "  ".repeat(level);
+    siblings.forEach(line => console.log(indent + line));
+  });
+}
+
+function printFullSyntaxTree(state) {
+    const doc = state.doc;
+    const tree = syntaxTree(state);
+    const cursor = tree.topNode.cursor();
+
+    function printNode(c, indent = 0) {
+        const padding = "  ".repeat(indent);
+        const content = doc.sliceString(c.from, c.to).replace(/\n/g, "\\n");
+        console.log(`${padding}${c.name} [${c.from}, ${c.to}]: "${content}"`);
+
+        if (c.firstChild()) {
+            do {
+                printNode(c, indent + 1);
+            } while (c.nextSibling());
+            c.parent();
+        }
+    }
+
+    printNode(cursor);
+}
+
+const disallowedTags = new Set([
+    "script", "style", "textarea", "title", "noscript",
+    "option", "optgroup", "select",
+    "svg", "math", "object", "iframe",
+    "head", "meta", "link", "base", "source", "track", "param",
+    "img", "input", "br", "hr", "col", "embed", "area", "wbr"
+]);
 
 const themes = {
     'light': EditorView.baseTheme(),
@@ -48,7 +108,8 @@ export default class CodeProEditor {
     static getThemes() {
         return ['light', 'dark'];
     }
-    static Marker = {
+    static Marker = String.fromCharCode(0);
+    static MarkerType = {
         none: 0,
         atElement: 1,
         atCursor: 2
@@ -121,7 +182,7 @@ export default class CodeProEditor {
             this.themeConfig.of(this._createTheme()),
             this.minimapConfig.of(this._createMinimap()),
             Prec.high(keymap.of(this._createKeyMap())),
-            EditorView.editorAttributes.of({'class': "tiny_codepro-editorview"})
+            EditorView.editorAttributes.of({ 'class': "tiny_codepro-editorview" })
         ];
         if (this._config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
@@ -198,7 +259,7 @@ export default class CodeProEditor {
 
         const create = () => {
             const dom = document.createElement('div');
-            return {dom};
+            return { dom };
         };
         return showMinimap.compute(['doc'], () => {
             return ({
@@ -226,15 +287,16 @@ export default class CodeProEditor {
     scrollToCaretPosition() {
         // Search the position of the NULL caret
         const state = this._editorView.state;
-        const searchCursor = new SearchCursor(state.doc, MARKER);
+        const searchCursor = new SearchCursor(state.doc, CodeProEditor.Marker);
         searchCursor.next();
         const value = searchCursor.value;
         if (value) {
             // Update the view by removing this marker and scrolling to its position
             this._editorView.dispatch({
-                changes: {from: value.from, to: value.to, insert: ''},
-                selection: {anchor: value.from},
-                scrollIntoView: true
+                changes: { from: value.from, to: value.to, insert: '' },
+                selection: { anchor: value.from },
+                scrollIntoView: true,
+                annotations: [Transaction.addToHistory.of(false)]
             });
         } else {
             // Simply ensure that the cursor position is into view
@@ -251,7 +313,10 @@ export default class CodeProEditor {
     setValue(source) {
         this._source = source;
         const view = this._editorView;
-        view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
+        view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: source || '' },
+            annotations: [Transaction.addToHistory.of(false)]
+        });
         this.scrollToCaretPosition();
     }
 
@@ -261,12 +326,86 @@ export default class CodeProEditor {
      * @returns {string}
      */
     getValue(marker) {
-        if (marker === CodeProEditor.Marker.atElement) {
+        if (marker === CodeProEditor.MarkerType.atElement) {
             return this._getValueWithMarkerAtElement();
-        } else if (marker === CodeProEditor.Marker.atCursor) {
+        } else if (marker === CodeProEditor.MarkerType.atCursor) {
             return this._getValueWithMarkerAtCursor();
         }
         return this._editorView.state.doc.toString();
+    }
+
+    /**
+     * 
+     * @returns The node type name at the cursor head
+     */
+    _getCurrentNodeType() {
+        const state = this._editorView.state;
+        const head = state.selection.main.head;
+        const tree = syntaxTree(state);
+        const currentNode = tree.resolve(head, -1);
+        return currentNode?.type?.name;
+    }
+
+
+_getTagNameFromCursor(node, doc) {
+  const cursor = node.cursor();
+
+  // Recursive function to search any subtree
+  function findTagName(c) {
+    if (c.name === "TagName") {
+      return doc.sliceString(c.from, c.to);
+    }
+    if (c.firstChild()) {
+      do {
+        const result = findTagName(c);
+        if (result) return result;
+      } while (c.nextSibling());
+      c.parent(); // go back up
+    }
+    return null;
+  }
+
+  return findTagName(cursor);
+}
+
+    /**
+      * Traverses the syntax tree upward from the given node to ensure it is not within
+      * any disallowed HTML tag context.
+      *
+      * - If no disallowed tags are found from the node up to the root, null is returned.
+      * - If any disallowed tag is found in the ancestor chain, the function returns the
+      *   nearest ancestor node whose entire path to the root is free of disallowed tags.
+      * - If no such safe ancestor exists (i.e., all are nested inside disallowed tags), returns null.
+      *
+      * This is useful for determining a safe insertion point for elements like <span>.
+      *
+      * @param {TreeCursor} node - The syntax tree node to evaluate.
+      * @returns {TreeCursor|null} - The nearest safe container node, or null if none exists.
+      */
+    _getSafeRootedContainer(node) {
+        const doc = this._editorView.state.doc;
+
+        const cursor = node.cursor();
+        let safeContainer = null;
+        let anyDisallowedFound = false;
+
+        do {
+            if (cursor.name === "Element") {
+                const tagName = this._getTagNameFromCursor(cursor.node, doc);
+                console.log(tagName);
+                if (tagName) {
+                    const name = tagName.toLowerCase();
+                    if (disallowedTags.has(name)) {
+                        safeContainer = cursor.node;
+                        anyDisallowedFound = true;
+                    }
+                }
+            }
+        } while (cursor.parent());
+
+
+        // If no disallowed tag found all the way to root
+        return { anyDisallowedFound, safeContainer }
     }
 
     /**
@@ -276,36 +415,94 @@ export default class CodeProEditor {
      * @returns {string}
      */
     _getValueWithMarkerAtElement() {
-        let pos = null;
-        // Insert the NULL marker at the begining of the closest TAG
-        const state = this._editorView.state;
-        const anchor = state.selection.main.from;
-        const tree = syntaxTree(state);
-        let currentNode = tree.resolve(anchor, -1);
 
+        // Insert the NULL marker at the begining of the closest TAG
+        const head = this._editorView.state.selection.main.head;
+        const tree = syntaxTree(this._editorView.state);
+        let currentNode = tree.resolve(head, -1);
+        const doc = this._editorView.state.doc;
+        printTreePathToRoot(currentNode, doc);
+        //printFullSyntaxTree(this._editorView.state);
+
+        // Node types where we should NOT insert the marker
+        const disallowedContexts = new Set([
+            "ScriptText", "StyleText", "Comment", "CommentText", "CommentBlock", "Attribute", "TagName",
+            "StartTag", "EndTag", "MismatchedCloseTag", "ObjectElement", "SvgElement"
+        ]);
+
+        const cursor = currentNode.cursor();
         let nodeFound = null;
-        while (!nodeFound && currentNode) {
-            if (currentNode.type.name === 'Element') {
-                nodeFound = currentNode;
-            } else if (currentNode.prevSibling) {
-                currentNode = currentNode.prevSibling;
+        let pos = null;
+        let firstRun = true;
+        do {
+            const nodeName = cursor.name;
+            console.log(cursor.name, cursor.from, cursor.to);
+            if (nodeName === "Text") {
+                pos = firstRun ? head : cursor.from;
+                nodeFound = cursor.node;
+                break;
+            }
+
+            if (nodeName === "EndTag" || nodeName === "SelfClosingTag") {
+                pos = cursor.to;
+                nodeFound = cursor.node;
+                break;
+            }
+
+            if (nodeName === "StartTag" || nodeName === "StartCloseTag" || nodeName === "Comment") {
+                pos = cursor.from;
+                nodeFound = cursor.node;
+                break;
+            }
+
+            if (nodeName === "Element" && !disallowedContexts.has(nodeName)) {
+                pos = cursor.from;
+                nodeFound = cursor.node;
+                break;
+            }
+
+            // TODO Why this????? Try to check next sibling
+            if (cursor.nextSibling()) {
+                if (cursor.name === "Element") {
+                    pos = cursor.from;
+                    nodeFound = cursor.node;
+                    break;
+                }
+                cursor.prevSibling(); // go back to where we were
+            }
+            firstRun = false;
+        } while (cursor.parent());
+
+        if (pos === null && pos === undefined) {
+            return this._editorView.state.doc.toString(); // fallback — no suitable place found
+        }
+
+        // Check if the selected currentNode is safe to place a span
+        const { anyDisallowedFound, safeContainer } = this._getSafeRootedContainer(currentNode);
+      
+        if (anyDisallowedFound) {
+            if (safeContainer) {
+                // Set cursor just before the disallowed tag
+                pos = safeContainer.from;
             } else {
-                currentNode = currentNode.parent;
+                // Give up
+                return this._editorView.state.doc.toString(); // fallback — no suitable place found
             }
         }
-        if (nodeFound) {
-            pos = nodeFound.from;
-            this._editorView.dispatch({
-                changes: {from: pos, to: pos, insert: MARKER}
-            });
-        }
+
+        console.log(pos, anyDisallowedFound, safeContainer);
+        this._editorView.dispatch({
+            changes: { from: pos, to: pos, insert: CodeProEditor.Marker },
+            annotations: [Transaction.addToHistory.of(false)]
+        });
 
         const html = this._editorView.state.doc.toString();
-        if (pos !== null) {
-            this._editorView.dispatch({
-                changes: {from: pos, to: pos + 1, insert: ''}
-            });
-        }
+
+        this._editorView.dispatch({
+            changes: { from: pos, to: pos + 1, insert: '' },
+            annotations: [Transaction.addToHistory.of(false)]
+        });
+
         return html;
     }
 
@@ -317,13 +514,15 @@ export default class CodeProEditor {
     _getValueWithMarkerAtCursor() {
         const cursor = this._editorView.state.selection.main.head;
         this._editorView.dispatch({
-            changes: {from: cursor, insert: MARKER},
+            changes: { from: cursor, insert: CodeProEditor.Marker },
+            annotations: [Transaction.addToHistory.of(false)]
         });
 
         const html = this._editorView.state.doc.toString();
         if (cursor !== null) {
             this._editorView.dispatch({
-                changes: {from: cursor, to: cursor + 1, insert: ''}
+                changes: { from: cursor, to: cursor + 1, insert: '' },
+                annotations: [Transaction.addToHistory.of(false)]
             });
         }
         return html;
@@ -347,10 +546,10 @@ export default class CodeProEditor {
      */
     getState() {
         const state = this._editorView.state;
-        const range = state.selection.ranges[0] || {from: 0, to: 0};
+        const range = state.selection.ranges[0] || { from: 0, to: 0 };
         return {
             html: state.doc.toString(),
-            selection: {anchor: range.from, head: range.to}
+            selection: { anchor: range.from, head: range.to }
         };
     }
 
