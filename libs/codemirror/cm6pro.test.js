@@ -3,11 +3,11 @@
  */
 import CodeProEditor from './cm6pro.mjs';
 // Make the marker visible
-CodeProEditor.Marker = '@';
-const marker = CodeProEditor.Marker;
+CodeProEditor.MARKER = '@';
+const marker = CodeProEditor.MARKER;
 console.log("Using marker", marker);
 
- 
+
 describe('CodeProEditor', () => {
   let container, commands;
 
@@ -88,9 +88,8 @@ describe('CodeProEditor', () => {
 
     let htmlWithMarker = editor.getValue(CodeProEditor.MarkerType.atCursor);
     expect(htmlWithMarker).toBe(`<p><span>batch</span> is ${marker}a nice element</p>`,);
-    expect(editor._getCurrentNodeType()).toBe('Text');
+    expect(editor.cursorSync._getCurrentNodeType()).toBe('Text');
     htmlWithMarker = editor.getValue(CodeProEditor.MarkerType.atElement);
-    console.log(htmlWithMarker)
     // Should insert NULL marker
     expect(htmlWithMarker).toBe(`<p><span>batch</span> is ${marker}a nice element</p>`);
     expect(htmlWithMarker.indexOf(marker)).toBeGreaterThan(-1);
@@ -139,7 +138,7 @@ describe('CodeProEditor', () => {
     expect(updatedDoc).toBe('<div>Hello World</div>');
 
     // Now check that the caret was moved to correct position
-    const state = editor._editorView.state;
+    const state = editor.editorView.state;
     const cursorPos = state.selection.main.from;
 
     // Cursor should be at the position where the marker was inserted (i.e., after W)
@@ -155,21 +154,20 @@ describe('CodeProEditor', () => {
       commands
     });
 
-    const beforeState = editor._editorView.state.selection.main.from;
+    const beforeState = editor.editorView.state.selection.main.from;
 
     // Manually trigger scrollToCaretPosition
-    editor.scrollToCaretPosition();
+    editor.cursorSync.scrollToCaretPosition();
 
-    const afterState = editor._editorView.state.selection.main.from;
+    const afterState = editor.editorView.state.selection.main.from;
     expect(afterState).toBe(beforeState); // Cursor should not move
 
     editor.destroy();
   });
 });
- 
+
 
 describe('CodeProEditor - Marker Insertion (atElement)', () => {
-  const marker = CodeProEditor.Marker;
   let editor;
 
   const createEditor = (doc, pos) => {
@@ -195,12 +193,12 @@ describe('CodeProEditor - Marker Insertion (atElement)', () => {
   afterEach(() => {
     destroyEditor();
   });
-
+  
   const tests = [
     {
       name: 'cursor at beginning of doc',
       doc: '<div>Hello world</div>',
-      expected: `${marker}<div>Hello world</div>`,
+      expected: `<div>Hello world</div>`,
       pos: 0,
       tagName: 'Document'
     },
@@ -365,15 +363,55 @@ describe('CodeProEditor - Marker Insertion (atElement)', () => {
       doc: '<div><p class="x">test</p></div>',
       expected: `<div>${marker}<p class="x">test</p></div>`,
       pos: 12
+    },
+    // More self-closing cases
+    {
+      name: 'cursor at self-closing tag <br/>',
+      doc: '<div>line<br/>next</div>',
+      expected: `<div>line${marker}<br/>next</div>`,
+      pos: 11,
+      tagName: 'TagName'
+    },
+    {
+      name: 'cursor at empty container',
+      doc: '<div></div>',
+      expected: `<div>${marker}</div>`,
+      pos: 5,
+      tagName: 'EndTag'
+    },
+    {
+      name: 'cursor inside nested disallowed tags (script in title)',
+      doc: '<title><script><b>skip this</b></script></title>',
+      expected: `${marker}<title><script><b>skip this</b></script></title>`,
+      pos: 25,
+    },
+    {
+      name: 'cursor between sibling paragraphs',
+      doc: '<div><p>first</p><p>second</p></div>',
+      expected: `<div><p>first</p>${marker}<p>second</p></div>`,
+      pos: 17,
+      tagName: 'EndTag'
+    },
+    {
+      name: 'document already contains marker (gets removed when doc set) 1',
+      doc: `<div>@</div>`,
+      expected: `<div>@</div>`,
+      pos: 5,
+    },
+    {
+      name: 'document already contains marker (gets removed when doc set) 2',
+      doc: `<div>@</div>`,
+      expected: `@<div></div>`,
+      pos: 2,
     }
   ];
 
   tests.forEach(({ name, doc, pos, posPresent, expected, tagName }) => {
-    it(`should ${posPresent >= 0? '' : 'not '}insert marker: ${name}`, () => {
+    it(`cursor at ${pos}: ${name}`, () => {
       const editor = createEditor(doc, pos);
       const html = editor.getValue(CodeProEditor.MarkerType.atElement);
       if (tagName) {
-        expect(editor._getCurrentNodeType()).toBe(tagName);
+        expect(editor.cursorSync._getCurrentNodeType()).toBe(tagName);
       }
       if (expected) {
         posPresent = expected.indexOf(marker);

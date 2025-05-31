@@ -46,7 +46,7 @@ const requireCm6Pro = () => {
         return Promise.resolve(_CodeProEditor);
     }
     return new Promise((resolve) => {
-        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
+        window.require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
             _CodeProEditor = CodeProEditor;
             resolve(CodeProEditor);
         });
@@ -66,7 +66,7 @@ const requireHTMLFormatter = () => {
     }
     return new Promise((resolve) => {
         const fallback = () => {
-            require(['tiny_codepro/htmlfy-lazy'], (prettify) => {
+            window.require(['tiny_codepro/htmlfy-lazy'], (prettify) => {
                 _htmlFormatter = (src) => prettify(src, {
                     ignore: ['style', 'script', 'pre', 'code'],
                     strict: false,
@@ -75,7 +75,7 @@ const requireHTMLFormatter = () => {
                 resolve(_htmlFormatter);
             }, () => resolve(null));
         };
-        require(['tiny_html/beautify/beautify-html'], (beautify) => {
+        window.require(['tiny_html/beautify/beautify-html'], (beautify) => {
             _htmlFormatter = beautify.html_beautify;
             if (_htmlFormatter) {
                 resolve(_htmlFormatter);
