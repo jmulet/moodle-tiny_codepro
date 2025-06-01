@@ -107,5 +107,6 @@ export default {
     icon: `${component}`,
     CM_MARKER: String.fromCharCode(0),
     TINY_MARKER_CLASS: 'tcp_CmCaReT',
+    TINY_MARKER_CONTENT: '&nbsp;', //'&#xfeff;',
     isPanelCapable
 };

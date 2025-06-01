@@ -31123,7 +31123,6 @@ const showMinimap = /*@__PURE__*/Facet.define({
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 
-const MARKER = String.fromCharCode(0);
 const MIN_FONTSIZE = 8;
 const MAX_FONTSIZE = 22;
 
@@ -31137,28 +31136,29 @@ class CodeProEditor {
     static getThemes() {
         return ['light', 'dark'];
     }
-    static Marker = {
+    static MARKER = String.fromCharCode(0);
+    static MarkerType = {
         none: 0,
         atElement: 1,
         atCursor: 2
     };
     /**
-     * @member {HTMLElement} _parentElement
-     * @member {string} _source
-     * @member {CodeMirrorView} _editorView
-     * @member {Record<string,*>} _config
+     * @member {HTMLElement} parentElement
+     * @member {string} source
+     * @member {CodeMirrorView} editorView
+     * @member {Record<string,*>} config
      */
-    _parentElement;
-    _source;
-    _editorView;
-    _config;
+    parentElement;
+    source;
+    editorView;
+    config;
     /**
      * @param {HTMLElement} parentElement
      * @param {Record<string, any>} [options]
      */
     constructor(parentElement, options) {
         // Default configuration
-        this._config = {
+        this.config = {
             themeName: options?.theme ?? 'light',
             fontSize: options?.fontSize ?? 11,
             lineWrapping: options?.lineWrapping ?? false,
@@ -31167,10 +31167,10 @@ class CodeProEditor {
             commands: options.commands
         };
 
-        this._parentElement = parentElement;
-        this._editorView = new EditorView({
+        this.parentElement = parentElement;
+        this.editorView = new EditorView({
             state: this._createState(options.doc),
-            parent: this._parentElement
+            parent: this.parentElement
         });
         if (options.doc) {
             this.scrollToCaretPosition();
@@ -31179,8 +31179,8 @@ class CodeProEditor {
         // Make sure that any changes on the parent dimensions, will triger a view requestMeasure
         this.resizeObserver = new ResizeObserver(() => {
             // No need to check entries here, as we only observe one element
-            if (this._editorView) {
-                this._editorView.requestMeasure();
+            if (this.editorView) {
+                this.editorView.requestMeasure();
             }
         });
         // Start observing the parent element
@@ -31206,16 +31206,16 @@ class CodeProEditor {
             html(),
             indentationMarkers(),
             colorPicker,
-            this.linewrapConfig.of(this._config.lineWrapping ? [EditorView.lineWrapping] : []),
+            this.linewrapConfig.of(this.config.lineWrapping ? [EditorView.lineWrapping] : []),
             this.themeConfig.of(this._createTheme()),
             this.minimapConfig.of(this._createMinimap()),
             Prec.high(keymap.of(this._createKeyMap())),
-            EditorView.editorAttributes.of({'class': "tiny_codepro-editorview"})
+            EditorView.editorAttributes.of({ 'class': "tiny_codepro-editorview" })
         ];
-        if (this._config.changesListener) {
+        if (this.config.changesListener) {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
                 if (viewUpdate.docChanged) {
-                    this._config.changesListener();
+                    this.config.changesListener();
                 }
             }));
         }
@@ -31232,31 +31232,31 @@ class CodeProEditor {
                 key: "Shift-Alt-m",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.minimap
+                run: this.config.commands.minimap
             },
             {
                 key: "Shift-Alt-p",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.prettify
+                run: this.config.commands.prettify
             },
             {
                 key: "Shift-Alt-w",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.linewrapping
+                run: this.config.commands.linewrapping
             },
             {
                 key: "Shift-Alt-t",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.theme
+                run: this.config.commands.theme
             },
             {
                 key: "Shift-Alt-a",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.accept
+                run: this.config.commands.accept
             },
             {
                 key: "Shift-Alt-d",
@@ -31264,7 +31264,7 @@ class CodeProEditor {
                 stopPropagation: true,
                 run: () => {
                     // Stores the preferences from this editor
-                    this._config.commands.savePrefs();
+                    this.config.commands.savePrefs();
                     return true;
                 }
             },
@@ -31272,7 +31272,7 @@ class CodeProEditor {
                 key: "Shift-Alt-c",
                 preventDefault: true,
                 stopPropagation: true,
-                run: this._config.commands.cancel
+                run: this.config.commands.cancel
             },
         ];
     }
@@ -31281,13 +31281,13 @@ class CodeProEditor {
      * @returns {*}
      */
     _createMinimap() {
-        if (!this._config.minimap) {
+        if (!this.config.minimap) {
             return [];
         }
 
         const create = () => {
             const dom = document.createElement('div');
-            return {dom};
+            return { dom };
         };
         return showMinimap.compute(['doc'], () => {
             return ({
@@ -31303,33 +31303,9 @@ class CodeProEditor {
      * Destroys the editor
      */
     destroy() {
-        this._editorView.destroy();
+        this.editorView.destroy();
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
-        }
-    }
-
-    /**
-     * Scrolls to the caret position defined by NULL ut8 char
-     */
-    scrollToCaretPosition() {
-        // Search the position of the NULL caret
-        const state = this._editorView.state;
-        const searchCursor = new SearchCursor(state.doc, MARKER);
-        searchCursor.next();
-        const value = searchCursor.value;
-        if (value) {
-            // Update the view by removing this marker and scrolling to its position
-            this._editorView.dispatch({
-                changes: {from: value.from, to: value.to, insert: ''},
-                selection: {anchor: value.from},
-                scrollIntoView: true
-            });
-        } else {
-            // Simply ensure that the cursor position is into view
-            this._editorView.dispatch({
-                scrollIntoView: true
-            });
         }
     }
 
@@ -31338,9 +31314,12 @@ class CodeProEditor {
      * @param {string} source
      */
     setValue(source) {
-        this._source = source;
-        const view = this._editorView;
-        view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: source || ''}});
+        this.source = source;
+        const view = this.editorView;
+        view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: source || '' },
+            annotations: [Transaction.addToHistory.of(false)]
+        });
         this.scrollToCaretPosition();
     }
 
@@ -31350,83 +31329,22 @@ class CodeProEditor {
      * @returns {string}
      */
     getValue(marker) {
-        if (marker === CodeProEditor.Marker.atElement) {
-            return this._getValueWithMarkerAtElement();
-        } else if (marker === CodeProEditor.Marker.atCursor) {
-            return this._getValueWithMarkerAtCursor();
+        if (marker === CodeProEditor.MarkerType.atCursor) {
+            return this.getValueWithMarkerAtCursor();
         }
-        return this._editorView.state.doc.toString();
-    }
-
-    /**
-     * Gets the html source code,
-     * including a NULL marker at the closest Element to the
-     * cursor position
-     * @returns {string}
-     */
-    _getValueWithMarkerAtElement() {
-        let pos = null;
-        // Insert the NULL marker at the begining of the closest TAG
-        const state = this._editorView.state;
-        const anchor = state.selection.main.from;
-        const tree = syntaxTree(state);
-        let currentNode = tree.resolve(anchor, -1);
-
-        let nodeFound = null;
-        while (!nodeFound && currentNode) {
-            if (currentNode.type.name === 'Element') {
-                nodeFound = currentNode;
-            } else if (currentNode.prevSibling) {
-                currentNode = currentNode.prevSibling;
-            } else {
-                currentNode = currentNode.parent;
-            }
-        }
-        if (nodeFound) {
-            pos = nodeFound.from;
-            this._editorView.dispatch({
-                changes: {from: pos, to: pos, insert: MARKER}
-            });
-        }
-
-        const html = this._editorView.state.doc.toString();
-        if (pos !== null) {
-            this._editorView.dispatch({
-                changes: {from: pos, to: pos + 1, insert: ''}
-            });
-        }
-        return html;
-    }
-
-    /**
-     * Gets the html source code,
-     * including a NULL marker at the cursor position
-     * @returns {string}
-     */
-    _getValueWithMarkerAtCursor() {
-        const cursor = this._editorView.state.selection.main.head;
-        this._editorView.dispatch({
-            changes: {from: cursor, insert: MARKER},
-        });
-
-        const html = this._editorView.state.doc.toString();
-        if (cursor !== null) {
-            this._editorView.dispatch({
-                changes: {from: cursor, to: cursor + 1, insert: ''}
-            });
-        }
-        return html;
+        return this.editorView.state.doc.toString();
     }
 
     /**
      * Sets the selection
-     * @param {*} selection
+     * @param {{anchor: number}} pos
      */
-    setSelection(selection) {
+    setSelection(pos) {
+        const selection = EditorSelection.single(pos.anchor);
         // Restore selection
-        this._editorView.dispatch({
+        this.editorView.dispatch({
             selection,
-            scrollIntoView: true
+            effects: EditorView.scrollIntoView(selection.main.head, { y: "center" })
         });
     }
 
@@ -31435,11 +31353,11 @@ class CodeProEditor {
      * @returns {*}
      */
     getState() {
-        const state = this._editorView.state;
-        const range = state.selection.ranges[0] || {from: 0, to: 0};
+        const state = this.editorView.state;
+        const range = state.selection.ranges[0] || { from: 0, to: 0 };
         return {
             html: state.doc.toString(),
-            selection: {anchor: range.from, head: range.to}
+            selection: { anchor: range.from, head: range.to }
         };
     }
 
@@ -31449,19 +31367,19 @@ class CodeProEditor {
      * @returns {*[] | null} - The theme effects
      */
     _createTheme(themeName) {
-        themeName = themeName ?? this._config.themeName ?? 'light';
+        themeName = themeName ?? this.config.themeName ?? 'light';
         const baseTheme = themes[themeName];
         if (!baseTheme) {
             return null;
         }
-        this._config.themeName = themeName;
+        this.config.themeName = themeName;
 
         const fontTheme = EditorView.theme({
             ".cm-content": {
-                fontSize: this._config.fontSize + "pt",
+                fontSize: this.config.fontSize + "pt",
             },
             ".cm-gutters": {
-                fontSize: this._config.fontSize + "pt",
+                fontSize: this.config.fontSize + "pt",
             },
         });
         return [baseTheme, fontTheme];
@@ -31477,7 +31395,7 @@ class CodeProEditor {
             // eslint-disable-next-line no-console
             console.error("Unknown theme", themeName);
         }
-        this._editorView.dispatch({
+        this.editorView.dispatch({
             effects: this.themeConfig.reconfigure(theme)
         });
     }
@@ -31486,7 +31404,7 @@ class CodeProEditor {
      * Toogles light or dark themes dynamically for an specific fontSize
      */
     toggleTheme() {
-        const themeName = this._config.themeName === 'light' ? 'dark' : 'light';
+        const themeName = this.config.themeName === 'light' ? 'dark' : 'light';
         this.setTheme(themeName);
         return themeName;
     }
@@ -31496,7 +31414,7 @@ class CodeProEditor {
      * @param {number} size
      */
     setFontsize(size) {
-        this._config.fontSize = size;
+        this.config.fontSize = size;
         this.setTheme();
     }
 
@@ -31505,17 +31423,17 @@ class CodeProEditor {
      * @returns {number}
      */
     getFontsize() {
-        return this._config.fontSize;
+        return this.config.fontSize;
     }
 
     /**
      * Increases the font size up to a MAX_FONTSIZE
      */
     increaseFontsize() {
-        if (this._config.fontSize > MAX_FONTSIZE) {
+        if (this.config.fontSize > MAX_FONTSIZE) {
             return;
         }
-        this._config.fontSize += 1;
+        this.config.fontSize += 1;
         this.setTheme();
     }
 
@@ -31523,10 +31441,10 @@ class CodeProEditor {
      * Decreases the font size down to a MIN_FONTSIZE
      */
     decreaseFontsize() {
-        if (this._config.fontSize < MIN_FONTSIZE) {
+        if (this.config.fontSize < MIN_FONTSIZE) {
             return;
         }
-        this._config.fontSize -= 1;
+        this.config.fontSize -= 1;
         this.setTheme();
     }
 
@@ -31534,36 +31452,84 @@ class CodeProEditor {
      * Enable/disable linewrapping dynamically
      */
     toggleLineWrapping() {
-        this._config.lineWrapping = !this._config.lineWrapping;
-        this._editorView.dispatch({
-            effects: this.linewrapConfig.reconfigure(this._config.lineWrapping ? [EditorView.lineWrapping] : [])
+        this.config.lineWrapping = !this.config.lineWrapping;
+        this.editorView.dispatch({
+            effects: this.linewrapConfig.reconfigure(this.config.lineWrapping ? [EditorView.lineWrapping] : [])
         });
-        return this._config.lineWrapping;
+        return this.config.lineWrapping;
     }
 
     /**
      * Show/hide minimap dynamically
      */
     toggleMinimap() {
-        this._config.minimap = !this._config.minimap;
-        this._editorView.dispatch({
+        this.config.minimap = !this.config.minimap;
+        this.editorView.dispatch({
             effects: this.minimapConfig.reconfigure(this._createMinimap())
         });
-        this._editorView.focus();
+        this.editorView.focus();
         // Issue:: Need to scroll to ensure minimap is rerendered
-        this._editorView.dispatch({
+        this.editorView.dispatch({
             scrollIntoView: true
         });
-        return this._config.minimap;
+        return this.config.minimap;
     }
 
     /**
      * Focus onto the editor
      */
     focus() {
-        if (!this._editorView.hasFocus) {
-            this._editorView.focus();
+        if (!this.editorView.hasFocus) {
+            this.editorView.focus();
         }
+    }
+
+        /**
+    * Scrolls the editor view to the position of the marker.
+    * If the marker is not found, scrolls the current view into focus.
+    */
+    scrollToCaretPosition() {
+        const state = this.editorView.state;
+        const searchCursor = new SearchCursor(state.doc, CodeProEditor.MARKER);
+        searchCursor.next();
+        const value = searchCursor.value;
+        if (value) {
+            this.editorView.dispatch({
+                changes: { from: value.from, to: value.to, insert: '' },
+                selection: { anchor: value.from },
+                effects: EditorView.scrollIntoView(value.from, { y: "center" }),
+                annotations: [Transaction.addToHistory.of(false)]
+            });
+        } else {
+            this.editorView.dispatch({
+                scrollIntoView: true
+            });
+        }
+    }
+
+
+    /**
+     * Inserts the marker at the current cursor position and returns
+     * the editor content as a string. The marker is removed immediately
+     * after insertion. Does not affect undo history.
+     *
+     * @returns {string} The document content with the marker temporarily inserted.
+     */
+    getValueWithMarkerAtCursor() {
+        const cursor = this.editorView.state.selection.main.head;
+        this.editorView.dispatch({
+            changes: { from: cursor, insert: CodeProEditor.MARKER },
+            annotations: [Transaction.addToHistory.of(false)]
+        });
+
+        const html = this.editorView.state.doc.toString();
+        if (cursor !== null) {
+            this.editorView.dispatch({
+                changes: { from: cursor, to: cursor + 1, insert: '' },
+                annotations: [Transaction.addToHistory.of(false)]
+            });
+        }
+        return html;
     }
 }
 

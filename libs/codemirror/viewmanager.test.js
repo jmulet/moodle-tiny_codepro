@@ -1,9 +1,11 @@
 /**
  * @jest-environment jsdom
  */
+jest.useFakeTimers();
 
 import { ViewManager } from '../../amd/src/viewmanager';
 import CodeProEditor from './cm6pro';
+CodeProEditor.MARKER = '@';
 
 // Mock preferences, options, and common
 jest.mock('../../amd/src/preferences', () => ({
@@ -39,131 +41,83 @@ window.require = (deps, callback, errback) => {
 };
 
 describe('ViewManager.create', () => {
-  let viewManager, mockTiny, container;
+  let viewManager, mockTiny, tinyContainer, cm6Container;
 
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
+  beforeEach(async() => {
+    cm6Container = document.createElement('DIV');
+    document.body.appendChild(cm6Container);
+    tinyContainer = document.createElement('DIV');
+    document.body.appendChild(tinyContainer);
+
+    tinyContainer.innerHTML = "<p>Sample text</p>";
+    const range = document.createRange();
+    const textNode = tinyContainer.querySelector("p").firstChild;
+    range.setStart(textNode, 3); // Position after "Sam"
+    range.setEnd(textNode, 3);   // Start == End --> collapsed range
+    const mockSelection = {
+      getRng: jest.fn(() => range),
+      setRng: jest.fn(),
+      setCursorLocation: jest.fn(),
+      collapse: jest.fn()
+    };
 
     mockTiny = {
       id: 'editor-id',
-      container,
+      container: tinyContainer,
       contentWindow: {
         scrollY: 0,
         scrollTo: jest.fn()
       },
+      focus: jest.fn(),
       dom: {
-        select: jest.fn(() => [])
+        select: jest.fn((q) => tinyContainer.querySelectorAll(q))
       },
-      getContent: jest.fn(() => '<p>Hello</p>'),
-      selection: {
-        getStart: jest.fn(() => document.createElement('div'))
-      }
+      getContent: jest.fn(() => tinyContainer.innerHTML),
+      setContent: jest.fn((t) => tinyContainer.innerHTML = t),
+      selection: mockSelection,
+      undoManager: {
+        transact: jest.fn((f) => f())
+      },
+      nodeChanged: jest.fn(),
     };
 
+    jest.spyOn(global, 'setTimeout').mockImplementation((fn) => fn());
+
     viewManager = new ViewManager(mockTiny, { autosave: false });
+    viewManager._tClose = jest.fn();
+    viewManager._tCreate = jest.fn();
+    viewManager._tShow = jest.fn();
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
+    jest.restoreAllMocks();
   });
 
   it('should create a CodeProEditor instance and attach it to the DOM', async () => {
-    expect(container.querySelector('.cm-editor')).toBeNull(); // Before creation
-
-    await viewManager.attachCodeEditor(container);
-
+    expect(cm6Container.querySelector('.cm-editor')).toBeNull(); // Before creation
+    await viewManager.attachCodeEditor(cm6Container);
     expect(viewManager.codeEditor).toBeInstanceOf(CodeProEditor);
-    expect(container.querySelector('.cm-editor')).not.toBeNull(); // Editor attached
-  });
-});
-
-describe('ViewManager.accept', () => {
-  let viewManager, mockTiny;
-  const editorContainer = document.createElement("DIV");
-  beforeEach(() => {
-    document.body.innerHTML = '<iframe></iframe>';
-    mockTiny = {
-      id: 'editor-id',
-      container: document.body,
-      contentWindow: {
-        scrollY: 0,
-        scrollTo: jest.fn()
-      },
-      dom: {
-        select: jest.fn(() => [])
-      },
-      getContent: jest.fn(() => '<div>hi<span class="tiny_codepro-marker">&#xfeff;</span> there</div>'),
-      setContent: jest.fn(),
-      focus: jest.fn(),
-      undoManager: {
-        transact: jest.fn(fn => fn())
-      },
-      selection: {
-        getStart: jest.fn(() => document.createElement('div')),
-        setCursorLocation: jest.fn(),
-        collapse: jest.fn()
-      },
-      execCommand: jest.fn(),
-      nodeChanged: jest.fn()
-    };
-
-    viewManager = new ViewManager(mockTiny, {});
-    viewManager._tClose = jest.fn();
+    expect(cm6Container.querySelector('.cm-editor')).not.toBeNull(); // Editor attached
+    // expect that the head of the cmEditor to be in the right place
+    const state = viewManager.codeEditor.editorView.state;
+    expect(viewManager.codeEditor.getValue()).toBe('<p>Sample text</p>');
+    expect(state.selection.main.head).toBe(6);
   });
 
-  it('should replace CM_MARKER and call editor.setContent()', async() => {
-    await viewManager.attachCodeEditor(editorContainer);
+  it('.accept() should replace CM_MARKER and call editor.setContent()', async() => {
+    await viewManager.attachCodeEditor(cm6Container);
     const result = viewManager.accept();
     expect(result).toBe(true);
     expect(viewManager._tClose).toHaveBeenCalled();
     expect(mockTiny.setContent).toHaveBeenCalledWith(
-      '<div>hi<span class="tiny_codepro-marker">&#xfeff;</span> there</div>'
+        '<p>Sam<span class="tiny_codepro-marker">&#xfeff;</span>ple text</p>'
     );
+
+    expect(mockTiny.contentWindow.scrollTo).toHaveBeenCalled();
+
+    // Expect that no marker is in the tiny dom
+    expect(tinyContainer.querySelector('span.tiny_codepro-marker')).toBeNull();
   });
 
-  it('Move to the begining of document', async() => {
-    await viewManager.attachCodeEditor(editorContainer);
-    viewManager.codeEditor.setSelection({ anchor: 0 });
-    const result = viewManager.accept();
-    expect(result).toBe(true);
-    expect(viewManager._tClose).toHaveBeenCalled();
-    expect(mockTiny.setContent).toHaveBeenCalledWith(
-      '<span class="tiny_codepro-marker">&#xfeff;</span><div>hi there</div>'
-    );
-  });
-});
-
-
-describe('ViewManager.attachCodeEditor', () => {
-  let viewManager, mockTiny, container;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-
-    mockTiny = {
-      id: 'editor-id',
-      container,
-      contentWindow: { scrollY: 0, scrollTo: jest.fn() },
-      dom: { select: jest.fn(() => []) },
-      getContent: jest.fn(() => '<p>Hello</p>'),
-      selection: {
-        getStart: jest.fn(() => document.createElement('div'))
-      }
-    };
-
-    viewManager = new ViewManager(mockTiny, { autosave: false });
-  });
-
-  afterEach(() => {
-    document.body.innerHTML = '';
-  });
-
-  it('should initialize a real CodeProEditor instance', async () => {
-    await viewManager.attachCodeEditor(container);
-
-    expect(viewManager.codeEditor).toBeInstanceOf(CodeProEditor);
-    expect(container.querySelector('.cm-editor')).not.toBeNull();
-  });
 });

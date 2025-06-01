@@ -20,7 +20,7 @@
  * @copyright   2024 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+import { EditorView } from "@codemirror/view";
 import { Transaction } from '@codemirror/state';
 import { SearchCursor } from '@codemirror/search';
 import { syntaxTree } from '@codemirror/language';
@@ -68,7 +68,7 @@ export class CursorSync {
             this.editorView.dispatch({
                 changes: { from: value.from, to: value.to, insert: '' },
                 selection: { anchor: value.from },
-                scrollIntoView: true,
+                effects: EditorView.scrollIntoView(value.from, { y: "center" }),
                 annotations: [Transaction.addToHistory.of(false)]
             });
         } else {

@@ -256,7 +256,7 @@ export class ViewPanelManager extends ViewManager {
                             this.parentContainer.style.height = HARDCODED_HEIGHT;
                         }
                         // Always show with linewrapping on
-                        if (!this.codeEditor._config.lineWrapping) {
+                        if (!this.codeEditor.config.lineWrapping) {
                             this.toggleLineWrapping();
                         }
                     }

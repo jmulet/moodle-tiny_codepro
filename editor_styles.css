@@ -1,0 +1,6 @@
+span.tcp_CmCaReT {
+    display: none;
+}
+p:has(> span.tcp_CmCaReT:first-child:last-child) {
+    display: none;
+}

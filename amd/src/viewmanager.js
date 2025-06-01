@@ -26,7 +26,7 @@
 
 import {setPref, getPref, savePrefs} from "./preferences";
 import {isSyncCaret, isAutoFormatHTML} from "./options";
-import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
+import {CM_MARKER, TINY_MARKER_CLASS, TINY_MARKER_CONTENT} from "./common";
 
 /**
  * Share the state among editor Views
@@ -146,7 +146,7 @@ export class ViewManager {
         // Call the template method to show the UI
         this._tShow();
         this.isLoading = false;
-        setTimeout(() => this.codeEditor?.focus(), 500);
+        setTimeout(() => this.codeEditor?.focus(), 250);
     }
 
     /**
@@ -181,6 +181,7 @@ export class ViewManager {
      */
     _saveAction(html) {
         if (!html) {
+            // Get code without any marker.
             html = this.codeEditor.getValue();
         }
         // Do it in a transaction
@@ -197,10 +198,8 @@ export class ViewManager {
      */
     accept() {
         // Add marker if cursor synchronization is enabled.
-        const shouldSyncCaret = isSyncCaret(this.editor);
-        const htmlWithMarker = this.codeEditor.getValue(shouldSyncCaret ? 1 : 0)
-            .replace(CM_MARKER, `<span class="${TINY_MARKER_CLASS}">&#xfeff;</span>`);
-        this._saveAction(htmlWithMarker);
+        const htmlNoMarker = this.codeEditor.getValue();
+        this._saveAction(htmlNoMarker);
         this.close();
         return true;
     }
@@ -214,35 +213,10 @@ export class ViewManager {
         this.destroyCodeEditor();
         // Execute template method defined in actual implementations
         this._tClose();
-
-        // After showing the Tiny editor, the scroll position is lost
         // Restore cursor and scroll position
-        const currentNode = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`)[0];
-        if (!currentNode) {
-            // Simply set the previous scroll position if selected node is not found
-            const previousScroll = blackboard.scrolls[this.editor.id];
-            setTimeout(() => this.editor.contentWindow.scrollTo(0, previousScroll), 50);
-        } else {
-            // Scroll the iframe's contentWindow until the currentNode is visible
-            this.editor.selection.setCursorLocation(currentNode, 0);
-            this.editor.selection.collapse();
-            const iframeHeight = this.editor.container.querySelector('iframe').clientHeight;
-            setTimeout(() => {
-                // Images take some time to adquire correct height
-                const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
-                this.editor.contentWindow.scrollTo(0, scrollPos);
-
-                // In some cases the currentNode is included into a <p></p> block by TinyMCE that should be also removed.
-                const parentNode = currentNode.parentNode;
-                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&#xfeff;</span>`) {
-                    parentNode.remove();
-                } else {
-                    currentNode.remove();
-                }
-                // Make sure that no other `span.${TINY_MARKER_CLASS}` is in page.
-                this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => n.remove());
-            }, 50);
-        }
+        // Simply set the previous scroll position if selected node is not found
+        const previousScroll = blackboard.scrolls[this.editor.id];
+        requestAnimationFrame(() => this.editor.contentWindow.scrollTo(0, previousScroll));
         this.editor.nodeChanged();
         this.pendingChanges = false;
         return true;
@@ -283,7 +257,6 @@ export class ViewManager {
             const isFS = getPref('fs', false);
             if (!isFS) {
                 options.lineWrapping = true;
-                // options.commands.linewrapping = () => false;
             }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
@@ -306,17 +279,41 @@ export class ViewManager {
         const syncCaret = isSyncCaret(this.editor);
         let markerNode;
         if (syncCaret) {
+            this.editor.focus();
+
             // Insert caret marker and retrieve html code to pass to CodeMirror
             markerNode = document.createElement("SPAN");
-            markerNode.innerHTML = '&#xfeff;';
+            markerNode.innerHTML = TINY_MARKER_CONTENT;
             markerNode.classList.add(TINY_MARKER_CLASS);
-            const currentNode = this.editor.selection.getStart();
-            currentNode.append(markerNode);
-        }
-        /** @type {string} */
 
+            // const currentNode = this.editor.selection.getStart();
+            // currentNode.append(markerNode);
+
+            // Use range instead for better accuracy in text nodes.
+            // Get current selection range
+            const selection = this.editor.selection;
+            let rng = selection.getRng(); // Native DOM Range
+
+            // Always collapse to start if selection is not collapsed
+            if (!rng.collapsed) {
+                rng = rng.cloneRange(); // Prevent modifying original range
+                rng.collapse(true);
+            }
+
+            // Insert marker at caret or start of selection
+            rng.insertNode(markerNode);
+
+            // Move caret after the inserted marker
+            rng.setStartAfter(markerNode);
+            rng.setEndAfter(markerNode);
+            selection.setRng(rng);
+
+        }
+
+        /** @type {string} */
         let html = this.editor.getContent({source_view: true});
-        if (syncCaret) {
+
+        if (markerNode) {
             const reg = new RegExp(`<span\\s+class="${TINY_MARKER_CLASS}"([^>]*)>([^<]*)<\\/span>`, "gm");
             html = html.replace(reg, CM_MARKER);
             markerNode.remove();

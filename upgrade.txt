@@ -49,5 +49,5 @@ Issue #27: Saving adds additional paragraphs/spans to html content
 
 == 2.1.1 ==
 Automatically hide minimap on mobile phones
-Improved cursor synchronization logic
+Safer cursor synchronization logic
 Include CONTRIBUTING.md file
