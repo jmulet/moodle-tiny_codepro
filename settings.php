@@ -45,7 +45,7 @@ if ($hassiteconfig) {
             'tiny_codepro/synccaret',
             new lang_string('synccaret', $pluginname),
             new lang_string('synccaret_def', $pluginname),
-            'both',
+            'forward',
             $choices0
         ));
 
