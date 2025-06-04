@@ -59,12 +59,17 @@ export const getSetup = async() => {
             return;
         }
 
-        editor.once('BeforeSetContent', () => {
+        editor.on('PreInit', () => {
             const schema = editor.parser?.schema;
             if (!schema) {
                 return;
             }
             // Apply HTML filtering options to the editor parser instance.
+            const customElements = (getCustomElements(editor) ?? '').trim();
+            if (customElements) {
+                schema.addCustomElements(customElements);
+            }
+
             const validElements = (getValidElements(editor) ?? '').trim();
             if (validElements) {
                 schema.addValidElements(validElements);
@@ -73,11 +78,6 @@ export const getSetup = async() => {
             const validChildren = (getValidChildren(editor) ?? '').trim();
             if (validChildren) {
                 schema.addValidChildren(validChildren);
-            }
-
-            const customElements = (getCustomElements(editor) ?? '').trim();
-            if (customElements) {
-                schema.addCustomElements(customElements);
             }
         });
 

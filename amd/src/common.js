@@ -105,8 +105,7 @@ export default {
     component,
     pluginName: `${component}/plugin`,
     icon: `${component}`,
+    TINY_MARKER_CLASS: 'tiny_widgethub-marker',
     CM_MARKER: String.fromCharCode(0),
-    TINY_MARKER_CLASS: 'tcp_CmCaReT',
-    TINY_MARKER_CONTENT: '&nbsp;', //'&#xfeff;',
     isPanelCapable
 };

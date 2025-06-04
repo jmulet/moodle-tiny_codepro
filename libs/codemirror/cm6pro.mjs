@@ -26,12 +26,14 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState, Transaction, Compartment, Prec, EditorSelection } from '@codemirror/state';
 import { html as htmlLang } from "@codemirror/lang-html";
 import { cm6proDark } from './cm6pro-dark-theme';
-import { SearchCursor } from '@codemirror/search';
 
 // 3rd party extensions.
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { colorPicker } from '@replit/codemirror-css-color-picker';
 import { showMinimap } from "@replit/codemirror-minimap";
+
+
+import { CursorSync } from "./cursorsync.mjs";
 
 const MIN_FONTSIZE = 8;
 const MAX_FONTSIZE = 22;
@@ -57,11 +59,13 @@ export default class CodeProEditor {
      * @member {string} source
      * @member {CodeMirrorView} editorView
      * @member {Record<string,*>} config
+     * @member {CursorSync} cursorSync
      */
     parentElement;
     source;
     editorView;
     config;
+    cursorSync;
     /**
      * @param {HTMLElement} parentElement
      * @param {Record<string, any>} [options]
@@ -82,8 +86,9 @@ export default class CodeProEditor {
             state: this._createState(options.doc),
             parent: this.parentElement
         });
+        this.cursorSync = new CursorSync(this.editorView, CodeProEditor.MARKER);
         if (options.doc) {
-            this.scrollToCaretPosition();
+            this.cursorSync.scrollToCaretPosition();
         }
 
         // Make sure that any changes on the parent dimensions, will triger a view requestMeasure
@@ -230,7 +235,7 @@ export default class CodeProEditor {
             changes: { from: 0, to: view.state.doc.length, insert: source || '' },
             annotations: [Transaction.addToHistory.of(false)]
         });
-        this.scrollToCaretPosition();
+        this.cursorSync.scrollToCaretPosition();
     }
 
     /**
@@ -240,7 +245,9 @@ export default class CodeProEditor {
      */
     getValue(marker) {
         if (marker === CodeProEditor.MarkerType.atCursor) {
-            return this.getValueWithMarkerAtCursor();
+            return this.cursorSync.getValueWithMarkerAtCursor();
+        } else if (marker === CodeProEditor.MarkerType.atElement) {
+            return this.cursorSync.getValueWithMarkerAtElement();
         }
         return this.editorView.state.doc.toString();
     }
@@ -392,54 +399,6 @@ export default class CodeProEditor {
         if (!this.editorView.hasFocus) {
             this.editorView.focus();
         }
-    }
-
-        /**
-    * Scrolls the editor view to the position of the marker.
-    * If the marker is not found, scrolls the current view into focus.
-    */
-    scrollToCaretPosition() {
-        const state = this.editorView.state;
-        const searchCursor = new SearchCursor(state.doc, CodeProEditor.MARKER);
-        searchCursor.next();
-        const value = searchCursor.value;
-        if (value) {
-            this.editorView.dispatch({
-                changes: { from: value.from, to: value.to, insert: '' },
-                selection: { anchor: value.from },
-                effects: EditorView.scrollIntoView(value.from, { y: "center" }),
-                annotations: [Transaction.addToHistory.of(false)]
-            });
-        } else {
-            this.editorView.dispatch({
-                scrollIntoView: true
-            });
-        }
-    }
-
-
-    /**
-     * Inserts the marker at the current cursor position and returns
-     * the editor content as a string. The marker is removed immediately
-     * after insertion. Does not affect undo history.
-     *
-     * @returns {string} The document content with the marker temporarily inserted.
-     */
-    getValueWithMarkerAtCursor() {
-        const cursor = this.editorView.state.selection.main.head;
-        this.editorView.dispatch({
-            changes: { from: cursor, insert: CodeProEditor.MARKER },
-            annotations: [Transaction.addToHistory.of(false)]
-        });
-
-        const html = this.editorView.state.doc.toString();
-        if (cursor !== null) {
-            this.editorView.dispatch({
-                changes: { from: cursor, to: cursor + 1, insert: '' },
-                annotations: [Transaction.addToHistory.of(false)]
-            });
-        }
-        return html;
     }
 }
 

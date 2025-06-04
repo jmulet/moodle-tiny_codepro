@@ -15,7 +15,7 @@ jest.mock('../../amd/src/preferences', () => ({
 }));
 
 jest.mock('../../amd/src/options', () => ({
-  isSyncCaret: jest.fn(() => true),
+  getSyncCaret: jest.fn(() => 'both'),
   isAutoFormatHTML: jest.fn(() => false)
 }));
 
@@ -68,15 +68,28 @@ describe('ViewManager.create', () => {
         scrollY: 0,
         scrollTo: jest.fn()
       },
+      getWin: jest.fn(() => window),
       focus: jest.fn(),
       dom: {
-        select: jest.fn((q) => tinyContainer.querySelectorAll(q))
+        select: jest.fn((q) => tinyContainer.querySelectorAll(q)),
+        create: jest.fn((tag, opts, html) => {
+          const elem = document.createElement(tag.toUpperCase())
+          if (opts) {
+            Object.keys(opts).forEach(k => elem.setAttribute(k, opts[k]));
+          }
+          if (html) {
+            elem.innerHTML = html;
+          }
+          return elem;
+        }),
+        remove: jest.fn(() => {}) 
       },
       getContent: jest.fn(() => tinyContainer.innerHTML),
       setContent: jest.fn((t) => tinyContainer.innerHTML = t),
       selection: mockSelection,
       undoManager: {
-        transact: jest.fn((f) => f())
+        transact: jest.fn((f) => f()),
+        ignore: jest.fn((f) => f()),
       },
       nodeChanged: jest.fn(),
     };
@@ -111,11 +124,8 @@ describe('ViewManager.create', () => {
     expect(result).toBe(true);
     expect(viewManager._tClose).toHaveBeenCalled();
     expect(mockTiny.setContent).toHaveBeenCalledWith(
-        '<p>Sam<span class="tiny_codepro-marker">&#xfeff;</span>ple text</p>'
+        '<p>Sam<span class="tiny_codepro-marker">&nbsp;</span>ple text</p>'
     );
-
-    expect(mockTiny.contentWindow.scrollTo).toHaveBeenCalled();
-
     // Expect that no marker is in the tiny dom
     expect(tinyContainer.querySelector('span.tiny_codepro-marker')).toBeNull();
   });

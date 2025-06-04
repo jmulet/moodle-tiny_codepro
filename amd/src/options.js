@@ -52,8 +52,8 @@ export const register = (editor, majorVersion, minorVersion) => {
     });
 
     registerOption(syncCaret, {
-        processor: 'boolean',
-        "default": true,
+        processor: 'string',
+        "default": 'both',
     });
 
     registerOption(uiMode, {
@@ -103,9 +103,9 @@ export const isAutoFormatHTML = (editor) => editor.options.get(autoPrettify);
 /**
  * Should the cursor position be synchronized between TinyMCE and CodeMirror?
  * @param {TinyMCE} editor
- * @returns {boolean}
+ * @returns {string}
  */
-export const isSyncCaret = (editor) => editor.options.get(syncCaret);
+export const getSyncCaret = (editor) => editor.options.get(syncCaret);
 
 /**
  * How to render the HTML editor?

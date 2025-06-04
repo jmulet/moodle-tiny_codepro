@@ -24,9 +24,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setPref, getPref, savePrefs} from "./preferences";
-import {isSyncCaret, isAutoFormatHTML} from "./options";
-import {CM_MARKER, TINY_MARKER_CLASS, TINY_MARKER_CONTENT} from "./common";
+import { setPref, getPref, savePrefs } from "./preferences";
+import { getSyncCaret, isAutoFormatHTML } from "./options";
+import { CM_MARKER, TINY_MARKER_CLASS } from "./common";
 
 /**
  * Share the state among editor Views
@@ -127,7 +127,7 @@ export class ViewManager {
      */
     constructor(editor, opts) {
         this.editor = editor;
-        this.opts = {autosave: false, translations: [], ...(opts ?? {})};
+        this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
         this.isLoading = false;
     }
 
@@ -185,11 +185,85 @@ export class ViewManager {
             html = this.codeEditor.getValue();
         }
         // Do it in a transaction
-        this.editor.focus();
-        this.editor.undoManager.transact(() => {
-            this.editor.setContent(html);
-        });
-        this.pendingChanges = false;
+        this.destroyCodeEditor();
+        // Wait for closing
+        setTimeout(() => {
+            // Restore cursor and scroll position
+            this.editor.focus();
+            this.editor.undoManager.transact(() => {
+                this.editor.setContent(html);
+                const isSynEnabled = getSyncCaret(this.editor) === 'both';
+                if (isSynEnabled) {
+                    // Select markers using TinyMCE api
+                    const markerNodes = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`);
+                    const markerNode = markerNodes.length ? markerNodes[0] : null;
+
+                    if (markerNode) {
+                        const parentEl = markerNode.parentNode;
+                        let elemForRemoval = markerNode;
+                        let elemForSelection = markerNode;
+
+                        if (parentEl) {
+                            // Check if marker is wrapped alone inside p tag
+                            const isMarkerAloneWrappedP =
+                                parentEl.nodeName === 'P' &&
+                                parentEl.childNodes.length === 1 &&
+                                parentEl.firstChild === markerNode;
+
+                            if (isMarkerAloneWrappedP) {
+                                elemForRemoval = parentEl;
+
+                                const grandParent = parentEl.parentNode;
+                                const body = this.editor.getBody();
+
+                                // eslint-disable-next-line max-depth
+                                if (grandParent && grandParent !== body) {
+                                    elemForSelection = grandParent;
+                                } else {
+                                    elemForSelection =
+                                        parentEl.previousSibling ||
+                                        parentEl.nextSibling ||
+                                        body;
+                                }
+                            }
+                        }
+
+                        // Set the cursor at selection element
+                        if (elemForSelection) {
+                            this.editor.selection.setCursorLocation(elemForSelection, 1);
+                        }
+
+                        markerNode.style.display = 'inline';
+                        const rect = markerNode.getBoundingClientRect();
+                        markerNode.style.display = 'none';
+                        const win = this.editor.getWin();
+                        const scrollY = win.scrollY || win.pageYOffset || 0;
+
+                        win.scrollTo({
+                            top: rect.top + scrollY - 100,
+                        });
+
+                        // Remove all markers
+                        if (elemForRemoval?.parentNode) {
+                            elemForRemoval.parentNode.removeChild(elemForRemoval);
+                        }
+
+                        this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => {
+                            this.editor.dom.remove(n);
+                        });
+                    } else {
+                        // No marker found. Restore the scroll.
+                        const previousScroll = blackboard.scrolls[this.editor.id];
+                        requestAnimationFrame(() => {
+                            this.editor.getWin().scrollTo(0, previousScroll);
+                            blackboard.scrolls[this.editor.id] = undefined;
+                        });
+                    }
+                }
+                this.editor.nodeChanged();
+            });
+            this.pendingChanges = false;
+        }, 250);
     }
 
     /**
@@ -198,9 +272,17 @@ export class ViewManager {
      */
     accept() {
         // Add marker if cursor synchronization is enabled.
-        const htmlNoMarker = this.codeEditor.getValue();
+        const isSynEnabled = getSyncCaret(this.editor) === 'both';
+        let htmlNoMarker;
+        if (isSynEnabled) {
+            htmlNoMarker = this.codeEditor.getValue(1);
+            const reg = new RegExp(CM_MARKER, 'g');
+            htmlNoMarker = htmlNoMarker.replace(reg,
+                `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
+        } else {
+            htmlNoMarker = this.codeEditor.getValue(0);
+        }
         this._saveAction(htmlNoMarker);
-        this.close();
         return true;
     }
 
@@ -208,16 +290,11 @@ export class ViewManager {
      * This method destroys the CodeMirror instance and executes the logic to close
      * the current view. It also restores the cursor and scroll positions in the TinyMCE
      * editor.
+     *
      */
     close() {
         this.destroyCodeEditor();
-        // Execute template method defined in actual implementations
-        this._tClose();
         // Restore cursor and scroll position
-        // Simply set the previous scroll position if selected node is not found
-        const previousScroll = blackboard.scrolls[this.editor.id];
-        requestAnimationFrame(() => this.editor.contentWindow.scrollTo(0, previousScroll));
-        this.editor.nodeChanged();
         this.pendingChanges = false;
         return true;
     }
@@ -276,48 +353,58 @@ export class ViewManager {
      * @returns {Promise<string>}
      */
     async _retrieveHtml() {
-        const syncCaret = isSyncCaret(this.editor);
-        let markerNode;
-        if (syncCaret) {
-            this.editor.focus();
+        let html;
+        this.editor.undoManager.ignore(() => {
+            const syncCaret = getSyncCaret(this.editor) !== 'none';
+            let markerNode;
+            if (syncCaret) {
+                this.editor.focus();
+                // Insert caret marker and retrieve html code to pass to CodeMirror
+                markerNode = this.editor.dom.create('span', {
+                    'class': TINY_MARKER_CLASS,
+                }, '&nbsp;');
 
-            // Insert caret marker and retrieve html code to pass to CodeMirror
-            markerNode = document.createElement("SPAN");
-            markerNode.innerHTML = TINY_MARKER_CONTENT;
-            markerNode.classList.add(TINY_MARKER_CLASS);
+                // const currentNode = this.editor.selection.getStart();
+                // currentNode.append(markerNode);
 
-            // const currentNode = this.editor.selection.getStart();
-            // currentNode.append(markerNode);
+                // Use range instead for better accuracy in text nodes.
+                // Get current selection range
+                const selection = this.editor.selection;
+                let rng = selection.getRng(); // Native DOM Range
 
-            // Use range instead for better accuracy in text nodes.
-            // Get current selection range
-            const selection = this.editor.selection;
-            let rng = selection.getRng(); // Native DOM Range
+                // Always collapse to start if selection is not collapsed
+                if (!rng.collapsed) {
+                    rng = rng.cloneRange(); // Prevent modifying original range
+                    rng.collapse(true);
+                }
 
-            // Always collapse to start if selection is not collapsed
-            if (!rng.collapsed) {
-                rng = rng.cloneRange(); // Prevent modifying original range
-                rng.collapse(true);
+                // Insert marker at caret or start of selection
+                // This may fail if, e.g., span cannot be inserted into comment, etc.
+                try {
+                    rng.insertNode(markerNode);
+
+                    // Move caret after the inserted marker
+                    rng.setStartAfter(markerNode);
+                    rng.setEndAfter(markerNode);
+                    selection.setRng(rng);
+                } catch (ex) {
+                    // Fail silently.
+                    console.warn(ex);
+                }
             }
 
-            // Insert marker at caret or start of selection
-            rng.insertNode(markerNode);
+            /** @type {string} */
+            html = this.editor.getContent({ source_view: true });
 
-            // Move caret after the inserted marker
-            rng.setStartAfter(markerNode);
-            rng.setEndAfter(markerNode);
-            selection.setRng(rng);
-
-        }
-
-        /** @type {string} */
-        let html = this.editor.getContent({source_view: true});
-
-        if (markerNode) {
-            const reg = new RegExp(`<span\\s+class="${TINY_MARKER_CLASS}"([^>]*)>([^<]*)<\\/span>`, "gm");
-            html = html.replace(reg, CM_MARKER);
-            markerNode.remove();
-        }
+            if (markerNode) {
+                const reg = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, "gm");
+                html = html.replace(reg, CM_MARKER);
+                markerNode.remove();
+                // Clean any possible comments put by backwards synchronization
+                const reg2 = /<!--\s*tiny_codepro-marker\s*-->/g;
+                html = html.replace(reg2, '');
+            }
+        });
 
         // According to global preference prettify code when opening the editor
         if (isAutoFormatHTML(this.editor)) {
@@ -341,6 +428,7 @@ export class ViewManager {
             this.submitListenerAction = null;
         }
         this.codeEditor?.destroy();
+        this._tClose();
     }
 
     /**
@@ -433,7 +521,6 @@ export class ViewManager {
         blackboard.state = this.codeEditor.getState();
         // Destroy code editor and close the current view.
         this.destroyCodeEditor();
-        this._tClose();
         // Toggle user preference
         const uiMode = getPref('view', 'dialog');
         setPref('view', uiMode === 'dialog' ? 'panel' : 'dialog', true);

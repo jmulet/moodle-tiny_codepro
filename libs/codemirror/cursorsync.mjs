@@ -59,16 +59,26 @@ export class CursorSync {
     * Scrolls the editor view to the position of the marker.
     * If the marker is not found, scrolls the current view into focus.
     */
-    scrollToCaretPosition() {
+      scrollToCaretPosition() {
         const state = this.editorView.state;
-        const searchCursor = new SearchCursor(state.doc, this.marker);
-        searchCursor.next();
-        const value = searchCursor.value;
-        if (value) {
+        const cursor = new SearchCursor(state.doc, this.marker, 0, state.doc.length);
+        const changes = [];
+        let firstMatch = null;
+        while (!cursor.next().done) {
+            const value = cursor.value;
+            if (!cursor.value) {
+                continue;
+            }
+            if (!firstMatch) {
+                firstMatch = value;
+            }
+            changes.push({ from: value.from, to: value.to, insert: '' });
+        }
+        if (firstMatch) {
             this.editorView.dispatch({
-                changes: { from: value.from, to: value.to, insert: '' },
-                selection: { anchor: value.from },
-                effects: EditorView.scrollIntoView(value.from, { y: "center" }),
+                changes,
+                selection: { anchor: firstMatch.from },
+                effects: EditorView.scrollIntoView(firstMatch.from, { y: "center" }),
                 annotations: [Transaction.addToHistory.of(false)]
             });
         } else {
