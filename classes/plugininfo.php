@@ -98,7 +98,7 @@ class plugininfo extends plugin implements
         if ($showplugin) {
             $cfg = get_config('tiny_codepro');
             $params['autoprettify'] = tiny_codepro_cfgwithdefault($cfg, 'autoprettify', 1) == 1;
-            $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 1) == 1;
+            $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 'forward');
             $params['uimode'] = tiny_codepro_cfgwithdefault($cfg, 'uimode', 'user:dialog');
             // Content filtering options.
             $params['customelements'] = trim(tiny_codepro_cfgwithdefault($cfg, 'customelements', ''));

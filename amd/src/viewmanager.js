@@ -175,6 +175,45 @@ export class ViewManager {
     }
 
     /**
+     * Gets the first element that is visible in the viewport of the editor
+     * @param {HTMElement} container
+     * @returns {HTMLElement | null}
+     */
+    _getFirstVisibleElement(container) {
+        const children = container.children;
+        for (let i = 0; i < children.length; i++) {
+            const rect = children[i].getBoundingClientRect();
+            // Container visible rect (viewport inside editor)
+            const containerRect = container.getBoundingClientRect();
+            if (rect.bottom > containerRect.top) {
+                return children[i];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Restores the previous scroll of the TinyMCE editor.
+     * @param {boolean} [activateCursor]
+     */
+    _restoreScroll(activateCursor) {
+        // No marker found. Restore previous scroll.
+        const previousScroll = blackboard.scrolls[this.editor.id];
+        this.editor.getWin().scrollTo(0, previousScroll);
+        blackboard.scrolls[this.editor.id] = undefined;
+
+        if (activateCursor) {
+            const firstVisible = this._getFirstVisibleElement(this.editor.getBody());
+            if (firstVisible) {
+                const rng = this.editor.dom.createRng();
+                rng.selectNodeContents(firstVisible);
+                rng.collapse(true);
+                this.editor.selection.setRng(rng);
+            }
+        }
+    }
+
+    /**
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
      * @param {string} [html] - HTML code
@@ -192,8 +231,8 @@ export class ViewManager {
             this.editor.focus();
             this.editor.undoManager.transact(() => {
                 this.editor.setContent(html);
-                const isSynEnabled = getSyncCaret(this.editor) === 'both';
-                if (isSynEnabled) {
+                const syncCaret = getSyncCaret(this.editor);
+                if (syncCaret === 'both') {
                     // Select markers using TinyMCE api
                     const markerNodes = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`);
                     const markerNode = markerNodes.length ? markerNodes[0] : null;
@@ -252,13 +291,10 @@ export class ViewManager {
                             this.editor.dom.remove(n);
                         });
                     } else {
-                        // No marker found. Restore the scroll.
-                        const previousScroll = blackboard.scrolls[this.editor.id];
-                        requestAnimationFrame(() => {
-                            this.editor.getWin().scrollTo(0, previousScroll);
-                            blackboard.scrolls[this.editor.id] = undefined;
-                        });
+                        this._restoreScroll(true);
                     }
+                } else if (syncCaret !== 'none') {
+                    this._restoreScroll(true);
                 }
                 this.editor.nodeChanged();
             });

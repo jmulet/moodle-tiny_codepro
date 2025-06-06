@@ -53,7 +53,7 @@ export const register = (editor, majorVersion, minorVersion) => {
 
     registerOption(syncCaret, {
         processor: 'string',
-        "default": 'both',
+        "default": 'forward',
     });
 
     registerOption(uiMode, {
