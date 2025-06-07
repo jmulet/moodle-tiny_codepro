@@ -71,7 +71,7 @@ if ($hassiteconfig) {
             'tiny_codepro/extendedvalidelements',
             new lang_string('extendedvalidelements', $pluginname),
             new lang_string('extendedvalidelements_def', $pluginname),
-            '*[*],svg[*],math[*]',
+            '*[*],svg[*],math[*],script[*],style[*]',
             PARAM_TEXT
         ));
 
