@@ -56,6 +56,12 @@ export const getSetup = async() => {
 
     return async(editor) => {
         if (!isPluginVisible(editor)) {
+            // Must register the menu items with the basic code editor command.
+            editor.ui.registry.addMenuItem(component, {
+                icon: 'sourcecode',
+                text: 'Source code',
+                onAction: () => editor.execCommand("mceCodeEditor", false)
+            });
             return;
         }
 
