@@ -24,9 +24,9 @@
 import {component as buttonName} from './common';
 
 const configureMenu = (menu) => {
-    // Replace original items with the new one
-    menu.view.items = menu.view.items.replace(/code /g, buttonName + " ");
-    menu.tools.items = menu.tools.items.replace(/code /g, buttonName + " ");
+    // Replace code by codepro menu items.
+    menu.view.items = menu.view.items.replace(/code /g, `${buttonName} `);
+    menu.tools.items = menu.tools.items.replace(/code /g, `${buttonName} `);
     return menu;
 };
 

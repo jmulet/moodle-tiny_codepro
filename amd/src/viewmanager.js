@@ -24,9 +24,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setPref, getPref, savePrefs} from "./preferences";
-import {isSyncCaret, isAutoFormatHTML} from "./options";
-import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
+import { setPref, getPref, savePrefs } from "./preferences";
+import { getSyncCaret, isAutoFormatHTML } from "./options";
+import { CM_MARKER, TINY_MARKER_CLASS } from "./common";
 
 /**
  * Share the state among editor Views
@@ -46,7 +46,7 @@ const requireCm6Pro = () => {
         return Promise.resolve(_CodeProEditor);
     }
     return new Promise((resolve) => {
-        require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
+        window.require(['tiny_codepro/cm6pro-lazy'], (CodeProEditor) => {
             _CodeProEditor = CodeProEditor;
             resolve(CodeProEditor);
         });
@@ -66,7 +66,7 @@ const requireHTMLFormatter = () => {
     }
     return new Promise((resolve) => {
         const fallback = () => {
-            require(['tiny_codepro/htmlfy-lazy'], (prettify) => {
+            window.require(['tiny_codepro/htmlfy-lazy'], (prettify) => {
                 _htmlFormatter = (src) => prettify(src, {
                     ignore: ['style', 'script', 'pre', 'code'],
                     strict: false,
@@ -75,7 +75,7 @@ const requireHTMLFormatter = () => {
                 resolve(_htmlFormatter);
             }, () => resolve(null));
         };
-        require(['tiny_html/beautify/beautify-html'], (beautify) => {
+        window.require(['tiny_html/beautify/beautify-html'], (beautify) => {
             _htmlFormatter = beautify.html_beautify;
             if (_htmlFormatter) {
                 resolve(_htmlFormatter);
@@ -127,7 +127,7 @@ export class ViewManager {
      */
     constructor(editor, opts) {
         this.editor = editor;
-        this.opts = {autosave: false, translations: [], ...(opts ?? {})};
+        this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
         this.isLoading = false;
     }
 
@@ -146,7 +146,7 @@ export class ViewManager {
         // Call the template method to show the UI
         this._tShow();
         this.isLoading = false;
-        setTimeout(() => this.codeEditor?.focus(), 500);
+        setTimeout(() => this.codeEditor?.focus(), 250);
     }
 
     /**
@@ -175,20 +175,131 @@ export class ViewManager {
     }
 
     /**
+     * Gets the first element that is visible in the viewport of the editor
+     * @param {HTMElement} container
+     * @returns {HTMLElement | null}
+     */
+    _getFirstVisibleElement(container) {
+        const children = container.children;
+        for (let i = 0; i < children.length; i++) {
+            const rect = children[i].getBoundingClientRect();
+            // Container visible rect (viewport inside editor)
+            const containerRect = container.getBoundingClientRect();
+            if (rect.bottom > containerRect.top) {
+                return children[i];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Restores the previous scroll of the TinyMCE editor.
+     * @param {boolean} [activateCursor]
+     */
+    _restoreScroll(activateCursor) {
+        // No marker found. Restore previous scroll.
+        const previousScroll = blackboard.scrolls[this.editor.id];
+        this.editor.getWin().scrollTo(0, previousScroll);
+        blackboard.scrolls[this.editor.id] = undefined;
+
+        if (activateCursor) {
+            const firstVisible = this._getFirstVisibleElement(this.editor.getBody());
+            if (firstVisible) {
+                const rng = this.editor.dom.createRng();
+                rng.selectNodeContents(firstVisible);
+                rng.collapse(true);
+                this.editor.selection.setRng(rng);
+            }
+        }
+    }
+
+    /**
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
      * @param {string} [html] - HTML code
      */
     _saveAction(html) {
         if (!html) {
+            // Get code without any marker.
             html = this.codeEditor.getValue();
         }
         // Do it in a transaction
-        this.editor.focus();
-        this.editor.undoManager.transact(() => {
-            this.editor.setContent(html);
-        });
-        this.pendingChanges = false;
+        this.destroyCodeEditor();
+        // Wait for closing
+        setTimeout(() => {
+            // Restore cursor and scroll position
+            this.editor.focus();
+            this.editor.undoManager.transact(() => {
+                this.editor.setContent(html);
+                const syncCaret = getSyncCaret(this.editor);
+                if (syncCaret === 'both') {
+                    // Select markers using TinyMCE api
+                    const markerNodes = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`);
+                    const markerNode = markerNodes.length ? markerNodes[0] : null;
+
+                    if (markerNode) {
+                        const parentEl = markerNode.parentNode;
+                        let elemForRemoval = markerNode;
+                        let elemForSelection = markerNode;
+
+                        if (parentEl) {
+                            // Check if marker is wrapped alone inside p tag
+                            const isMarkerAloneWrappedP =
+                                parentEl.nodeName === 'P' &&
+                                parentEl.childNodes.length === 1 &&
+                                parentEl.firstChild === markerNode;
+
+                            if (isMarkerAloneWrappedP) {
+                                elemForRemoval = parentEl;
+
+                                const grandParent = parentEl.parentNode;
+                                const body = this.editor.getBody();
+
+                                // eslint-disable-next-line max-depth
+                                if (grandParent && grandParent !== body) {
+                                    elemForSelection = grandParent;
+                                } else {
+                                    elemForSelection =
+                                        parentEl.previousSibling ||
+                                        parentEl.nextSibling ||
+                                        body;
+                                }
+                            }
+                        }
+
+                        // Set the cursor at selection element
+                        if (elemForSelection) {
+                            this.editor.selection.setCursorLocation(elemForSelection, 1);
+                        }
+
+                        markerNode.style.display = 'inline';
+                        const rect = markerNode.getBoundingClientRect();
+                        markerNode.style.display = 'none';
+                        const win = this.editor.getWin();
+                        const scrollY = win.scrollY || win.pageYOffset || 0;
+
+                        win.scrollTo({
+                            top: rect.top + scrollY - 100,
+                        });
+
+                        // Remove all markers
+                        if (elemForRemoval?.parentNode) {
+                            elemForRemoval.parentNode.removeChild(elemForRemoval);
+                        }
+
+                        this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => {
+                            this.editor.dom.remove(n);
+                        });
+                    } else {
+                        this._restoreScroll(true);
+                    }
+                } else if (syncCaret !== 'none') {
+                    this._restoreScroll(true);
+                }
+                this.editor.nodeChanged();
+            });
+            this.pendingChanges = false;
+        }, 250);
     }
 
     /**
@@ -197,11 +308,17 @@ export class ViewManager {
      */
     accept() {
         // Add marker if cursor synchronization is enabled.
-        const shouldSyncCaret = isSyncCaret(this.editor);
-        const htmlWithMarker = this.codeEditor.getValue(shouldSyncCaret ? 1 : 0)
-            .replace(CM_MARKER, `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
-        this._saveAction(htmlWithMarker);
-        this.close();
+        const isSynEnabled = getSyncCaret(this.editor) === 'both';
+        let htmlNoMarker;
+        if (isSynEnabled) {
+            htmlNoMarker = this.codeEditor.getValue(1);
+            const reg = new RegExp(CM_MARKER, 'g');
+            htmlNoMarker = htmlNoMarker.replace(reg,
+                `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
+        } else {
+            htmlNoMarker = this.codeEditor.getValue(0);
+        }
+        this._saveAction(htmlNoMarker);
         return true;
     }
 
@@ -209,41 +326,11 @@ export class ViewManager {
      * This method destroys the CodeMirror instance and executes the logic to close
      * the current view. It also restores the cursor and scroll positions in the TinyMCE
      * editor.
+     *
      */
     close() {
         this.destroyCodeEditor();
-        // Execute template method defined in actual implementations
-        this._tClose();
-
-        // After showing the Tiny editor, the scroll position is lost
         // Restore cursor and scroll position
-        const currentNode = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`)[0];
-        if (!currentNode) {
-            // Simply set the previous scroll position if selected node is not found
-            const previousScroll = blackboard.scrolls[this.editor.id];
-            setTimeout(() => this.editor.contentWindow.scrollTo(0, previousScroll), 50);
-        } else {
-            // Scroll the iframe's contentWindow until the currentNode is visible
-            this.editor.selection.setCursorLocation(currentNode, 0);
-            this.editor.selection.collapse();
-            const iframeHeight = this.editor.container.querySelector('iframe').clientHeight;
-            setTimeout(() => {
-                // Images take some time to adquire correct height
-                const scrollPos = Math.max(currentNode.offsetTop - 0.5 * iframeHeight, 0);
-                this.editor.contentWindow.scrollTo(0, scrollPos);
-
-                // In some cases the currentNode is included into a <p></p> block by TinyMCE that should be also removed.
-                const parentNode = currentNode.parentNode;
-                if (parentNode?.nodeName === 'P' && parentNode.innerHTML === `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`) {
-                    parentNode.remove();
-                } else {
-                    currentNode.remove();
-                }
-                // Make sure that no other `span.${TINY_MARKER_CLASS}` is in page.
-                this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => n.remove());
-            }, 50);
-        }
-        this.editor.nodeChanged();
         this.pendingChanges = false;
         return true;
     }
@@ -283,7 +370,6 @@ export class ViewManager {
             const isFS = getPref('fs', false);
             if (!isFS) {
                 options.lineWrapping = true;
-                // options.commands.linewrapping = () => false;
             }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
@@ -303,24 +389,58 @@ export class ViewManager {
      * @returns {Promise<string>}
      */
     async _retrieveHtml() {
-        const syncCaret = isSyncCaret(this.editor);
-        let markerNode;
-        if (syncCaret) {
-            // Insert caret marker and retrieve html code to pass to CodeMirror
-            markerNode = document.createElement("SPAN");
-            markerNode.innerHTML = '&nbsp;';
-            markerNode.classList.add(TINY_MARKER_CLASS);
-            const currentNode = this.editor.selection.getStart();
-            currentNode.append(markerNode);
-        }
-        /** @type {string} */
+        let html;
+        this.editor.undoManager.ignore(() => {
+            const syncCaret = getSyncCaret(this.editor) !== 'none';
+            let markerNode;
+            if (syncCaret) {
+                this.editor.focus();
+                // Insert caret marker and retrieve html code to pass to CodeMirror
+                markerNode = this.editor.dom.create('span', {
+                    'class': TINY_MARKER_CLASS,
+                }, '&nbsp;');
 
-        let html = this.editor.getContent({source_view: true});
-        if (syncCaret) {
-            const reg = new RegExp(`<span\\s+class="${TINY_MARKER_CLASS}"([^>]*)>([^<]*)<\\/span>`, "gm");
-            html = html.replace(reg, CM_MARKER);
-            markerNode.remove();
-        }
+                // const currentNode = this.editor.selection.getStart();
+                // currentNode.append(markerNode);
+
+                // Use range instead for better accuracy in text nodes.
+                // Get current selection range
+                const selection = this.editor.selection;
+                let rng = selection.getRng(); // Native DOM Range
+
+                // Always collapse to start if selection is not collapsed
+                if (!rng.collapsed) {
+                    rng = rng.cloneRange(); // Prevent modifying original range
+                    rng.collapse(true);
+                }
+
+                // Insert marker at caret or start of selection
+                // This may fail if, e.g., span cannot be inserted into comment, etc.
+                try {
+                    rng.insertNode(markerNode);
+
+                    // Move caret after the inserted marker
+                    rng.setStartAfter(markerNode);
+                    rng.setEndAfter(markerNode);
+                    selection.setRng(rng);
+                } catch (ex) {
+                    // Fail silently.
+                    console.warn(ex);
+                }
+            }
+
+            /** @type {string} */
+            html = this.editor.getContent({ source_view: true });
+
+            if (markerNode) {
+                const reg = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, "gm");
+                html = html.replace(reg, CM_MARKER);
+                markerNode.remove();
+                // Clean any possible comments put by backwards synchronization
+                const reg2 = /<!--\s*tiny_codepro-marker\s*-->/g;
+                html = html.replace(reg2, '');
+            }
+        });
 
         // According to global preference prettify code when opening the editor
         if (isAutoFormatHTML(this.editor)) {
@@ -344,6 +464,7 @@ export class ViewManager {
             this.submitListenerAction = null;
         }
         this.codeEditor?.destroy();
+        this._tClose();
     }
 
     /**
@@ -436,7 +557,6 @@ export class ViewManager {
         blackboard.state = this.codeEditor.getState();
         // Destroy code editor and close the current view.
         this.destroyCodeEditor();
-        this._tClose();
         // Toggle user preference
         const uiMode = getPref('view', 'dialog');
         setPref('view', uiMode === 'dialog' ? 'panel' : 'dialog', true);

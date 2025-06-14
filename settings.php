@@ -36,11 +36,17 @@ if ($hassiteconfig) {
             1
         ));
 
-        $settings->add(new admin_setting_configcheckbox(
+        $choices0 = [
+            'none' => new lang_string('synccaretnone', $pluginname),
+            'forward' => new lang_string('synccaretforward', $pluginname),
+            'both' => new lang_string('synccaretboth', $pluginname),
+        ];
+        $settings->add(new admin_setting_configselect(
             'tiny_codepro/synccaret',
             new lang_string('synccaret', $pluginname),
             new lang_string('synccaret_def', $pluginname),
-            1
+            'forward',
+            $choices0
         ));
 
         $userconf = new lang_string('opt_confuser', $pluginname);
@@ -65,7 +71,7 @@ if ($hassiteconfig) {
             'tiny_codepro/extendedvalidelements',
             new lang_string('extendedvalidelements', $pluginname),
             new lang_string('extendedvalidelements_def', $pluginname),
-            '*[*]',
+            '*[*],svg[*],math[*],script[*],style[*]',
             PARAM_TEXT
         ));
 
@@ -73,7 +79,7 @@ if ($hassiteconfig) {
             'tiny_codepro/validchildren',
             new lang_string('validchildren', $pluginname),
             new lang_string('validchildren_def', $pluginname),
-            '+button[div|p|span|strong|em]',
+            '+button[div|p|span|strong|em],+p[tiny-svg-block],+span[tiny-svg-block]',
             PARAM_TEXT
         ));
 
@@ -81,7 +87,7 @@ if ($hassiteconfig) {
             'tiny_codepro/customelements',
             new lang_string('customelements', $pluginname),
             new lang_string('customelements_def', $pluginname),
-            '',
+            'script,style,~svg,~tiny-svg-block',
             PARAM_TEXT
         ));
     }

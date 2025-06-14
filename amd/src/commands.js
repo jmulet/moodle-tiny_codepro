@@ -56,15 +56,26 @@ export const getSetup = async() => {
 
     return async(editor) => {
         if (!isPluginVisible(editor)) {
+            // Must register the menu items with the basic code editor command.
+            editor.ui.registry.addMenuItem(component, {
+                icon: 'sourcecode',
+                text: 'Source code',
+                onAction: () => editor.execCommand("mceCodeEditor", false)
+            });
             return;
         }
 
-        editor.once('BeforeSetContent', () => {
+        editor.on('PreInit', () => {
             const schema = editor.parser?.schema;
             if (!schema) {
                 return;
             }
             // Apply HTML filtering options to the editor parser instance.
+            const customElements = (getCustomElements(editor) ?? '').trim();
+            if (customElements) {
+                schema.addCustomElements(customElements);
+            }
+
             const validElements = (getValidElements(editor) ?? '').trim();
             if (validElements) {
                 schema.addValidElements(validElements);
@@ -73,11 +84,6 @@ export const getSetup = async() => {
             const validChildren = (getValidChildren(editor) ?? '').trim();
             if (validChildren) {
                 schema.addValidChildren(validChildren);
-            }
-
-            const customElements = (getCustomElements(editor) ?? '').trim();
-            if (customElements) {
-                schema.addCustomElements(customElements);
             }
         });
 
