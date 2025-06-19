@@ -51,3 +51,6 @@ Issue #27: Saving adds additional paragraphs/spans to html content
 Automatically hide minimap on mobile phones
 Safer cursor synchronization logic
 Include CONTRIBUTING.md file
+
+== 2.1.2 ==
+Fix bug not autosaving in panel mode when form is submitted
