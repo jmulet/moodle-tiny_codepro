@@ -24,9 +24,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import { setPref, getPref, savePrefs } from "./preferences";
-import { getSyncCaret, isAutoFormatHTML } from "./options";
-import { CM_MARKER, TINY_MARKER_CLASS } from "./common";
+import {setPref, getPref, savePrefs} from "./preferences";
+import {getSyncCaret, isAutoFormatHTML} from "./options";
+import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
 
 /**
  * Share the state among editor Views
@@ -127,7 +127,7 @@ export class ViewManager {
      */
     constructor(editor, opts) {
         this.editor = editor;
-        this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
+        this.opts = {autosave: false, translations: [], ...(opts ?? {})};
         this.isLoading = false;
     }
 
@@ -217,89 +217,93 @@ export class ViewManager {
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
      * @param {string} [html] - HTML code
+     * @returns {Promise<string>} - Resolves to the code that is actually set to the tinyMCE editor.
      */
     _saveAction(html) {
         if (!html) {
             // Get code without any marker.
             html = this.codeEditor.getValue();
         }
-        // Do it in a transaction
         this.destroyCodeEditor();
-        // Wait for closing
-        setTimeout(() => {
-            // Restore cursor and scroll position
-            this.editor.focus();
-            this.editor.undoManager.transact(() => {
-                this.editor.setContent(html);
-                const syncCaret = getSyncCaret(this.editor);
-                if (syncCaret === 'both') {
-                    // Select markers using TinyMCE api
-                    const markerNodes = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`);
-                    const markerNode = markerNodes.length ? markerNodes[0] : null;
+        // Do it in a transaction
+        return new Promise((resolve) => {
+            // Wait for closing
+            setTimeout(() => {
+                // Restore cursor and scroll position
+                this.editor.focus();
+                this.editor.undoManager.transact(() => {
+                    this.editor.setContent(html);
+                    resolve(html);
+                    const syncCaret = getSyncCaret(this.editor);
+                    if (syncCaret === 'both') {
+                        // Select markers using TinyMCE api
+                        const markerNodes = this.editor.dom.select(`span.${TINY_MARKER_CLASS}`);
+                        const markerNode = markerNodes.length ? markerNodes[0] : null;
 
-                    if (markerNode) {
-                        const parentEl = markerNode.parentNode;
-                        let elemForRemoval = markerNode;
-                        let elemForSelection = markerNode;
+                        if (markerNode) {
+                            const parentEl = markerNode.parentNode;
+                            let elemForRemoval = markerNode;
+                            let elemForSelection = markerNode;
 
-                        if (parentEl) {
-                            // Check if marker is wrapped alone inside p tag
-                            const isMarkerAloneWrappedP =
-                                parentEl.nodeName === 'P' &&
-                                parentEl.childNodes.length === 1 &&
-                                parentEl.firstChild === markerNode;
+                            if (parentEl) {
+                                // Check if marker is wrapped alone inside p tag
+                                const isMarkerAloneWrappedP =
+                                    parentEl.nodeName === 'P' &&
+                                    parentEl.childNodes.length === 1 &&
+                                    parentEl.firstChild === markerNode;
 
-                            if (isMarkerAloneWrappedP) {
-                                elemForRemoval = parentEl;
+                                if (isMarkerAloneWrappedP) {
+                                    elemForRemoval = parentEl;
 
-                                const grandParent = parentEl.parentNode;
-                                const body = this.editor.getBody();
+                                    const grandParent = parentEl.parentNode;
+                                    const body = this.editor.getBody();
 
-                                // eslint-disable-next-line max-depth
-                                if (grandParent && grandParent !== body) {
-                                    elemForSelection = grandParent;
-                                } else {
-                                    elemForSelection =
-                                        parentEl.previousSibling ||
-                                        parentEl.nextSibling ||
-                                        body;
+                                    // eslint-disable-next-line max-depth
+                                    if (grandParent && grandParent !== body) {
+                                        elemForSelection = grandParent;
+                                    } else {
+                                        elemForSelection =
+                                            parentEl.previousSibling ||
+                                            parentEl.nextSibling ||
+                                            body;
+                                    }
                                 }
                             }
+
+                            // Set the cursor at selection element
+                            if (elemForSelection) {
+                                this.editor.selection.setCursorLocation(elemForSelection, 1);
+                            }
+
+                            markerNode.style.display = 'inline';
+                            const rect = markerNode.getBoundingClientRect();
+                            markerNode.style.display = 'none';
+                            const win = this.editor.getWin();
+                            const scrollY = win.scrollY || win.pageYOffset || 0;
+
+                            win.scrollTo({
+                                top: rect.top + scrollY - 100,
+                            });
+
+                            // Remove all markers
+                            if (elemForRemoval?.parentNode) {
+                                elemForRemoval.parentNode.removeChild(elemForRemoval);
+                            }
+
+                            this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => {
+                                this.editor.dom.remove(n);
+                            });
+                        } else {
+                            this._restoreScroll(true);
                         }
-
-                        // Set the cursor at selection element
-                        if (elemForSelection) {
-                            this.editor.selection.setCursorLocation(elemForSelection, 1);
-                        }
-
-                        markerNode.style.display = 'inline';
-                        const rect = markerNode.getBoundingClientRect();
-                        markerNode.style.display = 'none';
-                        const win = this.editor.getWin();
-                        const scrollY = win.scrollY || win.pageYOffset || 0;
-
-                        win.scrollTo({
-                            top: rect.top + scrollY - 100,
-                        });
-
-                        // Remove all markers
-                        if (elemForRemoval?.parentNode) {
-                            elemForRemoval.parentNode.removeChild(elemForRemoval);
-                        }
-
-                        this.editor.dom.select(`span.${TINY_MARKER_CLASS}`).forEach(n => {
-                            this.editor.dom.remove(n);
-                        });
-                    } else {
+                    } else if (syncCaret !== 'none') {
                         this._restoreScroll(true);
                     }
-                } else if (syncCaret !== 'none') {
-                    this._restoreScroll(true);
-                }
-                this.editor.nodeChanged();
-            });
-            this.pendingChanges = false;
-        }, 250);
+                    this.editor.nodeChanged();
+                });
+                this.pendingChanges = false;
+            }, 250);
+        });
     }
 
     /**
@@ -400,7 +404,7 @@ export class ViewManager {
                     'class': TINY_MARKER_CLASS,
                 }, '&nbsp;');
 
-                // const currentNode = this.editor.selection.getStart();
+                // Const currentNode = this.editor.selection.getStart();
                 // currentNode.append(markerNode);
 
                 // Use range instead for better accuracy in text nodes.
@@ -430,7 +434,7 @@ export class ViewManager {
             }
 
             /** @type {string} */
-            html = this.editor.getContent({ source_view: true });
+            html = this.editor.getContent({source_view: true});
 
             if (markerNode) {
                 const reg = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, "gm");
