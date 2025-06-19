@@ -214,6 +214,14 @@ export class ViewManager {
     }
 
     /**
+     * Simplify updates the HTML code to TinyMCE without closing the CodeMirror editor.
+     */
+    _quickSave() {
+        const html = this.codeEditor.getValue();
+        this.editor.setContent(html, {format: 'html'});
+    }
+
+    /**
      * Action called to update the code in the Tiny editor.
      * Changes are performed in a transaction to take advantage of undo manager.
      * @param {string} [html] - HTML code
@@ -232,7 +240,7 @@ export class ViewManager {
                 // Restore cursor and scroll position
                 this.editor.focus();
                 this.editor.undoManager.transact(() => {
-                    this.editor.setContent(html);
+                    this.editor.setContent(html, {format: 'html'});
                     resolve(html);
                     const syncCaret = getSyncCaret(this.editor);
                     if (syncCaret === 'both') {
