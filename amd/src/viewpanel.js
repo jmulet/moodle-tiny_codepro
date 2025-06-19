@@ -171,12 +171,12 @@ export class ViewPanelManager extends ViewManager {
                     // Autosave all editors before submitting the form.
                     const form = this.editor.container?.closest('form');
                     if (form && !submitListenerAction) {
-                        submitListenerAction = (evt) => {
+                        submitListenerAction = async(evt) => {
                             const pendingViewPanels = Array.from(activeViewPanels.values())
                                 .filter(vp => vp.pendingChanges);
                             if (pendingViewPanels.length) {
                                 evt.preventDefault();
-                                pendingViewPanels.forEach(viewPanel => viewPanel._saveAction());
+                                await Promise.all(pendingViewPanels.map(viewPanel => viewPanel._saveAction()));
                                 setTimeout(() => {
                                     if (form.requestSubmit) {
                                         form.requestSubmit(evt.submitter);
