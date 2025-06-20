@@ -65,6 +65,15 @@ if ($hassiteconfig) {
             $choices1
         ));
 
+        // Disabling on certain pages
+        $settings->add(new admin_setting_configtext(
+            'tiny_codepro/disableonpagesregex',
+            new lang_string('disableonpagesregex', $pluginname),
+            new lang_string('disableonpagesregex_def', $pluginname),
+            '',
+            PARAM_TEXT
+        ));
+
         // Controlling TinyMCE content filtering options.
 
         $settings->add(new admin_setting_configtext(

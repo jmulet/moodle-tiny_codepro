@@ -168,9 +168,17 @@ export class ViewManager {
 
     /**
      * Template method that has to be implemented by the actual view manager.
-     * Logic associated with the destruction of the view.
+     * Logic associated when the view is hidden or closed.
      */
     _tClose() {
+        throw new Error("Method not implemented");
+    }
+
+    /**
+     * Template method that has to be implemented by the actual view manager.
+     * Logic associated with the destruction of the view.
+     */
+    _tDestroy() {
         throw new Error("Method not implemented");
     }
 
@@ -219,6 +227,7 @@ export class ViewManager {
     _quickSave() {
         const html = this.codeEditor.getValue();
         this.editor.setContent(html, {format: 'html'});
+        this.pendingChanges = false;
     }
 
     /**
@@ -232,7 +241,7 @@ export class ViewManager {
             // Get code without any marker.
             html = this.codeEditor.getValue();
         }
-        this.destroyCodeEditor();
+        this._tClose();
         // Do it in a transaction
         return new Promise((resolve) => {
             // Wait for closing
@@ -309,7 +318,7 @@ export class ViewManager {
                     }
                     this.editor.nodeChanged();
                 });
-                this.pendingChanges = false;
+                this.destroyCodeEditor();
             }, 250);
         });
     }
@@ -341,6 +350,7 @@ export class ViewManager {
      *
      */
     close() {
+        this._tClose();
         this.destroyCodeEditor();
         // Restore cursor and scroll position
         this.pendingChanges = false;
@@ -378,7 +388,17 @@ export class ViewManager {
             options.changesListener = () => {
                 this.pendingChanges = true;
             };
-            // Always enable linewrapping in panel view when not in Fullscreen
+            // If the form containing the editor has no submit button, must rely on blur to implement autosave.
+            const hasFormSubmit = this.editor.container.closest('form')?.querySelector('[type="submit"]');
+            if (!hasFormSubmit) {
+                // Blur strategy on this resource.
+                options.onblur = () => {
+                    if (this.pendingChanges) {
+                        this._quickSave();
+                    }
+                };
+            }
+            // Always enable linewrapping in panel view when not in Fullscreen.
             const isFS = getPref('fs', false);
             if (!isFS) {
                 options.lineWrapping = true;
@@ -470,13 +490,8 @@ export class ViewManager {
      * This method destroys the CodeMirror instance.
      */
     destroyCodeEditor() {
-        if (this.submitListenerAction) {
-            // Remove the submit listener
-            this.editor.container?.closest('form')?.removeEventListener('submit', this.submitListenerAction);
-            this.submitListenerAction = null;
-        }
         this.codeEditor?.destroy();
-        this._tClose();
+        this._tDestroy();
     }
 
     /**
@@ -485,7 +500,7 @@ export class ViewManager {
     async prettify() {
         const prettifier = await requireHTMLFormatter();
         if (!prettifier) {
-            console.error("No code formatter available");
+            console.error("No HTML formatter available");
             return true;
         }
         const html = this.codeEditor.getValue(2);
@@ -568,6 +583,7 @@ export class ViewManager {
         }
         blackboard.state = this.codeEditor.getState();
         // Destroy code editor and close the current view.
+        this._tClose();
         this.destroyCodeEditor();
         // Toggle user preference
         const uiMode = getPref('view', 'dialog');

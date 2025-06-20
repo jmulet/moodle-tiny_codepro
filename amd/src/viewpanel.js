@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
@@ -45,6 +46,9 @@ export class ViewPanelManager extends ViewManager {
     }
     _tClose() {
         this.editor.execCommand('ToggleView', false, 'codepro');
+    }
+    _tDestroy() {
+        activeViewPanels.delete(this.editor.id);
     }
 
     async _tCreate() {
@@ -162,31 +166,27 @@ export class ViewPanelManager extends ViewManager {
         const viewSpec = {
             buttons: buttonsSpec,
             onShow: async(api) => {
+                // Register this panel as active.
+                activeViewPanels.set(this.editor.id, this);
+
                 if (!this.codeEditorElement) {
                     // Make sure the UI is created.
                     this._createUI(api);
-                    // Register this panel as active.
-                    activeViewPanels.set(this.editor.id, this);
                     // Register a global listener to submit event.
                     // Autosave all editors before submitting the form.
-                    const form = document.querySelector('button[type="submit"],input[type="submit"]')?.closest('form');
-                    if (form && !submitListenerAction) {
-                        submitListenerAction = (evt) => {
-                            const pendingViewPanels = Array.from(activeViewPanels.values())
-                                .filter(vp => vp.pendingChanges);
-                            if (pendingViewPanels.length) {
-                                evt.preventDefault();
-                                pendingViewPanels.forEach(viewPanel => viewPanel._quickSave());
-                                setTimeout(() => {
-                                    if (form.requestSubmit) {
-                                        form.requestSubmit(evt.submitter);
-                                    } else {
-                                        evt.submitter?.click();
-                                    }
-                                }, 0);
+                    const submitButtons = document.querySelectorAll('button[type="submit"],input[type="submit"]');
+                    if (submitButtons.length && !submitListenerAction) {
+                        submitListenerAction = () => {
+                            try {
+                                Array.from(activeViewPanels.values())
+                                    .filter(vp => vp.pendingChanges)
+                                    .forEach(viewPanel => viewPanel._quickSave());
+                                submitButtons.forEach(btn => btn.removeEventListener('click', submitListenerAction));
+                            } catch (ex) {
+                                console.error(ex);
                             }
                         };
-                        form.addEventListener('submit', submitListenerAction);
+                        submitButtons.forEach(btn => btn.addEventListener('click', submitListenerAction));
                     }
                 }
 
@@ -232,7 +232,6 @@ export class ViewPanelManager extends ViewManager {
     }
 
     _createButtons() {
-        // eslint-disable-next-line no-unused-vars
         const [opendialogStr, fullscreenStr, themesStr, linewrapStr, prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
 
         const buttons = [

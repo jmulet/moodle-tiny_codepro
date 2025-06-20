@@ -78,7 +78,8 @@ export default class CodeProEditor {
             lineWrapping: options?.lineWrapping ?? false,
             minimap: options?.minimap ?? true,
             changesListener: options?.changesListener,
-            commands: options.commands
+            commands: options.commands,
+            onblur: options.onblur
         };
 
         this.parentElement = parentElement;
@@ -131,6 +132,14 @@ export default class CodeProEditor {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
                 if (viewUpdate.docChanged) {
                     this.config.changesListener();
+                }
+            }));
+        }
+        if (typeof(this.config.onblur) === 'function') {
+            extensions.push( EditorView.domEventHandlers({
+                blur: (event) => {
+                    this.config.onblur(event);
+                    return false;
                 }
             }));
         }
