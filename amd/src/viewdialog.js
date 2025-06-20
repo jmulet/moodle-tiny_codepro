@@ -174,4 +174,5 @@ export class ViewDialogManager extends ViewManager {
         this._unbindActions();
         this.modal.destroy();
     }
+    _tDestroy() {}
 }

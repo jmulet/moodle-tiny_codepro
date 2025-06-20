@@ -54,3 +54,4 @@ Include CONTRIBUTING.md file
 
 == 2.1.2 ==
 Fix bug not autosaving in panel mode when form is submitted
+New configuration property disableonpagesregex allows to disable the plugin on certain pages

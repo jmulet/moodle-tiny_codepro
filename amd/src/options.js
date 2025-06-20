@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -32,6 +33,7 @@ const validElements = getPluginOptionName(pluginName, 'extendedvalidelements');
 const validChildren = getPluginOptionName(pluginName, 'validchildren');
 const customElements = getPluginOptionName(pluginName, 'customelements');
 const panelCapable = getPluginOptionName(pluginName, 'panelcapable');
+const disableOnPages = getPluginOptionName(pluginName, 'disableonpagesregex');
 
 /**
  * @param {TinyMCE} editor
@@ -81,6 +83,11 @@ export const register = (editor, majorVersion, minorVersion) => {
         "default": isPanelCapable(majorVersion, minorVersion),
     });
 
+    registerOption(disableOnPages, {
+        processor: 'string',
+        "default": '',
+    });
+
 };
 
 
@@ -90,7 +97,19 @@ export const register = (editor, majorVersion, minorVersion) => {
  * @param {TinyMCE} editor
  * @returns {boolean}
  */
-export const isPluginVisible = (editor) => editor.options.get(showPlugin);
+export const isPluginVisible = (editor) => {
+    // A regular expression used to match the body.id of HTML pages on which the plugin should be disabled.
+    const expr = editor.options.get(disableOnPages)?.trim() ?? '';
+    let isEnabled = true;
+    if (expr) {
+        try {
+            isEnabled = !RegExp(expr).test(document.body.id ?? '');
+        } catch (ex) {
+            console.error(ex);
+        }
+    }
+    return isEnabled && editor.options.get(showPlugin);
+};
 
 /**
  * Should prettify the HTML code when the CodeMirror editor opens?

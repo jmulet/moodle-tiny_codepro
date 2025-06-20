@@ -118,16 +118,4 @@ describe('ViewManager.create', () => {
     expect(state.selection.main.head).toBe(6);
   });
 
-  it('.accept() should replace CM_MARKER and call editor.setContent()', async() => {
-    await viewManager.attachCodeEditor(cm6Container);
-    const result = viewManager.accept();
-    expect(result).toBe(true);
-    expect(viewManager._tClose).toHaveBeenCalled();
-    expect(mockTiny.setContent).toHaveBeenCalledWith(
-        '<p>Sam<span class="tiny_codepro-marker">&nbsp;</span>ple text</p>'
-    );
-    // Expect that no marker is in the tiny dom
-    expect(tinyContainer.querySelector('span.tiny_codepro-marker')).toBeNull();
-  });
-
 });

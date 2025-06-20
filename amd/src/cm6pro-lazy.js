@@ -31258,73 +31258,6 @@ class CursorSync {
     }
 
     /**
-    * Attempts to insert the marker near a valid p element based on the
-    * current cursor position. Avoids disallowed contexts and falls back to
-    * safe parent containers if necessary.
-    *
-    * @returns {string} The document content with the marker temporarily inserted.
-    */
-    getValueWithMarkerAtElementnew() {
-        let state = this.editorView.state;
-        const head = state.selection.main.head;
-        const tree = syntaxTree(state);
-        let currentNode = tree.resolve(head, -1);
-        const doc = state.doc;
-
-        const cursor = currentNode.cursor();
-
-        // Track if original position is in a text node
-        const isTextNode = currentNode.name === "Text";
-        // Remember the first parent of TextNode
-        let isFirstElement = true;
-        let firstParent = null;
-        let pos = null;
-        let anyDisallowedFound = false;
-
-        do {
-            if (cursor.name === "Element") {
-                const tagName = getTagNameFromCursor(cursor.node, doc)?.toLowerCase();
-                const isDisallowed = disallowedTags.has(tagName);
-                anyDisallowedFound = anyDisallowedFound || isDisallowed;
-                if (isDisallowed) {
-                    pos = null;
-                } else if(tagName === 'p') {
-                    cursor.node;
-                    pos = cursor.to + 1; // insert just after the p tag.
-                    if (isFirstElement) {
-                        firstParent = cursor.node;
-                    }
-                }
-                isFirstElement = false;
-            }
-        } while (cursor.parent());
-
-        // Start from text element and the firstParent is a p
-        if (isTextNode && firstParent && !anyDisallowedFound) {
-            // It is safe to insert to head
-            pos = head;
-        }
-
-        if (pos) {
-            this.editorView.dispatch({
-                changes: { from: pos, to: pos, insert: this.marker },
-                annotations: [Transaction.addToHistory.of(false)]
-            });
-
-            const html = this.editorView.state.doc.toString();
-
-            this.editorView.dispatch({
-                changes: { from: pos, to: pos + 1, insert: '' },
-                annotations: [Transaction.addToHistory.of(false)]
-            });
-
-            return html;
-        }        
-        // Do not include any marker
-        return this.editorView.state.doc.toString();
-    }
-
-    /**
     * Attempts to insert the marker near a valid HTML element based on the
     * current cursor position. Avoids disallowed contexts and falls back to
     * safe parent containers if necessary.
@@ -31503,7 +31436,8 @@ class CodeProEditor {
             lineWrapping: options?.lineWrapping ?? false,
             minimap: options?.minimap ?? true,
             changesListener: options?.changesListener,
-            commands: options.commands
+            commands: options.commands,
+            onblur: options.onblur
         };
 
         this.parentElement = parentElement;
@@ -31556,6 +31490,14 @@ class CodeProEditor {
             extensions.push(EditorView.updateListener.of((viewUpdate) => {
                 if (viewUpdate.docChanged) {
                     this.config.changesListener();
+                }
+            }));
+        }
+        if (typeof(this.config.onblur) === 'function') {
+            extensions.push( EditorView.domEventHandlers({
+                blur: (event) => {
+                    this.config.onblur(event);
+                    return false;
                 }
             }));
         }
