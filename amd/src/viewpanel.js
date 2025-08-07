@@ -167,7 +167,7 @@ export class ViewPanelManager extends ViewManager {
             buttons: buttonsSpec,
             onShow: async(api) => {
                 // Before Tiny loses focus, get its contents and head position
-                const docHead = this.loadDocInfo();
+                const docHead = await this.loadDocInfo();
                 // Register this panel as active.
                 activeViewPanels.set(this.editor.id, this);
 

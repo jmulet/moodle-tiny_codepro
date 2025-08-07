@@ -375,7 +375,7 @@ export class ViewManager {
         };
 
         const options = {
-            doc: docHead.html,
+            doc: docHead.html ?? '',
             head: docHead.head,
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
@@ -425,6 +425,8 @@ export class ViewManager {
         let html;
         let markerNode;
         const MARKER_COMMENT_TEXT = `__${TINY_MARKER_CLASS}_${Date.now()}__`;
+        // A more comprehensive list of tags to avoid inserting into.
+        const forbiddenTagSelector = 'script,style,textarea,title,pre,code,canvas,svg,iframe';
 
         this.editor.undoManager.ignore(() => {
             const syncCaret = getSyncCaret(this.editor) !== 'none';
@@ -432,25 +434,59 @@ export class ViewManager {
                 this.editor.focus();
 
                 // Use a comment node as the marker
-                markerNode = this.editor.getDoc().createComment(MARKER_COMMENT_TEXT);
-
-                // Use range instead for better accuracy in text nodes.
-                // Get current selection range
-                const selection = this.editor.selection;
-                let rng = selection.getRng(); // Native DOM Range
-
-                // Always collapse to start if selection is not collapsed
-                if (!rng.collapsed) {
-                    rng = rng.cloneRange(); // Prevent modifying original range
-                    rng.collapse(true);
-                }
-
-                // Insert marker at caret or start of selection
                 try {
-                    rng.insertNode(markerNode);
+                    markerNode = this.editor.getDoc().createComment(MARKER_COMMENT_TEXT);
+                    const selection = this.editor.selection;
+                    let rng = selection.getRng();
+
+                    if (!rng.collapsed) {
+                        rng = rng.cloneRange();
+                        rng.collapse(true);
+                    }
+
+                    // Get the most precise location of the cursor
+                    const container = rng.startContainer;
+
+                    // --- DECISION TREE FOR SAFE INSERTION ---
+
+                    // Case 1: The cursor is directly inside a comment node.
+                    if (container.nodeType === Node.COMMENT_NODE) {
+                        // ACTION: Insert the marker *after* the existing comment to avoid the HierarchyRequestError.
+                        const parent = container.parentNode;
+                        if (parent) {
+                            parent.insertBefore(markerNode, container.nextSibling);
+                        } else {
+                            // This is an edge case, but we should handle it.
+                            console.error("Cannot insert marker, comment node has no parent.");
+                        }
+
+                    } else {
+                        // Case 2 & 3: The cursor is NOT in a comment. Now we can check for forbidden parent *elements*.
+                        const currentNode = selection.getNode();
+                        let boundaryParent = this.editor.dom.getParent(currentNode, forbiddenTagSelector);
+
+                        if (!boundaryParent) {
+                            boundaryParent = this.editor.dom.getParent(currentNode, '*[contenteditable=false]');
+                        }
+
+                        if (boundaryParent) {
+                            // Case 2: The cursor is inside a forbidden or non-editable element.
+                            // ACTION: Move the range to be immediately BEFORE this boundary element and insert there.
+                            rng.setStartBefore(boundaryParent);
+                            rng.collapse(true);
+                            rng.insertNode(markerNode);
+                        } else {
+                            // Case 3: This is a normal, safe location (e.g., a text node in a <p> tag).
+                            // ACTION: Insert the marker at the original cursor position.
+                            rng.insertNode(markerNode);
+                        }
+                    }
+
                 } catch (ex) {
-                    // Fail silently.
-                    console.warn(ex);
+                    // If any part of the insertion logic fails, we'll end up here.
+                    console.error("Failed to insert cursor marker:", ex);
+                    // Crucially, ensure markerNode is nullified so the replacement logic doesn't run.
+                    // (You would need to declare markerNode outside the try block for this to work)
                 }
             }
 
@@ -470,7 +506,7 @@ export class ViewManager {
         }
 
         if (markerNode) {
-            const reg = new RegExp(`<!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
+            const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
             html = html.replace(reg, (str, pos) => {
                 head = pos;
                 return '';

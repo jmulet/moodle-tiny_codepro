@@ -75,16 +75,108 @@ The plugin also integrates with the [htmlfy](https://github.com/j4w8n/htmlfy#rea
 
 ## Configuration
 
-Administradors can set these options
+
+### Admin Settings
+
+This section describes the configurable admin settings available for the Tiny CodePro plugin, which enable fine-grained control over valid HTML structures, element nesting, and custom elements in the editor.
 
 <img src="./pix/pict06.png" alt="Administrator options" style="max-width:350px;">
 
-Additionally, the capability `tiny/codepro:viewplugin` controls visibility for specific roles.
+For more information, you can read the [Content filtering options](https://www.tiny.cloud/docs/tinymce/latest/content-filtering/) in TinyMCE documentation page.
+
+---
+
+#### 🔧 `tiny_codepro | extendedvalidelements`
+
+**Default:**  
+```
+*[*],svg[*],math[*],script[*],style[*]
+```
+
+**Description:**  
+Specifies which HTML elements and attributes are considered valid in the editor. Use the format:  
+`tag[attr1|attr2|...],tag[*]` to allow specific attributes, or `[*]` to allow all.
+
+**Example:**  
+```
+*[*],svg[*],math[*],script[*]
+```
+
+This example allows all attributes on all tags, as well as unrestricted use of `<svg>`, `<math>`, and `<script>` elements.
+
+> **Note:** Even though `<script>` is included as a valid element, TinyMCE will remove it if it appears at the very top of the content. Placing it elsewhere in the code is fine.
+
+---
+
+#### 🧱 `tiny_codepro | validchildren`
+
+**Default:**  
+```
++body[script],+button[div|p|span|strong|em],+p[tiny-svg-block],+span[tiny-svg-block]
+```
+
+**Description:**  
+Specifies which HTML elements are allowed as children of specific parent tags.  
+Use the format:  
+`+parentTag[childTag]` or `+parentTag[child1|child2|...]`.
+
+**Example:**  
+```
++body[script],+button[div|p|span|strong|em],+p[tiny-svg-block],+span[tiny-svg-block]
+```
+
+This allows:
+
+- `<script>` inside `<body>`
+- Elements like `<div>`, `<p>`, `<span>`, `<strong>`, `<em>` inside `<button>`
+- Custom `<tiny-svg-block>` inside `<p>` and `<span>`
+
+---
+
+#### 🧩 `tiny_codepro | customelements`
+
+**Default:**  
+```
+script,~svg,~tiny-svg-block
+```
+
+**Description:**  
+Defines custom HTML elements to be recognized by the editor. Separate each element by a comma.  
+Prefixing an element with `~` indicates a custom or non-standard element (e.g., SVG-based blocks).
+
+**Example:**  
+```
+script,~svg,~tiny-svg-block
+```
+
+This example allows:
+
+- Standard `<script>` elements
+- Custom or extended `<svg>` elements
+- The `<tiny-svg-block>` component
+
+> #### ⚠️ Warning
+> Even though the `<script>` tag is a block-level element, TinyMCE's filtering policy may remove it if it is placed at the beginning of the document. To prevent this, you should either wrap the tag in a `<div>` or move it to another part of the content. Keep in mind that allowing `<script>` tags can introduce security vulnerabilities, particularly through cross-site scripting (XSS) attacks.
+
+
+### Plugin visibility
+
+Additionally, the capability `tiny/codepro:viewplugin` determines which user roles can see and use the plugin.
+If the plugin is disabled, users will still have access to the default code editor provided by TinyMCE. For example, you can use this setting to ensure that students use the basic code editor instead of the plugin.
+
+The admin setting "Disable on pages" allows you to specify a regular expression that matches the body element's ID on pages where the plugin should be disabled. For example, the regular expression:
+
+**^page-mod-(assign-grader|forum)**
+
+will match the grader page for assignments and all forum pages. On these matched pages, the plugin will be disabled, and the default TinyMCE code editor will be shown instead.
+
+
+### Frontend configuration
 
 Regular users can configure:
 
 - **Default UI Mode**: Choose between "Dialog" and "Panel" mode.
-- **User Mode Switching**: Allow users to switch UI modes.
+- **User Mode Switching**: Allow users to switch UI modes (if the administrator choose one of the user:... options).
 - **Theme Selection**: Set a default theme or allow users to toggle between light and dark modes.
 - **Font Size Configuration**: Adjust font sizes for better readability.
 
