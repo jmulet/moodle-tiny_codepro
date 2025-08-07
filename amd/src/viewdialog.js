@@ -33,11 +33,13 @@ export class ViewDialogManager extends ViewManager {
         super(editor, opts);
     }
     async _tShow() {
+        // Before Tiny loses focus, get its contents and head position
+        const docHead = await this.loadDocInfo();
         // Make the modal visible
         this.modal.show();
         this._showSpinner(this.modal.body[0]);
         // Add the codeEditor (CodeMirror) in the selected UI element
-        await this.attachCodeEditor(this.modal.body[0]);
+        await this.attachCodeEditor(this.modal.body[0], docHead);
         this._hideSpinner(this.modal.body[0]);
 
         // Update the two-state icons

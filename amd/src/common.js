@@ -99,13 +99,12 @@ function isPanelCapable(majorVersion, minorVersion) {
     return panelMinorDecimalPart >= REQUIRED_MINOR_DECIMAL;
 }
 
-
 export default {
     baseUrl,
     component,
     pluginName: `${component}/plugin`,
     icon: `${component}`,
-    TINY_MARKER_CLASS: 'tiny_widgethub-marker',
-    CM_MARKER: String.fromCharCode(0),
+    MARKER: '\u200B',
+    TINY_MARKER_CLASS: 'tiny_codepro-marker',
     isPanelCapable
 };

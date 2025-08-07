@@ -26,7 +26,7 @@
 
 import {setPref, getPref, savePrefs} from "./preferences";
 import {getSyncCaret, isAutoFormatHTML} from "./options";
-import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
+import {MARKER, TINY_MARKER_CLASS} from "./common";
 
 /**
  * Share the state among editor Views
@@ -330,15 +330,7 @@ export class ViewManager {
     accept() {
         // Add marker if cursor synchronization is enabled.
         const isSynEnabled = getSyncCaret(this.editor) === 'both';
-        let htmlNoMarker;
-        if (isSynEnabled) {
-            htmlNoMarker = this.codeEditor.getValue(1);
-            const reg = new RegExp(CM_MARKER, 'g');
-            htmlNoMarker = htmlNoMarker.replace(reg,
-                `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
-        } else {
-            htmlNoMarker = this.codeEditor.getValue(0);
-        }
+        const htmlNoMarker = this.codeEditor.getValue(isSynEnabled ? 1 : 0);
         this._saveAction(htmlNoMarker);
         return true;
     }
@@ -358,10 +350,19 @@ export class ViewManager {
     }
 
     /**
+     * Loads the html and head position from the Tiny editor
+     * @returns {Promise<{html: string, head: number}>}
+     */
+    async loadDocInfo() {
+        return blackboard.state ? blackboard.state : await this._retrieveHtml();
+    }
+
+    /**
      * Creates a new instance of the CodeEditor and attaches to the DOM element.
      * @param {HTMLElement} codeEditorElement
+     * @param {{html: string, head: number}} docHead
      */
-    async attachCodeEditor(codeEditorElement) {
+    async attachCodeEditor(codeEditorElement, docHead) {
         const CodeProEditor = await requireCm6Pro();
         const commands = {
             minimap: this.toggleMinimap.bind(this),
@@ -373,10 +374,9 @@ export class ViewManager {
             savePrefs
         };
 
-        const doc = blackboard.state ? blackboard.state.html : await this._retrieveHtml();
-
         const options = {
-            doc,
+            doc: docHead.html ?? '',
+            head: docHead.head,
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
             lineWrapping: getPref("wrap", false),
@@ -405,7 +405,7 @@ export class ViewManager {
             }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
-
+        this.codeEditor.focus();
         this.pendingChanges = false;
         if (blackboard.state) {
             // Restore state from the another view
@@ -418,60 +418,81 @@ export class ViewManager {
     /**
      * Obtains the HTML code/state from Tiny to CodeMirror editor taking care
      * of cursor synchronization between both editors.
-     * @returns {Promise<string>}
+     * @returns {Promise<{html: string, head: number}>}
      */
     async _retrieveHtml() {
+        let head = 0;
         let html;
+        let markerNode;
+        const MARKER_COMMENT_TEXT = `__${TINY_MARKER_CLASS}_${Date.now()}__`;
+        // A more comprehensive list of tags to avoid inserting into.
+        const forbiddenTagSelector = 'script,style,textarea,title,pre,code,canvas,svg,iframe';
+
         this.editor.undoManager.ignore(() => {
             const syncCaret = getSyncCaret(this.editor) !== 'none';
-            let markerNode;
             if (syncCaret) {
                 this.editor.focus();
-                // Insert caret marker and retrieve html code to pass to CodeMirror
-                markerNode = this.editor.dom.create('span', {
-                    'class': TINY_MARKER_CLASS,
-                }, '&nbsp;');
 
-                // Const currentNode = this.editor.selection.getStart();
-                // currentNode.append(markerNode);
-
-                // Use range instead for better accuracy in text nodes.
-                // Get current selection range
-                const selection = this.editor.selection;
-                let rng = selection.getRng(); // Native DOM Range
-
-                // Always collapse to start if selection is not collapsed
-                if (!rng.collapsed) {
-                    rng = rng.cloneRange(); // Prevent modifying original range
-                    rng.collapse(true);
-                }
-
-                // Insert marker at caret or start of selection
-                // This may fail if, e.g., span cannot be inserted into comment, etc.
+                // Use a comment node as the marker
                 try {
-                    rng.insertNode(markerNode);
+                    markerNode = this.editor.getDoc().createComment(MARKER_COMMENT_TEXT);
+                    const selection = this.editor.selection;
+                    let rng = selection.getRng();
 
-                    // Move caret after the inserted marker
-                    rng.setStartAfter(markerNode);
-                    rng.setEndAfter(markerNode);
-                    selection.setRng(rng);
+                    if (!rng.collapsed) {
+                        rng = rng.cloneRange();
+                        rng.collapse(true);
+                    }
+
+                    // Get the most precise location of the cursor
+                    const container = rng.startContainer;
+
+                    // --- DECISION TREE FOR SAFE INSERTION ---
+
+                    // Case 1: The cursor is directly inside a comment node.
+                    if (container.nodeType === Node.COMMENT_NODE) {
+                        // ACTION: Insert the marker *after* the existing comment to avoid the HierarchyRequestError.
+                        const parent = container.parentNode;
+                        if (parent) {
+                            parent.insertBefore(markerNode, container.nextSibling);
+                        } else {
+                            // This is an edge case, but we should handle it.
+                            console.error("Cannot insert marker, comment node has no parent.");
+                        }
+
+                    } else {
+                        // Case 2 & 3: The cursor is NOT in a comment. Now we can check for forbidden parent *elements*.
+                        const currentNode = selection.getNode();
+                        let boundaryParent = this.editor.dom.getParent(currentNode, forbiddenTagSelector);
+
+                        if (!boundaryParent) {
+                            boundaryParent = this.editor.dom.getParent(currentNode, '*[contenteditable=false]');
+                        }
+
+                        if (boundaryParent) {
+                            // Case 2: The cursor is inside a forbidden or non-editable element.
+                            // ACTION: Move the range to be immediately BEFORE this boundary element and insert there.
+                            rng.setStartBefore(boundaryParent);
+                            rng.collapse(true);
+                            rng.insertNode(markerNode);
+                        } else {
+                            // Case 3: This is a normal, safe location (e.g., a text node in a <p> tag).
+                            // ACTION: Insert the marker at the original cursor position.
+                            rng.insertNode(markerNode);
+                        }
+                    }
+
                 } catch (ex) {
-                    // Fail silently.
-                    console.warn(ex);
+                    // If any part of the insertion logic fails, we'll end up here.
+                    console.error("Failed to insert cursor marker:", ex);
+                    // Crucially, ensure markerNode is nullified so the replacement logic doesn't run.
+                    // (You would need to declare markerNode outside the try block for this to work)
                 }
             }
 
             /** @type {string} */
             html = this.editor.getContent({source_view: true});
 
-            if (markerNode) {
-                const reg = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, "gm");
-                html = html.replace(reg, CM_MARKER);
-                markerNode.remove();
-                // Clean any possible comments put by backwards synchronization
-                const reg2 = /<!--\s*tiny_codepro-marker\s*-->/g;
-                html = html.replace(reg2, '');
-            }
         });
 
         // According to global preference prettify code when opening the editor
@@ -483,7 +504,24 @@ export class ViewManager {
                 console.error('No HTML formatter available');
             }
         }
-        return html;
+
+        if (markerNode) {
+            const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
+            html = html.replace(reg, (str, pos) => {
+                head = pos;
+                return '';
+            });
+            markerNode.remove();
+        }
+        // For security get rid of any possible span markers that couldn't eventually
+        // be removed by backwards synchronization.
+        const reg2 = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, 'gm');
+        html = html.replace(reg2, '');
+
+        // Remove any marker character used internally by the code editor.
+        html = html.replace(new RegExp(MARKER, 'g'), '');
+
+        return {html, head};
     }
 
     /**

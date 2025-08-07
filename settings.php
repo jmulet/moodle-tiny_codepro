@@ -88,7 +88,7 @@ if ($hassiteconfig) {
             'tiny_codepro/validchildren',
             new lang_string('validchildren', $pluginname),
             new lang_string('validchildren_def', $pluginname),
-            '+button[div|p|span|strong|em],+p[tiny-svg-block],+span[tiny-svg-block]',
+            '+body[script],+button[div|p|span|strong|em],+p[tiny-svg-block],+span[tiny-svg-block]',
             PARAM_TEXT
         ));
 
@@ -96,7 +96,7 @@ if ($hassiteconfig) {
             'tiny_codepro/customelements',
             new lang_string('customelements', $pluginname),
             new lang_string('customelements_def', $pluginname),
-            'script,style,~svg,~tiny-svg-block',
+            'script,~svg,~tiny-svg-block',
             PARAM_TEXT
         ));
     }

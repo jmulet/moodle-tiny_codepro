@@ -24,20 +24,6 @@ import { EditorView } from "@codemirror/view";
 import { Transaction } from '@codemirror/state';
 import { SearchCursor } from '@codemirror/search';
 import { syntaxTree } from '@codemirror/language';
-import { getTagNameFromCursor } from './treeutils';
-
-const disallowedTags = new Set([
-    "script", "style", "textarea", "title", "noscript",
-    "option", "optgroup", "select",
-    "svg", "math", "object", "iframe",
-    "head", "meta", "link", "base", "source", "track", "param",
-    "img", "input", "br", "hr", "col", "embed", "area", "wbr"
-]);
-
-const disallowedContexts = new Set([
-    "ScriptText", "StyleText", "Comment", "CommentText", "CommentBlock", "Attribute", "TagName",
-    "StartTag", "EndTag", "MismatchedCloseTag", "ObjectElement", "SvgElement"
-]);
 
 /**
  * Class responsible for synchronizing cursor-based interactions
@@ -45,40 +31,46 @@ const disallowedContexts = new Set([
  */
 export class CursorSync {
     /**
-   * Creates an instance of CursorSync.
-   *
-   * @param {EditorView} editorView - The CodeMirror editor view instance.
-   * @param {string} marker - The marker string to insert at cursor/element positions.
-   */
-    constructor(editorView, marker) {
+     * Creates an instance of CursorSync.
+     *
+     * @param {EditorView} editorView - The CodeMirror editor view instance.
+     * @param {string} marker - The marker string to insert at cursor/element positions.
+     */
+    constructor(editorView, marker, markerClass) {
         this.editorView = editorView;
         this.marker = marker;
+        this.markerClass = markerClass;
     }
 
     /**
     * Scrolls the editor view to the position of the marker.
     * If the marker is not found, scrolls the current view into focus.
+    * @param {number} [head] - If the head position is passed it will not look for any markers.
     */
-      scrollToCaretPosition() {
-        const state = this.editorView.state;
-        const cursor = new SearchCursor(state.doc, this.marker, 0, state.doc.length);
+    scrollToCaretPosition(head) {
         const changes = [];
-        let firstMatch = null;
-        while (!cursor.next().done) {
-            const value = cursor.value;
-            if (!cursor.value) {
-                continue;
+        if (!head) {
+            // Look for the marker.
+            const state = this.editorView.state;
+            const cursor = new SearchCursor(state.doc, this.marker, 0, state.doc.length);            
+            while (!cursor.next().done) {
+                const value = cursor.value;
+                if (!cursor.value) {
+                    continue;
+                }
+                if (!head) {
+                    // Stores the position of the first marker found
+                    head = value.from;
+                }
+                // To deletes all markers
+                changes.push({ from: value.from, to: value.to, insert: '' });
             }
-            if (!firstMatch) {
-                firstMatch = value;
-            }
-            changes.push({ from: value.from, to: value.to, insert: '' });
         }
-        if (firstMatch) {
+        if (head) {
             this.editorView.dispatch({
                 changes,
-                selection: { anchor: firstMatch.from },
-                effects: EditorView.scrollIntoView(firstMatch.from, { y: "center" }),
+                selection: { anchor: head },
+                effects: EditorView.scrollIntoView(head, { y: "center" }),
                 annotations: [Transaction.addToHistory.of(false)]
             });
         } else {
@@ -98,123 +90,150 @@ export class CursorSync {
      */
     getValueWithMarkerAtCursor() {
         const cursor = this.editorView.state.selection.main.head;
-        this.editorView.dispatch({
-            changes: { from: cursor, insert: this.marker },
-            annotations: [Transaction.addToHistory.of(false)]
-        });
-
-        const html = this.editorView.state.doc.toString();
-        if (cursor !== null) {
-            this.editorView.dispatch({
-                changes: { from: cursor, to: cursor + 1, insert: '' },
-                annotations: [Transaction.addToHistory.of(false)]
-            });
-        }
-        return html;
+        const doc = this.editorView.state.doc.toString();
+        return doc.slice(0, cursor) + this.marker + doc.slice(cursor);
     }
 
     /**
-    * Attempts to insert the marker near a valid HTML element based on the
-    * current cursor position. Avoids disallowed contexts and falls back to
-    * safe parent containers if necessary.
-    *
-    * @returns {string} The document content with the marker temporarily inserted.
-    */
-    getValueWithMarkerAtElement() {
-        let state = this.editorView.state;
-        const head = state.selection.main.head;
+     * Finds a safe insertion offset using a reliable linear tree traversal.
+     *
+     * This method traverses the tree from the beginning up to the cursor position,
+     * keeping track of the end position of the last "Text" node it encounters.
+     *
+     * This approach has proven to be the most robust and reliable, avoiding
+     * edge navigation issues that previously caused failures.
+     *
+     * @param {EditorState} state - The current state of CodeMirror.
+     * @param {number} head - The cursor position.
+     * @returns {number} A numeric offset guaranteed to be safe for text marker to be placed.
+     */
+    findSafeInsertionOffset(state, head) {
         const tree = syntaxTree(state);
-        let currentNode = tree.resolve(head, -1);
-        const doc = state.doc;
 
-        const cursor = currentNode.cursor();
-        let pos = null;
-        let firstRun = true;
-        do {
-            const nodeName = cursor.name;
-            if (nodeName === "Text") {
-                pos = firstRun ? head : cursor.from;
-                break;
-            }
-
-            if (["EndTag", "SelfClosingTag"].includes(nodeName)) {
-                pos = cursor.to;
-                break;
-            }
-
-            if (["StartTag", "StartCloseTag", "Comment"].includes(nodeName)) {
-                pos = cursor.from;
-                break;
-            }
-
-            if (nodeName === "Element" && !disallowedContexts.has(nodeName)) {
-                pos = cursor.from;
-                break;
-            }
-
-            if (cursor.nextSibling() && cursor.name === "Element") {
-                pos = cursor.from;
-                break;
-            }
-            cursor.prevSibling();
-            firstRun = false;
-        } while (cursor.parent());
-
-        if (pos == null) {
-            return doc.toString();
+        // 1. Fast Path: If the cursor is already inside a Text node, the position is perfect.
+        const currentNode = tree.resolve(head, -1);
+        if (currentNode.name === 'Text') {
+            return head;
         }
 
-        const { anyDisallowedFound, safeContainer } = this._getSafeRootedContainer(currentNode, doc);
+        // 2. Backward Search: Look for the last text node *before* the cursor.
+        let lastSeenTextEnd = -1; // Use -1 to indicate "not found"
+        tree.iterate({
+            from: 0,
+            to: head,
+            enter: (node) => {
+                if (node.name === 'Text') {
+                    lastSeenTextEnd = node.to;
+                }
+            }
+        });
 
-        if (anyDisallowedFound && safeContainer) {
-            pos = safeContainer.from;
-        } else if (anyDisallowedFound) {
-            return doc.toString();
+        // If we found a text node behind the cursor, that's our safe spot.
+        if (lastSeenTextEnd !== -1) {
+            return lastSeenTextEnd;
         }
 
-        this.editorView.dispatch({
-            changes: { from: pos, to: pos, insert: this.marker },
-            annotations: [Transaction.addToHistory.of(false)]
-        });
-        state = this.editorView.state;
-
-        const html = state.doc.toString();
-
-        this.editorView.dispatch({
-            changes: { from: pos, to: pos + 1, insert: '' },
-            annotations: [Transaction.addToHistory.of(false)]
-        });
-        state = this.editorView.state;
-
-        return html;
-    }
-
-    /**
-    * Traverses the syntax tree to find a parent node that is disallowed.
-    *
-    * @private
-    * @param {SyntaxNode} node - The starting syntax tree node.
-    * @param {Text} doc - The current document text.
-    * @returns {{ anyDisallowedFound: boolean, safeContainer: SyntaxNode | null }} Object with disallowed status and container node.
-    */
-    _getSafeRootedContainer(node, doc) {
-        const cursor = node.cursor();
-        let safeContainer = null;
-        let anyDisallowedFound = false;
-        do {
-            if (cursor.name === "Element") {
-                const tagName = getTagNameFromCursor(cursor.node, doc);
-                if (tagName) {
-                    const name = tagName.toLowerCase();
-                    if (disallowedTags.has(name)) {
-                        safeContainer = cursor.node;
-                        anyDisallowedFound = true;
+        // 3. Forward Search: If no text was found behind the cursor, search forward.
+        // This handles your exact case: <t@d>Cell 1...
+        let firstSeenTextStart = -1;
+        tree.iterate({
+            from: head,
+            enter: (node) => {
+                if (node.name === 'Text') {
+                    if (firstSeenTextStart === -1) { // We only care about the *first* one we find
+                        firstSeenTextStart = node.from;
                     }
                 }
             }
-        } while (cursor.parent());
+        });
 
-        return { anyDisallowedFound, safeContainer };
+        if (firstSeenTextStart !== -1) {
+            return firstSeenTextStart;
+        }
+
+        // Final fallback: If there is no text anywhere in the document, return 0.
+        return 0;
+    }
+
+
+    /**
+     * Inserta un marcador HTML final utilizando un marcador de texto provisional
+     * y validando la estructura a través de la API del DOM.
+     */
+    getHtmlWithHybridMarker(html, initialOffset) {
+        const DISALLOWED_PARENTS = new Set(["script", "style", "textarea", "title", "noscript",
+        "option", "optgroup", "select",
+        "svg", "math", "object", "iframe",
+        "head", "meta", "link", "base", "source", "track", "param",
+        "img", "input", "br", "hr", "col", "embed", "area", "wbr"]);
+
+        // 1. Insert a text marker at the best position found so far
+        const htmlWithTextMarker = html.slice(0, initialOffset) + this.marker + html.slice(initialOffset);
+
+        // 2. Parse the DOM
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlWithTextMarker, 'text/html');
+        const body = doc.body;
+
+        // 3. Find where the text marker is placed
+        const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+        let textNodeWithMarker = null;
+        while (walker.nextNode()) {
+            if (walker.currentNode.nodeValue.includes(this.marker)) {
+                textNodeWithMarker = walker.currentNode;
+                break;
+            }
+        }
+
+        if (!textNodeWithMarker) {
+            return html; // No marker found, so return the initial html.
+        }
+
+        // Divide the TextNode with the marker (to remove the textMarker)
+        const [nodeBefore, nodeAfter] = textNodeWithMarker.nodeValue.split(this.marker);
+        textNodeWithMarker.nodeValue = nodeBefore;
+        const newNodeAfter = document.createTextNode(nodeAfter);
+        textNodeWithMarker.parentElement.insertBefore(newNodeAfter, textNodeWithMarker.nextSibling);
+
+        // 4. Validate the context and find the final insertion point for the SPAN marker.
+        let insertionPoint = newNodeAfter;
+        let parent = insertionPoint.parentElement;
+
+        while (parent && parent !== body) {
+            if (DISALLOWED_PARENTS.has(parent.tagName?.toLowerCase())) {
+                insertionPoint = parent; // Move the insertion point before the forbidden element.
+                break;
+            }
+            parent = parent.parentElement;
+        }
+
+        // 5. Create and insert the final HTML marker that TinyMCE will be able to understand.
+        const finalMarker = doc.createElement('span');
+        finalMarker.classList.add(this.markerClass);
+        finalMarker.innerHTML = '&nbsp;';
+
+        insertionPoint.parentElement.insertBefore(finalMarker, insertionPoint);
+
+        // 6. Serialize back to HTML.
+        return body.innerHTML;
+    }
+
+    /**
+     * Attempts to insert the marker near a valid HTML element based on the
+     * current cursor position. Avoids disallowed contexts and falls back to
+     * safe parent containers if necessary.
+     *
+     * @returns {string} The document content with the marker temporarily inserted.
+    */
+    getValueWithMarkerAtElement() {
+        const state = this.editorView.state;
+        const head = state.selection.main.head;
+        const safeInitialOffset = this.findSafeInsertionOffset(state, head);
+        const html = state.doc.toString();
+
+        const finalHtml = this.getHtmlWithHybridMarker(html, safeInitialOffset);
+
+        return finalHtml;
     }
 
     /**
@@ -232,4 +251,3 @@ export class CursorSync {
     }
 
 }
-

@@ -166,6 +166,8 @@ export class ViewPanelManager extends ViewManager {
         const viewSpec = {
             buttons: buttonsSpec,
             onShow: async(api) => {
+                // Before Tiny loses focus, get its contents and head position
+                const docHead = await this.loadDocInfo();
                 // Register this panel as active.
                 activeViewPanels.set(this.editor.id, this);
 
@@ -212,7 +214,7 @@ export class ViewPanelManager extends ViewManager {
                 this._setButtonsState();
                 this._showSpinner(this.codeEditorElement);
                 // Add the codeEditor (CodeMirror) in the selected UI element.
-                await this.attachCodeEditor(this.codeEditorElement);
+                await this.attachCodeEditor(this.codeEditorElement, docHead);
                 this._hideSpinner(this.codeEditorElement);
             },
             onHide: () => {

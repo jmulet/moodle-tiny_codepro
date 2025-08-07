@@ -35,9 +35,11 @@ import { showMinimap } from "@replit/codemirror-minimap";
 
 import { CursorSync } from "./cursorsync.mjs";
 
+// Hardcoded fontsize limits.
 const MIN_FONTSIZE = 8;
 const MAX_FONTSIZE = 22;
 
+// Supported themes.
 const themes = {
     'light': EditorView.baseTheme(),
     'dark': cm6proDark
@@ -48,7 +50,9 @@ export default class CodeProEditor {
     static getThemes() {
         return ['light', 'dark'];
     }
-    static MARKER = String.fromCharCode(0);
+    // The marker used to enable cursor synchronization.
+    static TINY_MARKER_CLASS = 'tiny_codepro-marker';
+    static MARKER = '\u200B';
     static MarkerType = {
         none: 0,
         atElement: 1,
@@ -56,13 +60,11 @@ export default class CodeProEditor {
     };
     /**
      * @member {HTMLElement} parentElement
-     * @member {string} source
      * @member {CodeMirrorView} editorView
      * @member {Record<string,*>} config
      * @member {CursorSync} cursorSync
      */
     parentElement;
-    source;
     editorView;
     config;
     cursorSync;
@@ -71,7 +73,7 @@ export default class CodeProEditor {
      * @param {Record<string, any>} [options]
      */
     constructor(parentElement, options) {
-        // Default configuration
+        // Default configuration.
         this.config = {
             themeName: options?.theme ?? 'light',
             fontSize: options?.fontSize ?? 11,
@@ -87,14 +89,14 @@ export default class CodeProEditor {
             state: this._createState(options.doc),
             parent: this.parentElement
         });
-        this.cursorSync = new CursorSync(this.editorView, CodeProEditor.MARKER);
+        this.cursorSync = new CursorSync(this.editorView, CodeProEditor.MARKER, CodeProEditor.TINY_MARKER_CLASS);
         if (options.doc) {
-            this.cursorSync.scrollToCaretPosition();
+            this.cursorSync.scrollToCaretPosition(options?.head);
         }
 
-        // Make sure that any changes on the parent dimensions, will triger a view requestMeasure
+        // Make sure that any changes on the parent dimensions, will triger a view requestMeasure.
         this.resizeObserver = new ResizeObserver(() => {
-            // No need to check entries here, as we only observe one element
+            // No need to check entries here, as we only observe one element.
             if (this.editorView) {
                 this.editorView.requestMeasure();
             }
@@ -109,8 +111,8 @@ export default class CodeProEditor {
 
     /**
      *
-     * @param {string} [html] - The initial html
-     * @returns {*} a new State
+     * @param {string} [html] - The initial html.
+     * @returns {*} a new State.
      */
     _createState(html) {
         this.themeConfig = new Compartment();
@@ -187,7 +189,7 @@ export default class CodeProEditor {
                 preventDefault: true,
                 stopPropagation: true,
                 run: () => {
-                    // Stores the preferences from this editor
+                    // Stores the preferences from this editor.
                     this.config.commands.savePrefs();
                     return true;
                 }
@@ -238,7 +240,6 @@ export default class CodeProEditor {
      * @param {string} source
      */
     setValue(source) {
-        this.source = source;
         const view = this.editorView;
         view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: source || '' },
@@ -262,7 +263,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Sets the selection
+     * Sets the selection.
      * @param {{anchor: number}} pos
      */
     setSelection(pos) {
@@ -275,22 +276,23 @@ export default class CodeProEditor {
     }
 
     /**
-     * Gets the current editor's view state properties
-     * @returns {*}
+     * Gets the current editor's view state properties.
+     * @returns {{html: string, head: number, selection: {anchor: number, head: number}}}
      */
     getState() {
         const state = this.editorView.state;
         const range = state.selection.ranges[0] || { from: 0, to: 0 };
         return {
             html: state.doc.toString(),
+            head: range.to,
             selection: { anchor: range.from, head: range.to }
         };
     }
 
     /**
-     * Creates light or dark themes dynamically for an specific fontSize
+     * Creates light or dark themes dynamically for an specific fontSize.
      * @param {string} [themeName]
-     * @returns {*[] | null} - The theme effects
+     * @returns {*[] | null} - The theme effects.
      */
     _createTheme(themeName) {
         themeName = themeName ?? this.config.themeName ?? 'light';
@@ -312,7 +314,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Sets light or dark themes dynamically for an specific fontSize
+     * Sets light or dark themes dynamically for an specific fontSize.
      * @param {string} [themeName]
      */
     setTheme(themeName) {
@@ -327,7 +329,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Toogles light or dark themes dynamically for an specific fontSize
+     * Toogles light or dark themes dynamically for an specific fontSize.
      */
     toggleTheme() {
         const themeName = this.config.themeName === 'light' ? 'dark' : 'light';
@@ -345,7 +347,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Gets the current font size
+     * Gets the current font size.
      * @returns {number}
      */
     getFontsize() {
@@ -353,7 +355,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Increases the font size up to a MAX_FONTSIZE
+     * Increases the font size up to a MAX_FONTSIZE.
      */
     increaseFontsize() {
         if (this.config.fontSize > MAX_FONTSIZE) {
@@ -364,7 +366,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Decreases the font size down to a MIN_FONTSIZE
+     * Decreases the font size down to a MIN_FONTSIZE.
      */
     decreaseFontsize() {
         if (this.config.fontSize < MIN_FONTSIZE) {
@@ -375,7 +377,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Enable/disable linewrapping dynamically
+     * Enable/disable linewrapping dynamically.
      */
     toggleLineWrapping() {
         this.config.lineWrapping = !this.config.lineWrapping;
@@ -386,7 +388,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Show/hide minimap dynamically
+     * Show/hide minimap dynamically.
      */
     toggleMinimap() {
         this.config.minimap = !this.config.minimap;
@@ -394,7 +396,7 @@ export default class CodeProEditor {
             effects: this.minimapConfig.reconfigure(this._createMinimap())
         });
         this.editorView.focus();
-        // Issue:: Need to scroll to ensure minimap is rerendered
+        // Issue:: Need to scroll to ensure minimap is rerendered.
         this.editorView.dispatch({
             scrollIntoView: true
         });
@@ -402,7 +404,7 @@ export default class CodeProEditor {
     }
 
     /**
-     * Focus onto the editor
+     * Focus onto the editor.
      */
     focus() {
         if (!this.editorView.hasFocus) {

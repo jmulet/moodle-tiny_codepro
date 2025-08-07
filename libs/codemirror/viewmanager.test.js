@@ -58,7 +58,8 @@ describe('ViewManager.create', () => {
       getRng: jest.fn(() => range),
       setRng: jest.fn(),
       setCursorLocation: jest.fn(),
-      collapse: jest.fn()
+      collapse: jest.fn(),
+      getNode: jest.fn(() => tinyContainer.querySelector('p'))
     };
 
     mockTiny = {
@@ -68,6 +69,7 @@ describe('ViewManager.create', () => {
         scrollY: 0,
         scrollTo: jest.fn()
       },
+      getDoc: jest.fn(() => document),
       getWin: jest.fn(() => window),
       focus: jest.fn(),
       dom: {
@@ -82,7 +84,11 @@ describe('ViewManager.create', () => {
           }
           return elem;
         }),
-        remove: jest.fn(() => {}) 
+        remove: jest.fn(() => {}),
+        getParent: jest.fn().mockImplementation((currentNode, tags) => {
+          console.log(currentNode);
+          return currentNode.closest(tags);
+        }),
       },
       getContent: jest.fn(() => tinyContainer.innerHTML),
       setContent: jest.fn((t) => tinyContainer.innerHTML = t),
@@ -109,7 +115,8 @@ describe('ViewManager.create', () => {
 
   it('should create a CodeProEditor instance and attach it to the DOM', async () => {
     expect(cm6Container.querySelector('.cm-editor')).toBeNull(); // Before creation
-    await viewManager.attachCodeEditor(cm6Container);
+    const docHead = await viewManager.loadDocInfo();
+    await viewManager.attachCodeEditor(cm6Container, docHead);
     expect(viewManager.codeEditor).toBeInstanceOf(CodeProEditor);
     expect(cm6Container.querySelector('.cm-editor')).not.toBeNull(); // Editor attached
     // expect that the head of the cmEditor to be in the right place
