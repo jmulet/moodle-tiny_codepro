@@ -68,6 +68,7 @@ describe('ViewManager.create', () => {
         scrollY: 0,
         scrollTo: jest.fn()
       },
+      getDoc: jest.fn(() => document),
       getWin: jest.fn(() => window),
       focus: jest.fn(),
       dom: {
@@ -109,7 +110,9 @@ describe('ViewManager.create', () => {
 
   it('should create a CodeProEditor instance and attach it to the DOM', async () => {
     expect(cm6Container.querySelector('.cm-editor')).toBeNull(); // Before creation
-    await viewManager.attachCodeEditor(cm6Container);
+    const docHead = await viewManager.loadDocInfo();
+    console.log(docHead);
+    await viewManager.attachCodeEditor(cm6Container, docHead);
     expect(viewManager.codeEditor).toBeInstanceOf(CodeProEditor);
     expect(cm6Container.querySelector('.cm-editor')).not.toBeNull(); // Editor attached
     // expect that the head of the cmEditor to be in the right place

@@ -53,5 +53,6 @@ Safer cursor synchronization logic
 Include CONTRIBUTING.md file
 
 == 2.1.2 ==
+Safer cursor synchronization logic
 Fix bug not autosaving in panel mode when form is submitted
 New configuration property disableonpagesregex allows to disable the plugin on certain pages

@@ -26,7 +26,7 @@
 
 import {setPref, getPref, savePrefs} from "./preferences";
 import {getSyncCaret, isAutoFormatHTML} from "./options";
-import {CM_MARKER, TINY_MARKER_CLASS} from "./common";
+import {MARKER, TINY_MARKER_CLASS} from "./common";
 
 /**
  * Share the state among editor Views
@@ -330,15 +330,7 @@ export class ViewManager {
     accept() {
         // Add marker if cursor synchronization is enabled.
         const isSynEnabled = getSyncCaret(this.editor) === 'both';
-        let htmlNoMarker;
-        if (isSynEnabled) {
-            htmlNoMarker = this.codeEditor.getValue(1);
-            const reg = new RegExp(CM_MARKER, 'g');
-            htmlNoMarker = htmlNoMarker.replace(reg,
-                `<span class="${TINY_MARKER_CLASS}">&nbsp;</span>`);
-        } else {
-            htmlNoMarker = this.codeEditor.getValue(0);
-        }
+        const htmlNoMarker = this.codeEditor.getValue(isSynEnabled ? 1 : 0);
         this._saveAction(htmlNoMarker);
         return true;
     }
@@ -358,10 +350,19 @@ export class ViewManager {
     }
 
     /**
+     * Loads the html and head position from the Tiny editor
+     * @returns {Promise<{html: string, head: number}>}
+     */
+    async loadDocInfo() {
+        return blackboard.state ? blackboard.state : await this._retrieveHtml();
+    }
+
+    /**
      * Creates a new instance of the CodeEditor and attaches to the DOM element.
      * @param {HTMLElement} codeEditorElement
+     * @param {{html: string, head: number}} docHead
      */
-    async attachCodeEditor(codeEditorElement) {
+    async attachCodeEditor(codeEditorElement, docHead) {
         const CodeProEditor = await requireCm6Pro();
         const commands = {
             minimap: this.toggleMinimap.bind(this),
@@ -373,10 +374,9 @@ export class ViewManager {
             savePrefs
         };
 
-        const doc = blackboard.state ? blackboard.state.html : await this._retrieveHtml();
-
         const options = {
-            doc,
+            doc: docHead.html,
+            head: docHead.head,
             theme: getPref("theme", "light"),
             fontSize: getPref("fontsize", 11),
             lineWrapping: getPref("wrap", false),
@@ -405,7 +405,7 @@ export class ViewManager {
             }
         }
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
-
+        this.codeEditor.focus();
         this.pendingChanges = false;
         if (blackboard.state) {
             // Restore state from the another view
@@ -418,22 +418,21 @@ export class ViewManager {
     /**
      * Obtains the HTML code/state from Tiny to CodeMirror editor taking care
      * of cursor synchronization between both editors.
-     * @returns {Promise<string>}
+     * @returns {Promise<{html: string, head: number}>}
      */
     async _retrieveHtml() {
+        let head = 0;
         let html;
+        let markerNode;
+        const MARKER_COMMENT_TEXT = `__${TINY_MARKER_CLASS}_${Date.now()}__`;
+
         this.editor.undoManager.ignore(() => {
             const syncCaret = getSyncCaret(this.editor) !== 'none';
-            let markerNode;
             if (syncCaret) {
                 this.editor.focus();
-                // Insert caret marker and retrieve html code to pass to CodeMirror
-                markerNode = this.editor.dom.create('span', {
-                    'class': TINY_MARKER_CLASS,
-                }, '&nbsp;');
 
-                // Const currentNode = this.editor.selection.getStart();
-                // currentNode.append(markerNode);
+                // Use a comment node as the marker
+                markerNode = this.editor.getDoc().createComment(MARKER_COMMENT_TEXT);
 
                 // Use range instead for better accuracy in text nodes.
                 // Get current selection range
@@ -447,14 +446,8 @@ export class ViewManager {
                 }
 
                 // Insert marker at caret or start of selection
-                // This may fail if, e.g., span cannot be inserted into comment, etc.
                 try {
                     rng.insertNode(markerNode);
-
-                    // Move caret after the inserted marker
-                    rng.setStartAfter(markerNode);
-                    rng.setEndAfter(markerNode);
-                    selection.setRng(rng);
                 } catch (ex) {
                     // Fail silently.
                     console.warn(ex);
@@ -464,14 +457,6 @@ export class ViewManager {
             /** @type {string} */
             html = this.editor.getContent({source_view: true});
 
-            if (markerNode) {
-                const reg = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, "gm");
-                html = html.replace(reg, CM_MARKER);
-                markerNode.remove();
-                // Clean any possible comments put by backwards synchronization
-                const reg2 = /<!--\s*tiny_codepro-marker\s*-->/g;
-                html = html.replace(reg2, '');
-            }
         });
 
         // According to global preference prettify code when opening the editor
@@ -483,7 +468,24 @@ export class ViewManager {
                 console.error('No HTML formatter available');
             }
         }
-        return html;
+
+        if (markerNode) {
+            const reg = new RegExp(`<!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
+            html = html.replace(reg, (str, pos) => {
+                head = pos;
+                return '';
+            });
+            markerNode.remove();
+        }
+        // For security get rid of any possible span markers that couldn't eventually
+        // be removed by backwards synchronization.
+        const reg2 = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, 'gm');
+        html = html.replace(reg2, '');
+
+        // Remove any marker character used internally by the code editor.
+        html = html.replace(new RegExp(MARKER, 'g'), '');
+
+        return {html, head};
     }
 
     /**
