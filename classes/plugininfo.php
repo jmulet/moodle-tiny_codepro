@@ -48,9 +48,8 @@ function tiny_codepro_cfgwithdefault(object $cfg, string $key, $default) {
  */
 class plugininfo extends plugin implements
     plugin_with_buttons,
-    plugin_with_menuitems,
-    plugin_with_configuration {
-
+    plugin_with_configuration,
+    plugin_with_menuitems {
     /**
      * Get the editor buttons for this plugins
      *
