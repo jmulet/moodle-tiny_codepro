@@ -29,10 +29,9 @@ import { cm6proDark } from './cm6pro-dark-theme';
 
 // 3rd party extensions.
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
-import { colorPicker } from '@replit/codemirror-css-color-picker';
 import { showMinimap } from "@replit/codemirror-minimap";
 
-
+import { colorPicker } from './cm6pro-css-colorpicker';
 import { CursorSync } from "./cursorsync.mjs";
 
 // Hardcoded fontsize limits.

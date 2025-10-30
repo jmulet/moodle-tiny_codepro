@@ -102,9 +102,9 @@ Specifies which HTML elements and attributes are considered valid in the editor.
 *[*],svg[*],math[*],script[*]
 ```
 
-This example allows all attributes on all tags, as well as unrestricted use of `<svg>`, `<math>`, and `<script>` elements.
+This example allows all attributes on all tags, as well as unrestricted use of `<svg>`, `<math>`, and `script` elements.
 
-> **Note:** Even though `<script>` is included as a valid element, TinyMCE will remove it if it appears at the very top of the content. Placing it elsewhere in the code is fine.
+> **Note:** Even though `script` is included as a valid element, TinyMCE will remove it if it appears at the very top of the content. Placing it elsewhere in the code is fine.
 
 ---
 
@@ -127,7 +127,7 @@ Use the format:
 
 This allows:
 
-- `<script>` inside `<body>`
+- `script` inside `<body>`
 - Elements like `<div>`, `<p>`, `<span>`, `<strong>`, `<em>` inside `<button>`
 - Custom `<tiny-svg-block>` inside `<p>` and `<span>`
 
@@ -151,12 +151,12 @@ script,~svg,~tiny-svg-block
 
 This example allows:
 
-- Standard `<script>` elements
+- Standard `script` elements
 - Custom or extended `<svg>` elements
 - The `<tiny-svg-block>` component
 
 > #### ⚠️ Warning
-> Even though the `<script>` tag is a block-level element, TinyMCE's filtering policy may remove it if it is placed at the beginning of the document. To prevent this, you should either wrap the tag in a `<div>` or move it to another part of the content. Keep in mind that allowing `<script>` tags can introduce security vulnerabilities, particularly through cross-site scripting (XSS) attacks.
+> Even though the `script` tag is a block-level element, TinyMCE's filtering policy may remove it if it is placed at the beginning of the document. To prevent this, you should either wrap the tag in a `<div>` or move it to another part of the content. Keep in mind that allowing `script` tags can introduce security vulnerabilities, particularly through cross-site scripting (XSS) attacks.
 
 
 ### Plugin visibility
