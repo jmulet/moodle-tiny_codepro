@@ -13,11 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-import {createModal} from "./modal";
+import { createModal } from "./modal";
 import ModalEvents from 'core/modal_events';
-import {getPref, setPref} from "./preferences";
-import {getDefaultUI} from "./options";
-import {ViewManager} from "./viewmanager";
+import { getDefaultUI } from "./options";
+import { ViewManager } from "./viewmanager";
 
 /**
  * Tiny CodePro plugin.
@@ -47,7 +46,7 @@ export class ViewDialogManager extends ViewManager {
             this.domElements.btnWrap.querySelector('span').innerHTML = ViewManager.icons.rightarrow;
         }
         if (this.codeEditor.config.themeName === 'dark') {
-             this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
+            this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
         }
     }
 
@@ -89,7 +88,7 @@ export class ViewDialogManager extends ViewManager {
         });
 
         const modalContent = this.modal.getRoot().find('.modal-content');
-        const isDark = getPref('theme') === 'dark';
+        const isDark = this.preferencesSrv.get('theme') === 'dark';
         if (isDark) {
             modalContent.addClass('tiny_codepro-dark');
         } else {
@@ -98,12 +97,12 @@ export class ViewDialogManager extends ViewManager {
 
         this._bindActions();
 
-        if (getPref('fs')) {
-           // Set fullscreen mode
-           this.modal.header.hide();
-           const $dlgElem = this.modal.getRoot().find(dialogQuery);
-           $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
-           $dlgElem.addClass("tiny_codepro-fullscreen");
+        if (this.preferencesSrv.get('fs')) {
+            // Set fullscreen mode
+            this.modal.header.hide();
+            const $dlgElem = this.modal.getRoot().find(dialogQuery);
+            $dlgElem.removeClass("modal-dialog modal-lg modal-dialog-scrollable");
+            $dlgElem.addClass("tiny_codepro-fullscreen");
         }
     }
 
@@ -139,7 +138,7 @@ export class ViewDialogManager extends ViewManager {
                     this.toggleLineWrapping();
                     break;
                 case ("prettify"):
-                    this.prettify();
+                    this.prettify(btnElem);
                     break;
                 case ("cancel"):
                     this.close();
@@ -153,7 +152,7 @@ export class ViewDialogManager extends ViewManager {
 
     _toggleFullscreen() {
         const $dlgElem = this.modal.getRoot().find(dialogQuery);
-        const isFullscreen = getPref("fs", false);
+        const isFullscreen = this.preferencesSrv.get('fs', false);
         if (!isFullscreen) {
             // Set fullscreen mode
             this.modal.header.hide();
@@ -165,7 +164,7 @@ export class ViewDialogManager extends ViewManager {
             $dlgElem.removeClass("tiny_codepro-fullscreen");
             $dlgElem.addClass("modal-dialog modal-lg modal-dialog-scrollable");
         }
-        setPref("fs", !isFullscreen);
+        this.preferencesSrv.set('fs', !isFullscreen);
     }
 
     _unbindActions() {
@@ -176,5 +175,5 @@ export class ViewDialogManager extends ViewManager {
         this._unbindActions();
         this.modal.destroy();
     }
-    _tDestroy() {}
+    _tDestroy() { }
 }

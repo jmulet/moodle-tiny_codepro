@@ -15,9 +15,10 @@ Feature: Tiny code pro editor
         | activity | name      | intro     | introformat | course | contentformat | idnumber |
         | page     | PageName1 | PageDesc1 | 1           | C1     | 1             | 1        |
   @javascript @external
-  Scenario: View HTML in TinyMCE source code view
+  Scenario: Dialog view in TinyMCE source code
     Given I log in as "admin"
     When I open my profile in edit mode
     And I set the field "Description" to "Hello tiny!"
     And I click on the "View > Source code Pro" menu item for the "Description" TinyMCE editor
     Then I should see "Source code Pro"
+    

@@ -24,9 +24,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setPref, getPref, savePrefs} from "./preferences";
-import {getSyncCaret, isAutoFormatHTML} from "./options";
-import {MARKER, TINY_MARKER_CLASS} from "./common";
+import { getPreferencesSrv } from "./preferences";
+import { getSyncCaret, isAutoFormatHTML } from "./options";
+import { MARKER, TINY_MARKER_CLASS } from "./common";
 
 /**
  * Share the state among editor Views
@@ -76,7 +76,13 @@ const requireHTMLFormatter = () => {
             }, () => resolve(null));
         };
         window.require(['tiny_html/beautify/beautify-html'], (beautify) => {
-            _htmlFormatter = beautify.html_beautify;
+            _htmlFormatter = (src) => beautify.html_beautify(src, {
+                indent_size: 2,
+                wrap_line_length: 80,
+                unformatted: [],
+                preserve_newlines: true,
+                max_preserve_newlines: 1,
+            });
             if (_htmlFormatter) {
                 resolve(_htmlFormatter);
                 return;
@@ -127,8 +133,9 @@ export class ViewManager {
      */
     constructor(editor, opts) {
         this.editor = editor;
-        this.opts = {autosave: false, translations: [], ...(opts ?? {})};
+        this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
         this.isLoading = false;
+        this.preferencesSrv = getPreferencesSrv(editor);
     }
 
     /**
@@ -226,7 +233,7 @@ export class ViewManager {
      */
     _quickSave() {
         const html = this.codeEditor.getValue();
-        this.editor.setContent(html, {format: 'html'});
+        this.editor.setContent(html, { format: 'html' });
         this.pendingChanges = false;
     }
 
@@ -249,7 +256,7 @@ export class ViewManager {
                 // Restore cursor and scroll position
                 this.editor.focus();
                 this.editor.undoManager.transact(() => {
-                    this.editor.setContent(html, {format: 'html'});
+                    this.editor.setContent(html, { format: 'html' });
                     resolve(html);
                     const syncCaret = getSyncCaret(this.editor);
                     if (syncCaret === 'both') {
@@ -344,6 +351,8 @@ export class ViewManager {
     close() {
         this._tClose();
         this.destroyCodeEditor();
+        // Save any pending preferences.
+        this.preferencesSrv.flush();
         // Restore cursor and scroll position
         this.pendingChanges = false;
         return true;
@@ -371,16 +380,18 @@ export class ViewManager {
             theme: this.toggleTheme.bind(this),
             accept: this.accept.bind(this),
             cancel: this.close.bind(this),
-            savePrefs
+            savePrefs: () => {
+                this.preferencesSrv.save();
+            }
         };
 
         const options = {
             doc: docHead.html ?? '',
             head: docHead.head,
-            theme: getPref("theme", "light"),
-            fontSize: getPref("fontsize", 11),
-            lineWrapping: getPref("wrap", false),
-            minimap: !this.opts.autosave && getPref("minimap", true),
+            theme: this.preferencesSrv.get("theme", "light"),
+            fontSize: this.preferencesSrv.get("fontsize", 11),
+            lineWrapping: this.preferencesSrv.get("wrap", false),
+            minimap: !this.opts.autosave && this.preferencesSrv.get("minimap", true),
             commands
         };
         if (this.opts.autosave) {
@@ -399,7 +410,7 @@ export class ViewManager {
                 };
             }
             // Always enable linewrapping in panel view when not in Fullscreen.
-            const isFS = getPref('fs', false);
+            const isFS = this.preferencesSrv.get('fs', false);
             if (!isFS) {
                 options.lineWrapping = true;
             }
@@ -491,7 +502,7 @@ export class ViewManager {
             }
 
             /** @type {string} */
-            html = this.editor.getContent({source_view: true});
+            html = this.editor.getContent({ source_view: true });
 
         });
 
@@ -521,7 +532,7 @@ export class ViewManager {
         // Remove any marker character used internally by the code editor.
         html = html.replace(new RegExp(MARKER, 'g'), '');
 
-        return {html, head};
+        return { html, head };
     }
 
     /**
@@ -534,16 +545,26 @@ export class ViewManager {
 
     /**
      * Action to format or prettify HTML code.
+     * @param {HTMLElement} [btn] Button element to disable while prettifying.
      */
-    async prettify() {
+    async prettify(btn) {
+        if (btn) {
+            btn.disabled = true;
+        }
         const prettifier = await requireHTMLFormatter();
         if (!prettifier) {
             console.error("No HTML formatter available");
+            if (btn) {
+                btn.disabled = false;
+            }
             return true;
         }
         const html = this.codeEditor.getValue(2);
         const pretty = prettifier(html);
         this.codeEditor.setValue(pretty);
+        if (btn) {
+            btn.disabled = false;
+        }
         return true;
     }
 
@@ -552,12 +573,12 @@ export class ViewManager {
      *
      */
     toggleLineWrapping() {
-        if (!this.codeEditor || (!getPref('fs', false) && this.opts.autosave)) {
+        if (!this.codeEditor || (!this.preferencesSrv.get('fs', false) && this.opts.autosave)) {
             // Panel mode which is not in fullscreen, should always be wrapping on
             return true;
         }
         const isWrap = this.codeEditor.toggleLineWrapping();
-        setPref('wrap', isWrap);
+        this.preferencesSrv.set('wrap', isWrap);
 
         ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span',
             isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow);
@@ -570,7 +591,7 @@ export class ViewManager {
             return true;
         }
         const isMinimap = this.codeEditor.toggleMinimap();
-        setPref('minimap', isMinimap);
+        this.preferencesSrv.set('minimap', isMinimap);
         return true;
     }
 
@@ -583,7 +604,7 @@ export class ViewManager {
             return true;
         }
         const theme = this.codeEditor.toggleTheme();
-        setPref('theme', theme);
+        this.preferencesSrv.set('theme', theme);
         const isDark = theme === 'dark';
         ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span',
             isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
@@ -601,7 +622,7 @@ export class ViewManager {
      */
     decreaseFontsize() {
         this.codeEditor?.decreaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize());
+        this.preferencesSrv.set('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**
@@ -609,7 +630,7 @@ export class ViewManager {
      */
     increaseFontsize() {
         this.codeEditor?.increaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize());
+        this.preferencesSrv.set('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**
@@ -624,8 +645,8 @@ export class ViewManager {
         this._tClose();
         this.destroyCodeEditor();
         // Toggle user preference
-        const uiMode = getPref('view', 'dialog');
-        setPref('view', uiMode === 'dialog' ? 'panel' : 'dialog', true);
+        const uiMode = this.preferencesSrv.get('view', 'dialog');
+        this.preferencesSrv.set('view', uiMode === 'dialog' ? 'panel' : 'dialog');
         // Call the action again
         this.editor.execCommand('mceCodeProEditor', false);
     }

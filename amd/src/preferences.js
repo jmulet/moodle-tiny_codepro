@@ -13,68 +13,158 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Tiny CodePro plugin.
- *
- * @module      tiny_codepro/plugin
- * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
- * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+import { getUserPrefs } from "./options";
+import { getRemoteService } from "./remotesrv";
 
+/**
+ * Default preferences
+ */
 const defaultPrefs = {
-    theme: "light", /** Light vs dark themes */
-    wrap: true, /** Wrap long lines */
-    fs: false, /** Fullscreen mode */
-    fontsize: 11, /** Editor fontsize */
-    minimap: true, /** VScode like minimap */
-    view: undefined, /** Which UI is used to display the HTML editor */
+    theme: "light",
+    wrap: true,
+    fs: false,
+    fontsize: 11,
+    minimap: true,
+    view: undefined,
 };
 
-const loadPrefs = () => {
-    const storedPreferences = localStorage.getItem("tiny-codepro");
-    let storedParsed = {};
-    if (storedPreferences) {
+/**
+ * Preferences service (stateful)
+ */
+class PreferencesService {
+    static SAVE_DELAY = 1000; // ms
+    /**
+     * @param {TinyMCEEditor} editor
+     */
+    constructor(editor) {
+        this.editor = editor;
+        this.preferences = this._loadPrefs();
+        // Never force saving default prefs.
+        this._lastSavedJson = JSON.stringify(this.preferences);
+        this._saveTimeout = null;
+        this._dirty = false;
+    }
+
+    /**
+     * Load preferences from remote / local storage
+     * @returns {object}
+     */
+    _loadPrefs() {
+        const remotePrefsJson = getUserPrefs(this.editor);
+        const localPrefsJson = localStorage.getItem("tiny-codepro");
+
+        let storedParsed = {};
+
         try {
-            storedParsed = JSON.parse(storedPreferences);
+            if (remotePrefsJson) {
+                storedParsed = JSON.parse(remotePrefsJson);
+            } else if (localPrefsJson) {
+                const localPrefs = JSON.parse(localPrefsJson);
+                // Migrate old local prefs to remote
+                getRemoteService().saveUserPref(localPrefsJson);
+                storedParsed = localPrefs;
+            }
         } catch (ex) {
             // eslint-disable-next-line no-console
-            console.error("Cannot parse JSON", storedPreferences);
+            console.error("Cannot parse JSON user preferences", ex);
+        }
+
+        return { ...defaultPrefs, ...storedParsed };
+    }
+
+    /**
+     * Get a preference value
+     * @param {string} key
+     * @param {*} [def]
+     * @returns {*}
+     */
+    get(key, def) {
+        return this.preferences[key] ?? def;
+    }
+
+    /**
+     * Set a preference value
+     * @param {string} key
+     * @param {*} value
+     * @param {boolean} [save=true]
+     */
+    set(key, value, save = true) {
+        this._dirty = this._dirty || this.preferences[key] !== value;
+        this.preferences[key] = value;
+        if (save && this._dirty) {
+            this._scheduleSave();
         }
     }
-    return {...defaultPrefs, ...storedParsed};
-};
 
-const preferences = loadPrefs();
-
-/**
- * @param {string} key The preference key
- * @param {*} [def] The default value (optional)
- * @returns the preference value
- */
-const getPref = (key, def) => {
-    return preferences[key] ?? def;
-};
-
-/**
- * Saves the preferences
- */
-const savePrefs = () => {
-    localStorage.setItem("tiny-codepro", JSON.stringify(preferences));
-};
-
-/**
- * @param {*} key The preference key
- * @param {*} value The preference value
- * @param {*} save Whether to save the preference or not (optional)
- */
-const setPref = (key, value, save) => {
-    preferences[key] = value;
-    if (save) {
-        // Only save this preference, keep the remaining ones intact
-        const oldPrefs = loadPrefs();
-        oldPrefs[key] = value;
-        localStorage.setItem("tiny-codepro", JSON.stringify(oldPrefs));
+    _scheduleSave() {
+        if (this._saveTimeout) {
+            clearTimeout(this._saveTimeout);
+        }
+        this._saveTimeout = setTimeout(() => this._save(), PreferencesService.SAVE_DELAY);
     }
+
+    /**
+     * Save preferences (remote + local)
+     * @param {object} [prefs]
+     */
+    _save(prefs = this.preferences) {
+        if (this._saveTimeout) {
+            clearTimeout(this._saveTimeout);
+        }
+        const json = JSON.stringify(prefs);
+        if (json === this._lastSavedJson) {
+            return;
+        }
+        this._lastSavedJson = json;
+        // Keep local copy for backward compatibility
+        localStorage.setItem("tiny-codepro", json);
+        this._dirty = false;
+        // Beware this call is async!
+        getRemoteService().saveUserPref(json);
+    }
+
+    /**
+     * Force save preferences (remote + local)
+     */
+    flush() {
+        if (!this._dirty) {
+            return;
+        }
+        this._save();
+        this._dirty = false;
+    }
+
+    /**
+     * Get all preferences
+     * @returns {object}
+     */
+    all() {
+        return { ...this.preferences };
+    }
+}
+
+/**
+ * Preferences service instances per editor
+ * @type {Map<string, PreferencesService>}
+ */
+const instances = new Map();
+
+/**
+ * Get PreferencesService for an editor
+ *
+ * @param {TinyMCEEditor} editor
+ * @returns {PreferencesService}
+ */
+const getPreferencesSrv = (editor) => {
+    if (!editor) {
+        throw new Error("PreferencesService requires an editor instance");
+    }
+
+    if (!instances.has(editor.id)) {
+        instances.set(editor.id, new PreferencesService(editor));
+    }
+
+    return instances.get(editor.id);
 };
 
-export {getPref, setPref, savePrefs};
+export { PreferencesService, getPreferencesSrv };

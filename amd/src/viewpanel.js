@@ -22,9 +22,8 @@
  * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-import {getPref, setPref} from "./preferences";
-import {getDefaultUI, isFullscreen} from "./options";
-import {ViewManager} from "./viewmanager";
+import { getDefaultUI, isFullscreen } from "./options";
+import { ViewManager } from "./viewmanager";
 
 /**
  * Keep track of all active viewPanels in the page.
@@ -65,7 +64,7 @@ export class ViewPanelManager extends ViewManager {
     _createUI(api) {
         const container = api.getContainer();
         container.classList.add('tiny_codepro-view__pane');
-        const shadowRoot = container.attachShadow({mode: "open"});
+        const shadowRoot = container.attachShadow({ mode: "open" });
         const shadowStyles = document.createElement('style');
         shadowStyles.textContent = `
         .cm-editor.cm-focused {
@@ -118,14 +117,14 @@ export class ViewPanelManager extends ViewManager {
 
     _setButtonsState() {
         // eslint-disable-next-line no-unused-vars
-        const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept} = this.domElements;
+        const { btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept } = this.domElements;
 
         // Style issue
         btnDescreaseFontsize.style.marginRight = '0';
         btnIncreaseFontsize.style.marginLeft = '0';
 
         // Set the toggle state
-        const isDark = getPref('theme', 'light') === 'dark';
+        const isDark = this.preferencesSrv.get('theme', 'light') === 'dark';
         ViewManager.safeInnerHTML(btnTheme, 'span', isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
 
         if (isDark) {
@@ -140,9 +139,8 @@ export class ViewPanelManager extends ViewManager {
             btnAcceptSvg.style.marginRight = '5px';
         }
 
-        // Sync fullscreen state
-        const isFS = getPref('fs', false);
-        if (isFS) {
+        // In panel mode, the initial fs state is decided by tox-fullscreen class.
+        if (isFullscreen(this.editor)) {
             this.domElements.btnWrap.style.display = 'initial';
             if (this.parentContainer) {
                 this.parentContainer.style.height = '';
@@ -155,17 +153,13 @@ export class ViewPanelManager extends ViewManager {
                 this.parentContainer.style.height = HARDCODED_HEIGHT;
             }
         }
-        const hasClassFS = this.editor.container.classList.contains('tox-fullscreen');
-        if ((hasClassFS && !isFS) || (!hasClassFS && isFS)) {
-            this.editor.execCommand('mceFullScreen');
-        }
     }
 
     _createViewSpec() {
         const buttonsSpec = this._createButtons();
         const viewSpec = {
             buttons: buttonsSpec,
-            onShow: async(api) => {
+            onShow: async (api) => {
                 // Before Tiny loses focus, get its contents and head position
                 const docHead = await this.loadDocInfo();
                 // Register this panel as active.
@@ -207,6 +201,7 @@ export class ViewPanelManager extends ViewManager {
                     btnIncreaseFontsize: buttonsArray[bLen - 5],
                     btnTheme: buttonsArray[bLen - 4],
                     btnWrap: buttonsArray[bLen - 3],
+                    btnPrettify: buttonsArray[bLen - 2],
                     btnAccept: buttonsArray[bLen - 1],
                 };
 
@@ -261,7 +256,7 @@ export class ViewPanelManager extends ViewManager {
                             this.toggleLineWrapping();
                         }
                     }
-                    setPref('fs', isFS);
+                    // Never store fs state in panel mode.
                     this.editor.execCommand('mceFullScreen');
                 }
             },
@@ -299,7 +294,7 @@ export class ViewPanelManager extends ViewManager {
                 text: ' ',
                 icon: 'tiny_codepro-magic',
                 tooltip: prettifyStr,
-                onAction: this.prettify.bind(this)
+                onAction: () => this.prettify(this.domElements.btnPrettify)
             },
             {
                 type: 'button',
