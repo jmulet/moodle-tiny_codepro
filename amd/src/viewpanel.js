@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-/* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -22,9 +21,8 @@
  * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-import {getPref, setPref} from "./preferences";
-import {getDefaultUI, isFullscreen} from "./options";
-import {ViewManager} from "./viewmanager";
+import { getDefaultUI, isFullscreen } from "./options";
+import { ViewManager } from "./viewmanager";
 
 /**
  * Keep track of all active viewPanels in the page.
@@ -51,6 +49,28 @@ export class ViewPanelManager extends ViewManager {
         activeViewPanels.delete(this.editor.id);
     }
 
+    _tAdjustOptions(options) {
+        // View-panel case. Detect changes on CM editor.
+        options.changesListener = () => {
+            this.pendingChanges = true;
+        };
+        // If the form containing the editor has no submit button, must rely on blur to implement autosave.
+        const hasFormSubmit = this.editor.container.closest('form')?.querySelector('[type="submit"]');
+        if (!hasFormSubmit) {
+            // Blur strategy on this resource.
+            options.onblur = () => {
+                if (this.pendingChanges) {
+                    this._quickSave();
+                }
+            };
+        }
+        // Always enable linewrapping in panel view when not in Fullscreen.
+        const isFS = isFullscreen(this.editor);
+        if (!isFS) {
+            options.lineWrapping = true;
+        }
+    }
+
     async _tCreate() {
         // Only one instance per editor has to be registered.
         if (this.isViewCreated) {
@@ -65,7 +85,7 @@ export class ViewPanelManager extends ViewManager {
     _createUI(api) {
         const container = api.getContainer();
         container.classList.add('tiny_codepro-view__pane');
-        const shadowRoot = container.attachShadow({mode: "open"});
+        const shadowRoot = container.attachShadow({ mode: "open" });
         const shadowStyles = document.createElement('style');
         shadowStyles.textContent = `
         .cm-editor.cm-focused {
@@ -118,14 +138,14 @@ export class ViewPanelManager extends ViewManager {
 
     _setButtonsState() {
         // eslint-disable-next-line no-unused-vars
-        const {btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept} = this.domElements;
+        const { btnDescreaseFontsize, btnIncreaseFontsize, btnTheme, btnAccept } = this.domElements;
 
         // Style issue
         btnDescreaseFontsize.style.marginRight = '0';
         btnIncreaseFontsize.style.marginLeft = '0';
 
         // Set the toggle state
-        const isDark = getPref('theme', 'light') === 'dark';
+        const isDark = this.preferencesSrv.get('theme', 'light') === 'dark';
         ViewManager.safeInnerHTML(btnTheme, 'span', isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
 
         if (isDark) {
@@ -140,9 +160,8 @@ export class ViewPanelManager extends ViewManager {
             btnAcceptSvg.style.marginRight = '5px';
         }
 
-        // Sync fullscreen state
-        const isFS = getPref('fs', false);
-        if (isFS) {
+        // In panel mode, the initial fs state is decided by tox-fullscreen class.
+        if (isFullscreen(this.editor)) {
             this.domElements.btnWrap.style.display = 'initial';
             if (this.parentContainer) {
                 this.parentContainer.style.height = '';
@@ -155,17 +174,13 @@ export class ViewPanelManager extends ViewManager {
                 this.parentContainer.style.height = HARDCODED_HEIGHT;
             }
         }
-        const hasClassFS = this.editor.container.classList.contains('tox-fullscreen');
-        if ((hasClassFS && !isFS) || (!hasClassFS && isFS)) {
-            this.editor.execCommand('mceFullScreen');
-        }
     }
 
     _createViewSpec() {
         const buttonsSpec = this._createButtons();
         const viewSpec = {
             buttons: buttonsSpec,
-            onShow: async(api) => {
+            onShow: async (api) => {
                 // Before Tiny loses focus, get its contents and head position
                 const docHead = await this.loadDocInfo();
                 // Register this panel as active.
@@ -207,6 +222,7 @@ export class ViewPanelManager extends ViewManager {
                     btnIncreaseFontsize: buttonsArray[bLen - 5],
                     btnTheme: buttonsArray[bLen - 4],
                     btnWrap: buttonsArray[bLen - 3],
+                    btnPrettify: buttonsArray[bLen - 2],
                     btnAccept: buttonsArray[bLen - 1],
                 };
 
@@ -234,7 +250,8 @@ export class ViewPanelManager extends ViewManager {
     }
 
     _createButtons() {
-        const [opendialogStr, fullscreenStr, themesStr, linewrapStr, prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
+        const [opendialogStr, fullscreenStr, themesStr, linewrapStr,
+            prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
 
         const buttons = [
             {
@@ -258,10 +275,10 @@ export class ViewPanelManager extends ViewManager {
                         }
                         // Always show with linewrapping on
                         if (!this.codeEditor.config.lineWrapping) {
-                            this.toggleLineWrapping();
+                            this.toggleLineWrapping(false);
                         }
                     }
-                    setPref('fs', isFS);
+                    // Never store fs state in panel mode.
                     this.editor.execCommand('mceFullScreen');
                 }
             },
@@ -299,7 +316,7 @@ export class ViewPanelManager extends ViewManager {
                 text: ' ',
                 icon: 'tiny_codepro-magic',
                 tooltip: prettifyStr,
-                onAction: this.prettify.bind(this)
+                onAction: () => this.prettify(this.domElements.btnPrettify)
             },
             {
                 type: 'button',

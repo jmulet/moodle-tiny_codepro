@@ -8,22 +8,68 @@
 const CONFIG = {
   content_wrap: 0,
   ignore: [],
-  ignore_with: '_!i-£___£%_',
+  ignore_with: '!i-£___£%_',
   strict: false,
   tab_size: 2,
   tag_wrap: 0,
-  tag_wrap_width: 80,
   trim: []
 };
-
-const CONTENT_IGNORE_STRING = '__!i-£___£%__';
-const IGNORE_STRING = '!i-£___£%_';
 
 const VOID_ELEMENTS = [
   'area', 'base', 'br', 'col', 'embed', 'hr', 
   'img', 'input', 'link', 'meta',
   'param', 'source', 'track', 'wbr'
 ];
+
+/**
+ * Defined by state.js and configuration.
+ * 
+ * CONTENT_IGNORE_PLACEHOLDER
+ * SELF_CLOSING_PLACEHOLDER
+ * ATTRIBUTE_IGNORE_PLACEHOLDER
+ */
+
+/**
+ * @typedef {object} Constants
+ * @property {string} CONTENT_IGNORE_PLACEHOLDER
+ * @property {string} SELF_CLOSING_PLACEHOLDER
+ * @property {string} ATTRIBUTE_IGNORE_PLACEHOLDER
+ */
+/**
+ * @typedef {object} State
+ * @property {boolean} checked_html - If passed in HTML has been checked for HTML within it.
+ * @property {import("htmlfy").Config} config - Validated configuration.
+ * @property {boolean} ignored
+ * @property {Constants} constants - Constant strings, influenced by ignore_with.
+ */
+
+/**
+ * @type State
+ * 
+ * `constants` prefixes and suffixes must be in sync with those in utils.js
+ */
+const state = {
+  checked_html: false,
+  config: { ...CONFIG },
+  ignored: false,
+  constants: {
+    CONTENT_IGNORE_PLACEHOLDER: `${CONFIG.ignore_with}_`,
+    SELF_CLOSING_PLACEHOLDER: `${CONFIG.ignore_with}/_>`,
+    ATTRIBUTE_IGNORE_PLACEHOLDER: `${CONFIG.ignore_with}=_`
+  }
+};
+
+/**
+ * 
+ * @returns {State}
+ */
+const getState = () => state;
+
+/**
+ * 
+ * @param {Partial<State>} new_state 
+ */
+const setState = (new_state) => Object.assign(state, new_state);
 
 /**
  * Checks if content contains at least one HTML element or custom HTML element.
@@ -47,10 +93,13 @@ const VOID_ELEMENTS = [
  * @param {string} content Content to evaluate.
  * @returns {boolean} A boolean.
  */
-const isHtml = (content) => 
-  /<(?:[A-Za-z]+[A-Za-z0-9]*)(?:\s+.*?)*?\/{0,1}>/.test(content) ||
+const isHtml = (content) => {
+  setState({ checked_html: true });
+
+  return /<(?:[A-Za-z]+[A-Za-z0-9]*)(?:\s+.*?)*?\/{0,1}>/.test(content) ||
   /<(?<Element>(?:[A-Za-z]+[A-Za-z0-9]*:)?(?:[A-Za-z]+[A-Za-z0-9]*))(?:\s+.*?)*?>(?:.|\n)*?<\/{1}\k<Element>>/.test(content) || 
-  /<(?<Element>(?:[a-z][a-z0-9._]*:)?[a-z][a-z0-9._]*-[a-z0-9._-]+)(?:\s+.*?)*?>(?:.|\n)*?<\/{1}\k<Element>>/.test(content);
+  /<(?<Element>(?:[a-z][a-z0-9._]*:)?[a-z][a-z0-9._]*-[a-z0-9._-]+)(?:\s+.*?)*?>(?:.|\n)*?<\/{1}\k<Element>>/.test(content)
+};
 
 /**
  * Generic utility which merges two objects.
@@ -88,16 +137,23 @@ const mergeObjects = (current, updates) => {
 /**
  * Merge a user config with the default config.
  * 
- * @param {import('htmlfy').Config} dconfig The default config.
+ * @param {import('htmlfy').Config} default_config The default config.
  * @param {import('htmlfy').UserConfig} config The user config.
  * @returns {import('htmlfy').Config}
  */
-const mergeConfig = (dconfig, config) => {
-  /**
-   * We need to make a deep copy of `dconfig`,
-   * otherwise we end up altering the original `CONFIG` because `dconfig` is a reference to it.
-   */
-  return mergeObjects(structuredClone(dconfig), config)
+const mergeConfig = (default_config, config) => {
+  const validated_config = mergeObjects(default_config, config);
+
+  /* Below `constants` prefixes and suffixes must be in sync with those in state.js */
+  setState({ 
+    config: validated_config,
+    constants: {
+      CONTENT_IGNORE_PLACEHOLDER: `${validated_config.ignore_with}_`,
+      SELF_CLOSING_PLACEHOLDER: `${validated_config.ignore_with}/_>`,
+      ATTRIBUTE_IGNORE_PLACEHOLDER: `${validated_config.ignore_with}=_`
+    }
+  });
+  return validated_config
 };
 
 /**
@@ -105,12 +161,14 @@ const mergeConfig = (dconfig, config) => {
  * @param {string} html 
  */
 const protectAttributes = (html) => {
+  const { constants } = getState();
+
   html = html.replace(/<[\w:\-]+([^>]*[^\/])>/g, (/** @type {string} */match, /** @type {any} */capture) => {
     return match.replace(capture, (match) => {
       return match
-        .replace(/\n/g, IGNORE_STRING + 'nl!')
-        .replace(/\r/g, IGNORE_STRING + 'cr!')
-        .replace(/\s/g, IGNORE_STRING + 'ws!')
+        .replace(/\n/g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'nl!')
+        .replace(/\r/g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'cr!')
+        .replace(/\s/g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'ws!')
     })
   });
 
@@ -122,10 +180,12 @@ const protectAttributes = (html) => {
  * @param {string} html 
  */
 const protectContent = (html) => {
+  const { constants } = getState();
+
   return html
-    .replace(/\n/g, CONTENT_IGNORE_STRING + 'nl!')
-    .replace(/\r/g, CONTENT_IGNORE_STRING + 'cr!')
-    .replace(/\s/g, CONTENT_IGNORE_STRING + 'ws!')
+    .replace(/\n/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'nl!')
+    .replace(/\r/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'cr!')
+    .replace(/\s/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'ws!')
 };
 
 /**
@@ -133,7 +193,9 @@ const protectContent = (html) => {
  * @param {string} html 
  */
 const finalProtectContent = (html) => {
-  const regex = /\s*<([a-zA-Z0-9:-]+)[^>]*>\n\s*<\/\1>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n)|<([a-zA-Z0-9:-]+)[^>]*>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n\s*)<\/\3>/g;
+  const regex = /\s*<([a-zA-Z0-9:-]+)[^>]*>\n\s*<\/\1>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n)|<([a-zA-Z0-9:-]+)[^>]*>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n\s*)<\/\3>/g; 
+  const { constants } = getState();
+
   return html
     .replace(regex, (/** @type {string} */match, p1, p2, p3, p4) => {
       const text_to_protect = p2 || p4;
@@ -142,9 +204,9 @@ const finalProtectContent = (html) => {
         return match
 
       const protected_text = text_to_protect
-       .replace(/\n/g, CONTENT_IGNORE_STRING + 'nl!')
-       .replace(/\r/g, CONTENT_IGNORE_STRING + 'cr!')
-       .replace(/\s/g, CONTENT_IGNORE_STRING + "ws!");
+       .replace(/\n/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'nl!')
+       .replace(/\r/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'cr!')
+       .replace(/\s/g, constants.CONTENT_IGNORE_PLACEHOLDER + "ws!");
 
       return match.replace(text_to_protect, protected_text)
     })
@@ -157,13 +219,14 @@ const finalProtectContent = (html) => {
  * @returns {string}
  */
 const setIgnoreAttribute = (html) => {
-  const regex = /<([A-Za-z][A-Za-z0-9]*|[a-z][a-z0-9._]*-[a-z0-9._-]+)((?:\s+[A-Za-z0-9_-]+="[^"]*"|\s*[a-z]*)*)>/g;
+  const regex = /<([A-Za-z][A-Za-z0-9]*|[a-z][a-z0-9._]*-[a-z0-9._-]+)((?:\s+[A-Za-z0-9_-]+="[^"]*"|\s*[a-z]*)*)>/g; 
+  const { constants } = getState();
 
   html = html.replace(regex, (/** @type {string} */match, p1, p2) => {
     return match.replace(p2, (match) => {
       return match
-        .replace(/</g, IGNORE_STRING + 'lt!')
-        .replace(/>/g, IGNORE_STRING + 'gt!')
+        .replace(/</g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'lt!')
+        .replace(/>/g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'gt!')
     })
   });
   
@@ -196,12 +259,14 @@ const trimify = (html, trim) => {
  * @param {string} html 
  */
 const unprotectAttributes = (html) => {
+  const { constants } = getState();
+
   html = html.replace(/<[\w:\-]+([^>]*[^\/])>/g, (/** @type {string} */match, /** @type {any} */capture) => {
     return match.replace(capture, (match) => {
       return match
-        .replace(new RegExp(IGNORE_STRING + 'nl!', "g"), '\n')
-        .replace(new RegExp(IGNORE_STRING + 'cr!', "g"), '\r')
-        .replace(new RegExp(IGNORE_STRING + 'ws!', "g"), ' ')
+        .replace(new RegExp(constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'nl!', "g"), '\n')
+        .replace(new RegExp(constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'cr!', "g"), '\r')
+        .replace(new RegExp(constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'ws!', "g"), ' ')
     })
   });
 
@@ -213,24 +278,19 @@ const unprotectAttributes = (html) => {
  * @param {string} html 
  */
 const unprotectContent = (html) => {
-  html = html.replace(/.*__!i-£___£%__[a-z]{2}!.*/g, (/** @type {string} */match) => {
-    return match.replace(/__!i-£___£%__[a-z]{2}!/g, (match) => {
+  const { constants } = getState();
+
+  html = html.replace(new RegExp(`.*${constants.CONTENT_IGNORE_PLACEHOLDER}[a-z]{2}!.*`, "g"), (/** @type {string} */match) => {
+    return match.replace(new RegExp(`${constants.CONTENT_IGNORE_PLACEHOLDER}[a-z]{2}!`, "g"), (match) => {
       return match
-        .replace(new RegExp(CONTENT_IGNORE_STRING + 'nl!', "g"), '\n')
-        .replace(new RegExp(CONTENT_IGNORE_STRING + 'cr!', "g"), '\r')
-        .replace(new RegExp(CONTENT_IGNORE_STRING + 'ws!', "g"), ' ')
+        .replace(new RegExp(constants.CONTENT_IGNORE_PLACEHOLDER + 'nl!', "g"), '\n')
+        .replace(new RegExp(constants.CONTENT_IGNORE_PLACEHOLDER + 'cr!', "g"), '\r')
+        .replace(new RegExp(constants.CONTENT_IGNORE_PLACEHOLDER + 'ws!', "g"), ' ')
     })
   });
 
   return html
 };
-
-const escapedIgnoreString = IGNORE_STRING.replace(
-  /[-\/\\^$*+?.()|[\]{}]/g,
-  "\\$&"
-);
-const ltPlaceholderRegex = new RegExp(escapedIgnoreString + "lt!", "g");
-const gtPlaceholderRegex = new RegExp(escapedIgnoreString + "gt!", "g");
 
 /**
  * Replace ignore string with html brackets.
@@ -241,6 +301,13 @@ const gtPlaceholderRegex = new RegExp(escapedIgnoreString + "gt!", "g");
 const unsetIgnoreAttribute = (html) => {
   /* Regex to find opening tags and capture their attributes. */
   const tagRegex = /<([\w:\-]+)([^>]*)>/g;
+  const { constants } = getState();
+  const escapedIgnoreString = constants.ATTRIBUTE_IGNORE_PLACEHOLDER.replace(
+    /[-\/\\^$*+?.()|[\]{}]/g,
+    "\\$&"
+  );
+  const ltPlaceholderRegex = new RegExp(escapedIgnoreString + "lt!", "g");
+  const gtPlaceholderRegex = new RegExp(escapedIgnoreString + "gt!", "g");
 
   return html.replace(
     tagRegex,
@@ -267,6 +334,8 @@ const unsetIgnoreAttribute = (html) => {
  */
 const validateConfig = (config) => {
   if (typeof config !== 'object') throw new Error('Config must be an object.')
+  
+  const default_config = { ...CONFIG };
 
   const config_empty = !(
     Object.hasOwn(config, 'content_wrap') ||
@@ -275,11 +344,13 @@ const validateConfig = (config) => {
     Object.hasOwn(config, 'strict') || 
     Object.hasOwn(config, 'tab_size') || 
     Object.hasOwn(config, 'tag_wrap') || 
-    Object.hasOwn(config, 'tag_wrap_width') || 
     Object.hasOwn(config, 'trim')
   );
 
-  if (config_empty) return CONFIG
+  if (config_empty) {
+    setState({ config: default_config });
+    return default_config
+  }
 
   let tab_size = config.tab_size;
 
@@ -300,41 +371,33 @@ const validateConfig = (config) => {
   }
 
   if (Object.hasOwn(config, 'content_wrap') && typeof config.content_wrap !== 'number')
-    throw new Error(`content_wrap config must be a number, not ${typeof config.tag_wrap_width}.`)
+    throw new Error(`content_wrap config must be a number, not ${typeof config.content_wrap}.`)
 
   if (Object.hasOwn(config, 'ignore') && (!Array.isArray(config.ignore) || !config.ignore?.every((e) => typeof e === 'string')))
     throw new Error('Ignore config must be an array of strings.')
 
-  if (Object.hasOwn(config, 'ignore_with') && typeof config.ignore_with !== 'string')
-    throw new Error(`Ignore_with config must be a string, not ${typeof config.ignore_with}.`)
+  if (Object.hasOwn(config, 'ignore_with')) {
+    if (typeof config.ignore_with !== 'string')
+      throw new Error(`ignore_with must be a string, not ${typeof config.ignore_with}.`)
+    else if (config.ignore_with.startsWith('_'))
+      /**
+       * This negatively affects processing of preserved tag attributes,
+       * because tag names can end with an underscore, so the regex
+       * does not capture them.
+       */
+      throw new Error(`ignore_with cannot start with an underscore.`)
+  }
 
   if (Object.hasOwn(config, 'strict') && typeof config.strict !== 'boolean')
     throw new Error(`Strict config must be a boolean, not ${typeof config.strict}.`)
-
-  /* TODO remove in v0.9.0 */
-  if (Object.hasOwn(config, 'tag_wrap') && typeof config.tag_wrap === 'boolean') {
-    console.warn('tag_wrap as a boolean is deprecated, and will not be supported in v0.9.0+. Use `tag_wrap: <number>` instead; where <number> is the max character width acceptable before wrapping attributes.');
-    if (config.tag_wrap_width)
-      config.tag_wrap = config.tag_wrap_width;
-    else
-      config.tag_wrap = CONFIG.tag_wrap_width;
-  }
   
   if (Object.hasOwn(config, 'tag_wrap') && typeof config.tag_wrap !== 'number')
     throw new Error(`tag_wrap config must be a number, not ${typeof config.tag_wrap}.`)
 
-  /* TODO remove in v0.9.0 */
-  if (Object.hasOwn(config, 'tag_wrap_width'))
-    console.warn('tag_wrap_width is deprecated, and will not be supported in v0.9.0+. Use `tag_wrap: <number>` instead; where <number> is the max character width acceptable before wrapping attributes.');
-
-  /* TODO remove in v0.9.0 */
-  if (Object.hasOwn(config, 'tag_wrap_width') && typeof config.tag_wrap_width !== 'number')
-    throw new Error(`tag_wrap_width config must be a number, not ${typeof config.tag_wrap_width}.`)
-
   if (Object.hasOwn(config, 'trim') && (!Array.isArray(config.trim) || !config.trim?.every((e) => typeof e === 'string')))
     throw new Error('Trim config must be an array of strings.')
 
-  return mergeConfig(CONFIG, config)
+  return mergeConfig(default_config, config)
 
 };
 
@@ -399,10 +462,11 @@ const wordWrap = (text, width, indent) => {
  * for re-insertion later.
  * 
  * @param {string} html 
- * @param {import('htmlfy').Config} config 
- * @returns {{  html_with_markers: string, extracted_map: Map<any,any> }}
+ * @returns {{ html_with_markers: string, extracted_map: Map<any,any> }}
  */
-function extractIgnoredBlocks(html, config) {
+function extractIgnoredBlocks(html) {
+  setState({ ignored: true });
+  const config = (getState()).config;
   let current_html = html;
   const extracted_blocks = new Map();
   let marker_id = 0;
@@ -413,19 +477,27 @@ function extractIgnoredBlocks(html, config) {
     const safe_tag_name = tag.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
 
     const regex = new RegExp(
-      `<${safe_tag_name}[^>]*>.*?<\/${safe_tag_name}>`,
+      `(<\\s*${safe_tag_name}[^>]*>)(.*?)(<\\s*\/\\s*${safe_tag_name}\\s*>)`,
       "gs" // global and dotAll
     );
 
+    /** @type RegExpExecArray | null */
     let match;
-    const replacements = []; // Store [startIndex, endIndex, marker]
+
+    /**
+     * @type {{ start: number; end: number; marker: string }[]}
+     */
+    const replacements = [];
 
     while ((match = regex.exec(current_html)) !== null) {
       const marker = `${MARKER_PREFIX}${marker_id++}___`;
-      extracted_blocks.set(marker, match[0]); // Store the full original match
+
+      /* Only store content, and minify tags later. */
+      extracted_blocks.set(marker, match[2]);
+      
       replacements.push({
-        start: match.index,
-        end: regex.lastIndex,
+        start: match.index + match[1].length, // start of content
+        end: match.index + match[1].length + match[2].length, // end of content
         marker: marker,
       });
     }
@@ -439,6 +511,7 @@ function extractIgnoredBlocks(html, config) {
         current_html.substring(rep.end);
     }
   }
+
   return { html_with_markers: current_html, extracted_map: extracted_blocks }
 }
 
@@ -450,6 +523,7 @@ function extractIgnoredBlocks(html, config) {
  * @returns 
  */
 function reinsertIgnoredBlocks(html_with_markers, extracted_map) {
+  setState({ ignored: false });
   let final_html = html_with_markers;
 
   for (const [marker, original_block] of extracted_map) {
@@ -458,41 +532,55 @@ function reinsertIgnoredBlocks(html_with_markers, extracted_map) {
   return final_html
 }
 
-/**
- * Ensure void elements are "self-closing".
- * 
- * @param {string} html The HTML string to evaluate.
- * @param {boolean} check_html Check to see if the content contains any HTML, before processing.
- * @returns {string}
- * @example <br> => <br />
- */
-const closify = (html, check_html = true) => {
-  if (check_html && !isHtml(html)) return html
-  
-  return html.replace(/<([a-zA-Z\-0-9:]+)[^>]*>/g, (match, name) => {
-    if (VOID_ELEMENTS.indexOf(name) > -1)
-      return (`${match.substring(0, match.length - 1)} />`).replace(/\/\s\//g, '/')
+const void_element_regex = new RegExp(`<(${VOID_ELEMENTS.join("|")})(?:\\s(?:[^/>]|/(?!>))*)*>`, 'g');
 
-    return match.replace(/[\s]?\/>/g, `></${name}>`)
-  })
-};
+/**
+ * Add a placeholder for void elements that are not self-closing.
+ * This is for internal processing only.
+ * 
+ * @param {string} html 
+ * @returns 
+ */
+function setSelfClosing(html) {
+  const { constants } = getState();
+
+  return html.replace(
+    // match only void elements that are not self-closing
+    void_element_regex,
+    match => match.replace(/>$/, constants.SELF_CLOSING_PLACEHOLDER)
+  )
+}
+
+/**
+ * Remove internal placeholder for non-native self-closing void elements.
+ * 
+ * @param {string} html 
+ * @returns 
+ */
+function unsetSelfClosing(html) {
+  const { constants } = getState();
+
+  return html.replace(constants.SELF_CLOSING_PLACEHOLDER, ">")
+}
 
 /**
  * Enforce entity characters for textarea content.
- * To also minifiy, pass `minify` as `true`.
+ * To also minifiy tags, pass `minify` as `true`.
  * 
  * @param {string} html The HTML string to evaluate.
- * @param {boolean} [minify] Fully minifies the content of textarea elements. 
+ * @param {boolean} [minify] Minifies the textarea tags themselves. 
  * Defaults to `false`. We recommend a value of `true` if you're running `entify()` 
  * as a standalone function.
  * @returns {string}
- * @example <textarea>3 > 2</textarea> => <textarea>3 &gt; 2</textarea>
+ * @example <textarea>3 > 2</textarea> => <textarea>3&nbsp;&gt;&nbsp;2</textarea>
+ * @example With minify.
+ * <textarea  >3 > 2</textarea> => <textarea>3&nbsp;&gt;&nbsp;2</textarea>
  */
 const entify = (html, minify = false) => {
   /** 
    * Use entities inside textarea content.
    */
-  html = html.replace(/<textarea[^>]*>((.|\n)*?)<\/textarea>/g, (match, capture) => {
+  html = html.replace(/<\s*textarea[^>]*>((.|\n)*?)<s*\/\s*textarea\s*>/g, (match, capture) => {
     return match.replace(capture, (match) => {
       return match
         .replace(/</g, '&lt;')
@@ -505,27 +593,18 @@ const entify = (html, minify = false) => {
     })
   });
 
-  /* Typical minification, but only for textareas. */
   if (minify) {
-    html = html.replace(/<textarea[^>]*>((.|\n)*?)<\/textarea>/g, (match, capture) => {
-      /* Replace things inside the textarea content. */
-      match = match.replace(capture, (match) => {
-        return match
-          .replace(/\n|\t/g, '')
-          .replace(/[a-z]+="\s*"/ig, '')
-          .replace(/>\s+</g, '><')
-          .replace(/\s+/g, ' ')
-      });
-
-      /* Replace things in the entire element */
-      match = match
+    html = html.replace(/<\s*textarea[^>]*>(.|\n)*?<\s*\/\s*textarea\s*>/g, (match) => {
+      /* This only affects the html tags, since everything else has been entified. */
+      return match
         .replace(/\s+/g, ' ')
         .replace(/\s>/g, '>')
         .replace(/>\s/g, '>')
         .replace(/\s</g, '<')
+        .replace(/<\s/g, '<')
+        .replace(/<\/\s/g, '<\/')
         .replace(/class=["']\s/g, (match) => match.replace(/\s/g, ''))
-        .replace(/(class=.*)\s(["'])/g, '$1'+'$2');
-      return match
+        .replace(/(class=.*)\s(["'])/g, '$1'+'$2')
     });
   }
 
@@ -533,21 +612,70 @@ const entify = (html, minify = false) => {
 };
 
 /**
+ * Remove entity characters for textarea content.
+ * Currently internal use only.
+ * 
+ * @param {string} html The HTML string to evaluate.
+ * @returns {string}
+ * @example <textarea>3&nbsp;&gt;&nbsp;2</textarea> => <textarea>3 > 2</textarea>
+ */
+const dentify = (html) => {
+  /** 
+   * Remove entities inside textarea content.
+   */
+  return html = html.replace(/<textarea[^>]*>((.|\n)*?)<\/textarea>/g, (match, capture) => {
+    return match.replace(capture, (match) => {
+      match = match
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&#10;/g, '\n')
+        .replace(/&#13;/g, '\r')
+        .replace(/&nbsp;/g, ' ')
+        // Ensure we collapse consecutive spaces, or they'll be completely removed later.
+        .replace(/\s+/g, ' ');
+
+      return match
+    })
+  })
+};
+
+/**
+ * @type {Map<any,any>}
+ */
+let ignore_map$1;
+
+/**
  * Creates a single-line HTML string
  * by removing line returns, tabs, and relevant spaces.
  * 
  * @param {string} html The HTML string to minify.
- * @param {boolean} check_html Check to see if the content contains any HTML, before processing.
+ * @param {import('htmlfy').UserConfig} [config] A user configuration object.
  * @returns {string} A minified HTML string.
  */
-const minify = (html, check_html = true) => {
-  if (check_html && !isHtml(html)) return html
+const minify = (html, config) => {
+  let reinsert_ignored = false;
+  const { checked_html, ignored, constants } = getState();
+
+  if (!checked_html && !isHtml(html)) return html
+
+  const validated_config = (getState()).config;
+  const ignore = validated_config.ignore.length > 0;
+
+  /* Extract ignored elements. Skipped if prettify has already ignored blocks. */
+  if (!ignored && ignore) {
+    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html);
+    html = html_with_markers;
+    ignore_map$1 = extracted_map;
+    reinsert_ignored = true;
+  }
 
   /**
-   * Ensure textarea content is specially minified and protected
+   * Ensure textarea content is protected
    * before general minification.
    */
-  html = entify(html);
+  html = entify(html, true);
 
   /* All other minification. */
   // Remove ALL newlines and tabs explicitly.
@@ -559,11 +687,28 @@ const minify = (html, check_html = true) => {
   // Collapse any remaining multiple spaces to single spaces.
   html = html.replace(/ {2,}/g, ' ');
 
-  // Remove specific single spaces OR whitespace within closing tags.
+  // Protect space between text content and an opening tag (e.g., "text <a>")
+  html = html.replace(
+    /(\S) (<[a-zA-Z][a-zA-Z0-9_:-]*)/g,
+    `$1___MINIFY-PROTECTED-SPACE___$2`
+  );
+
+  // Protect space between a closing tag and text content (e.g., "</a> text")
+  html = html.replace(
+    /(<\/[a-zA-Z][a-zA-Z0-9_:-]*>) (\S)/g,
+    `$1___MINIFY-PROTECTED-SPACE___$2`
+  );
+
+  // Remove specific single spaces between tags and whitespace within tags.
   html = html.replace(/ >/g, ">");   // <tag > -> <tag>
-  html = html.replace(/ </g, "<");   // Text < -> Text< (Also handles leading space before tag)
-  html = html.replace(/> /g, ">");   // > Text -> >Text
-  html = html.replace(/<\s*\//g, '</'); // < /tag -> </tag>
+  html = html.replace(/ </g, "<");   // leading space before tag
+  html = html.replace(/> /g, ">");   // trailing space after tag
+  html = html.replace(/< /g, "<");   // < tag> -> <tag>
+  html = html.replace(/<\s+\//g, '</'); // < /tag> -> </tag>
+  html = html.replace(/<\/\s+/g, '</'); // </ tag> -> </tag>
+
+  // Unprotect space around inner tags
+  html = html.replace(new RegExp('___MINIFY-PROTECTED-SPACE___', 'g'), ' ');
 
   // Trim spaces around equals signs in attributes (run before value trim)
   //    This handles `attr = "value"` -> `attr="value"`
@@ -584,18 +729,16 @@ const minify = (html, check_html = true) => {
   // Final trim for the whole string
   html = html.trim();
 
+  /* Remove protective entities. */
+  html = dentify(html);
+
+  /* Re-insert ignored elements. Skipped unless minify did the ignore. */
+  if (reinsert_ignored) {
+    html = reinsertIgnoredBlocks(html, ignore_map$1);
+  }
+
   return html
 };
-
-/**
- * @type {boolean}
- */
-let strict;
-
-/**
- * @type {string[]}
- */
-let trim;
 
 /**
  * @type {{ line: Record<string,string>[] }}
@@ -613,7 +756,6 @@ let ignore_map;
  * Isolate tags, content, and comments.
  * 
  * @param {string} html The HTML string to evaluate.
- * @returns {string}
  * @example <div>Hello World!</div> => 
  *  [#-# : 0 : <div> : #-#]
  *  Hello World!
@@ -625,7 +767,7 @@ const enqueue = (html) => {
   /* Regex to find tags OR text content between tags. */
   const regex = /(<[^>]+>)|([^<]+)/g;
 
-  html = html.replace(regex, (match, c1, c2) => {
+  html.replace(regex, (match, c1, c2) => {
     if (c1) {
       convert.line.push({ type: "tag", value: match });
     } else if (c2 && c2.trim().length > 0) {
@@ -636,39 +778,19 @@ const enqueue = (html) => {
     i++;
     return `\n[#-# : ${i} : ${match} : #-#]\n`
   });
-
-  return html
 };
 
 /**
- * Preprocess the HTML.
- * 
- * @param {string} html The HTML string to preprocess.
+ * Process enqueued content.
+ *  
  * @returns {string}
  */
-const preprocess = (html) => {
-  html = closify(html, false);
-
-  if (trim.length > 0) html = trimify(html, trim);
-
-  html = minify(html, false);
-  html = enqueue(html);
-
-  return html
-};
-
-/**
- * 
- * @param {string} html The HTML string to process.
- * @param {import('htmlfy').Config} config 
- * @returns {string}
- */
-const process = (html, config) => {
+const process = () => {
+  const { config, constants } = getState();
   const step = " ".repeat(config.tab_size);
   const tag_wrap = config.tag_wrap;
   const content_wrap = config.content_wrap;
-  const ignore_with = config.ignore_with;
-  const placeholder_template = `-${ignore_with}`;
+  const strict = config.strict;
 
   /* Track current number of indentations needed. */
   let indents = '';
@@ -683,12 +805,7 @@ const process = (html, config) => {
     let current_line_value = source.value;
 
     const is_ignored_content =
-      current_line_value.startsWith(placeholder_template + "lt--") ||
-      current_line_value.startsWith(placeholder_template + "gt--") ||
-      current_line_value.startsWith(placeholder_template + "nl--") ||
-      current_line_value.startsWith(placeholder_template + "cr--") ||
-      current_line_value.startsWith(placeholder_template + "ws--") ||
-      current_line_value.startsWith(placeholder_template + "tab--");
+      current_line_value.startsWith('___HTMLFY_SPECIAL_IGNORE_MARKER_');
 
     let subtrahend = 0;
     const prev_line_data = convert.line[index - 1];
@@ -706,8 +823,12 @@ const process = (html, config) => {
     if (prev_line_value.trim().startsWith("<!doctype")) subtrahend++;
     /* prevLine is a comment. */
     if (prev_line_value.trim().startsWith("<!--")) subtrahend++;
-    /* prevLine is a self-closing tag. */
-    if (prev_line_value.trim().endsWith("/>")) subtrahend++;
+    /* prevLine is a void element. */
+    if (
+      prev_line_value.trim().endsWith("/>") // native self-closing
+      ||
+      prev_line_value.trim().endsWith(constants.SELF_CLOSING_PLACEHOLDER) // synthetic self-closing
+    ) subtrahend++;
     /* prevLine is a closing tag. */
     if (prev_line_value.trim().startsWith("</")) subtrahend++;
     /* prevLine is text. */
@@ -723,8 +844,6 @@ const process = (html, config) => {
     /**
      * Starts with a single punctuation character.
      * Add punctuation to end of previous line.
-     * 
-     * TODO - Implement inline groups instead?
      */
     if (source.type === 'text' && /^[!,;\.]/.test(current_line_value)) {
       if (current_line_value.length === 1) {
@@ -735,6 +854,9 @@ const process = (html, config) => {
         output_lines[output_lines.length - 1] = 
           output_lines.at(-1) + current_line_value.charAt(0);
         current_line_value = current_line_value.slice(1).trim();
+
+        /* If nothing left after extracting punctuation, skip this line. */
+        if (current_line_value.length === 0) return
       }
     }
 
@@ -749,6 +871,9 @@ const process = (html, config) => {
         return
 
       let result = current_line_value;
+
+      /* Remove self-closing placeholder, if needed. */
+      result = unsetSelfClosing(result);
 
       if (
         source.type === 'text' && 
@@ -780,9 +905,9 @@ const process = (html, config) => {
 
           const tag_name_match = tag_parts[0].match(/<([A-Za-z_:-]+)/);
           const tag_name = tag_name_match ? tag_name_match[1] : "";
-          const is_void = VOID_ELEMENTS.includes(tag_name);
+          const is_self_closing = tag_parts.at(-1)?.endsWith("/>") && VOID_ELEMENTS.includes(tag_name);
           const closing_part = tag_parts[1].trim();
-          const closing_padding = padding + (strict && is_void ? " " : ""); // Add space if void/strict
+          const closing_padding = padding + (strict && is_self_closing ? " " : "");
 
           wrapped_tag += closing_padding + closing_part;
 
@@ -807,13 +932,20 @@ const process = (html, config) => {
   if (tag_wrap > 0) final_html = protectAttributes(final_html);
 
   /* Extra preserve wrapped content. */
-  if (content_wrap > 0 && /\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n/.test(final_html))
+  if (content_wrap > 0 && new RegExp(`/\\n[ ]*[^\\n]*${constants.CONTENT_IGNORE_PLACEHOLDER}[^\\n]*\\n/`).test(final_html))
     final_html = finalProtectContent(final_html);
 
   /* Remove line returns, tabs, and consecutive spaces within html elements or their content. */
   final_html = final_html.replace(
-    /<(?<Element>.+).*>[^<]*?[^><\/\s][^<]*?<\/{1}\k<Element>|<script[^>]*>\s+<\/script>|<(\w+)>\s+<\/(\w+)|<(?:([\w:\._-]+)|([\w:\._-]+)[^>]*[^\/])>\s+<\/([\w:\._-]+)>/g,
-    match => match.replace(/\n|\t|\s{2,}/g, '')
+    /<(?<Element>[^>\s]+)[^>]*>[^<]*?[^><\/\s][^<]*?<\/\k<Element>>|<script[^>]*>[\s]*<\/script>|<([\w:\._-]+)([^>]*)><\/\2>|<([\w:\._-]+)([^>]*)>[\s]+<\/\4>/g,
+    match => {
+      // Check if this contains placeholder
+      if (match.includes(constants.SELF_CLOSING_PLACEHOLDER) || match.includes(constants.CONTENT_IGNORE_PLACEHOLDER)) {
+        return match // Don't modify if it contains the placeholder
+      }
+
+      return match.replace(/\n|\t|\s{2,}/g, '')
+    }
   );
 
   /* Revert wrapped content. */
@@ -840,33 +972,43 @@ const process = (html, config) => {
  * @returns {string} A well-formed HTML string.
  */
 const prettify = (html, config) => {
-  /* Return content as-is if it does not contain any HTML elements. */
-  if (!isHtml(html)) return html
+  let reinsert_ignored = false;
+  const { checked_html, ignored } = getState();
 
-  const validated_config = config ? validateConfig(config) : CONFIG;
-  strict = validated_config.strict;
+  /* Return content as-is if it does not contain any HTML elements. */
+  if (!checked_html && !isHtml(html)) return html
+
+  /* Runs setState for config. */
+  const validated_config = validateConfig(config || {});
 
   const ignore = validated_config.ignore.length > 0;
-  trim = validated_config.trim;
+
+  /* Allows you to trimify before ignoring. */
+  if (validated_config.trim.length > 0) html = trimify(html, validated_config.trim);
 
   /* Extract ignored elements. */
-  if (ignore) {
-    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html, validated_config);
+  if (!ignored && ignore) {
+    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html);
     html = html_with_markers;
     ignore_map = extracted_map;
+    reinsert_ignored = true;
   }
 
   /* Preserve html text within attribute values. */
   html = setIgnoreAttribute(html);
 
-  html = preprocess(html);
-  html = process(html, validated_config);
+  /* Insert placeholder for void elements that aren't self-closing. */
+  html = setSelfClosing(html);
+
+  html = minify(html);
+  enqueue(html);
+  html = process();
 
   /* Revert html text within attribute values. */
   html = unsetIgnoreAttribute(html);
 
   /* Re-insert ignored elements. */
-  if (ignore) {
+  if (reinsert_ignored) {
     html = reinsertIgnoredBlocks(html, ignore_map);
   }
 

@@ -22,39 +22,41 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getButtonImage} from 'editor_tiny/utils';
-import {get_strings} from 'core/str';
-import {ViewDialogManager} from './viewdialog';
-import {component, icon} from './common';
-import {getValidElements, getValidChildren, getCustomElements, getDefaultUI, isPluginVisible} from './options';
-import {ViewPanelManager} from './viewpanel';
-import {getPref, setPref} from './preferences';
+import { getButtonImage } from 'editor_tiny/utils';
+import { get_strings } from 'core/str';
+import { ViewDialogManager } from './viewdialog';
+import { component, icon } from './common';
+import { getValidElements, getValidChildren, getCustomElements, getDefaultUI, isPluginVisible } from './options';
+import { ViewPanelManager } from './viewpanel';
+import { getPreferencesSrv } from './preferences';
 
 /**
  * Setups the TinyMCE editor
  * @returns {Promise<(editor: TinyMCE)=>void>}
  */
-export const getSetup = async() => {
+export const getSetup = async () => {
     const [
         strs,
         buttonImage,
     ] = await Promise.all([
         get_strings([
-            {key: 'pluginname', component},
-            {key: 'opendialog', component},
-            {key: 'fullscreen', component},
-            {key: 'themes', component},
-            {key: 'linewrap', component},
-            {key: 'prettify', component},
-            {key: 'decreasefontsize', component},
-            {key: 'increasefontsize', component}
+            { key: 'pluginname', component },
+            { key: 'opendialog', component },
+            { key: 'fullscreen', component },
+            { key: 'themes', component },
+            { key: 'linewrap', component },
+            { key: 'prettify', component },
+            { key: 'decreasefontsize', component },
+            { key: 'increasefontsize', component }
         ]),
         getButtonImage('icon', component),
     ]);
 
     const [pluginName, ...translations] = strs;
 
-    return async(editor) => {
+    return async (editor) => {
+        const preferencesSrv = getPreferencesSrv(editor);
+
         if (!isPluginVisible(editor)) {
             // Must register the menu items with the basic code editor command.
             editor.ui.registry.addMenuItem(component, {
@@ -105,9 +107,9 @@ export const getSetup = async() => {
                 return instance;
             }
             if (name === 'panel') {
-               instance = new ViewPanelManager(editor, {autosave: true, translations});
+                instance = new ViewPanelManager(editor, { autosave: true, translations });
             } else {
-               instance = new ViewDialogManager(editor);
+                instance = new ViewDialogManager(editor);
             }
             _viewManagers[name] = instance;
             return instance;
@@ -117,10 +119,10 @@ export const getSetup = async() => {
         editor.addCommand("mceCodeProEditor", () => {
             let uiMode = getDefaultUI(editor) ?? 'dialog';
             if (uiMode.startsWith('user:')) {
-                uiMode = getPref('view', uiMode.substring(5));
+                uiMode = preferencesSrv.get('view', uiMode.substring(5));
             }
             // Make sure preference is in sync
-            setPref('view', uiMode);
+            preferencesSrv.set('view', uiMode);
             getViewManager(uiMode).show();
         });
 

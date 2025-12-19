@@ -24,9 +24,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setPref, getPref, savePrefs} from "./preferences";
-import {getSyncCaret, isAutoFormatHTML} from "./options";
-import {MARKER, TINY_MARKER_CLASS} from "./common";
+import { getPreferencesSrv } from "./preferences";
+import { getSyncCaret, isAutoFormatHTML } from "./options";
+import { MARKER, TINY_MARKER_CLASS } from "./common";
 
 /**
  * Share the state among editor Views
@@ -53,12 +53,15 @@ const requireCm6Pro = () => {
     });
 };
 
+/**
+ * @type {((str: string) => string) | null}
+ */
 let _htmlFormatter = null;
 /**
  * Loads HTML formatter on demand  (The first load will be delayed a little bit).
  * To avoid loading multiple formatters, take advantge of that shipped with tiny_html plugin.
  * If this plugin is not available, fallback on htmlfy.
- * @returns {Promise<(str: string) => string>}
+ * @returns {Promise<(str: string) => string> | Promise<null>}
  */
 const requireHTMLFormatter = () => {
     if (_htmlFormatter) {
@@ -76,12 +79,17 @@ const requireHTMLFormatter = () => {
             }, () => resolve(null));
         };
         window.require(['tiny_html/beautify/beautify-html'], (beautify) => {
-            _htmlFormatter = beautify.html_beautify;
-            if (_htmlFormatter) {
-                resolve(_htmlFormatter);
+            if (typeof beautify?.html_beautify !== 'function') {
+                fallback();
                 return;
             }
-            fallback();
+            _htmlFormatter = (src) => beautify.html_beautify(src, {
+                indent_size: 2,
+                wrap_line_length: 0,
+                unformatted: [],
+                preserve_newlines: false,
+            });
+            resolve(_htmlFormatter);
         }, fallback);
     });
 };
@@ -127,8 +135,9 @@ export class ViewManager {
      */
     constructor(editor, opts) {
         this.editor = editor;
-        this.opts = {autosave: false, translations: [], ...(opts ?? {})};
+        this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
         this.isLoading = false;
+        this.preferencesSrv = getPreferencesSrv(editor);
     }
 
     /**
@@ -183,6 +192,13 @@ export class ViewManager {
     }
 
     /**
+     * Template method that can be overridden by the actual view manager.
+     * Adjusts the options for the CodeMirror editor.
+     */
+    _tAdjustOptions() {
+    }
+
+    /**
      * Gets the first element that is visible in the viewport of the editor
      * @param {HTMElement} container
      * @returns {HTMLElement | null}
@@ -226,7 +242,7 @@ export class ViewManager {
      */
     _quickSave() {
         const html = this.codeEditor.getValue();
-        this.editor.setContent(html, {format: 'html'});
+        this.editor.setContent(html, { format: 'html' });
         this.pendingChanges = false;
     }
 
@@ -249,7 +265,7 @@ export class ViewManager {
                 // Restore cursor and scroll position
                 this.editor.focus();
                 this.editor.undoManager.transact(() => {
-                    this.editor.setContent(html, {format: 'html'});
+                    this.editor.setContent(html, { format: 'html' });
                     resolve(html);
                     const syncCaret = getSyncCaret(this.editor);
                     if (syncCaret === 'both') {
@@ -344,6 +360,8 @@ export class ViewManager {
     close() {
         this._tClose();
         this.destroyCodeEditor();
+        // Save any pending preferences.
+        this.preferencesSrv.flush();
         // Restore cursor and scroll position
         this.pendingChanges = false;
         return true;
@@ -371,39 +389,21 @@ export class ViewManager {
             theme: this.toggleTheme.bind(this),
             accept: this.accept.bind(this),
             cancel: this.close.bind(this),
-            savePrefs
+            savePrefs: () => {
+                this.preferencesSrv.save();
+            }
         };
 
         const options = {
             doc: docHead.html ?? '',
             head: docHead.head,
-            theme: getPref("theme", "light"),
-            fontSize: getPref("fontsize", 11),
-            lineWrapping: getPref("wrap", false),
-            minimap: !this.opts.autosave && getPref("minimap", true),
+            theme: this.preferencesSrv.get("theme", "light"),
+            fontSize: this.preferencesSrv.get("fontsize", 11),
+            lineWrapping: this.preferencesSrv.get("wrap", false),
+            minimap: !this.opts.autosave && this.preferencesSrv.get("minimap", true),
             commands
         };
-        if (this.opts.autosave) {
-            // View-panel case. Detect changes on CM editor.
-            options.changesListener = () => {
-                this.pendingChanges = true;
-            };
-            // If the form containing the editor has no submit button, must rely on blur to implement autosave.
-            const hasFormSubmit = this.editor.container.closest('form')?.querySelector('[type="submit"]');
-            if (!hasFormSubmit) {
-                // Blur strategy on this resource.
-                options.onblur = () => {
-                    if (this.pendingChanges) {
-                        this._quickSave();
-                    }
-                };
-            }
-            // Always enable linewrapping in panel view when not in Fullscreen.
-            const isFS = getPref('fs', false);
-            if (!isFS) {
-                options.lineWrapping = true;
-            }
-        }
+        this._tAdjustOptions(options);
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
         this.codeEditor.focus();
         this.pendingChanges = false;
@@ -425,6 +425,8 @@ export class ViewManager {
         let html;
         let markerNode;
         const MARKER_COMMENT_TEXT = `__${TINY_MARKER_CLASS}_${Date.now()}__`;
+        const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
+
         // A more comprehensive list of tags to avoid inserting into.
         const forbiddenTagSelector = 'script,style,textarea,title,pre,code,canvas,svg,iframe';
 
@@ -491,8 +493,8 @@ export class ViewManager {
             }
 
             /** @type {string} */
-            html = this.editor.getContent({source_view: true});
-
+            html = this.editor.getContent({ source_view: true });
+            html = html.replace(reg, MARKER);
         });
 
         // According to global preference prettify code when opening the editor
@@ -505,23 +507,22 @@ export class ViewManager {
             }
         }
 
+        // Remove the marker comment node
         if (markerNode) {
-            const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
-            html = html.replace(reg, (str, pos) => {
+            html = html.replace(new RegExp(MARKER, 'g'), (str, pos) => {
                 head = pos;
                 return '';
             });
             markerNode.remove();
         }
+
+
         // For security get rid of any possible span markers that couldn't eventually
         // be removed by backwards synchronization.
         const reg2 = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, 'gm');
         html = html.replace(reg2, '');
 
-        // Remove any marker character used internally by the code editor.
-        html = html.replace(new RegExp(MARKER, 'g'), '');
-
-        return {html, head};
+        return { html, head };
     }
 
     /**
@@ -534,30 +535,39 @@ export class ViewManager {
 
     /**
      * Action to format or prettify HTML code.
+     * @param {HTMLElement} [btn] Button element to disable while prettifying.
      */
-    async prettify() {
-        const prettifier = await requireHTMLFormatter();
-        if (!prettifier) {
-            console.error("No HTML formatter available");
-            return true;
+    async prettify(btn) {
+        if (btn) {
+            btn.disabled = true;
         }
-        const html = this.codeEditor.getValue(2);
-        const pretty = prettifier(html);
-        this.codeEditor.setValue(pretty);
+        const prettifier = await requireHTMLFormatter();
+        if (prettifier) {
+            const html = this.codeEditor.getValue(2);
+            const pretty = prettifier(html);
+            this.codeEditor.setValue(pretty);
+        } else {
+            console.error('No HTML formatter available');
+        }
+        if (btn) {
+            btn.disabled = false;
+        }
         return true;
     }
 
     /**
      * Action to toggle line wrapping in the codeMirror editor.
-     *
+     * @param {boolean} mustSave Save the state.
      */
-    toggleLineWrapping() {
-        if (!this.codeEditor || (!getPref('fs', false) && this.opts.autosave)) {
+    toggleLineWrapping(mustSave = true) {
+        if (!this.codeEditor || (!this.preferencesSrv.get('fs', false) && this.opts.autosave)) {
             // Panel mode which is not in fullscreen, should always be wrapping on
             return true;
         }
         const isWrap = this.codeEditor.toggleLineWrapping();
-        setPref('wrap', isWrap);
+        if (mustSave) {
+            this.preferencesSrv.set('wrap', isWrap);
+        }
 
         ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span',
             isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow);
@@ -570,7 +580,7 @@ export class ViewManager {
             return true;
         }
         const isMinimap = this.codeEditor.toggleMinimap();
-        setPref('minimap', isMinimap);
+        this.preferencesSrv.set('minimap', isMinimap);
         return true;
     }
 
@@ -583,7 +593,7 @@ export class ViewManager {
             return true;
         }
         const theme = this.codeEditor.toggleTheme();
-        setPref('theme', theme);
+        this.preferencesSrv.set('theme', theme);
         const isDark = theme === 'dark';
         ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span',
             isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
@@ -601,7 +611,7 @@ export class ViewManager {
      */
     decreaseFontsize() {
         this.codeEditor?.decreaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize());
+        this.preferencesSrv.set('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**
@@ -609,7 +619,7 @@ export class ViewManager {
      */
     increaseFontsize() {
         this.codeEditor?.increaseFontsize();
-        setPref('fontsize', this.codeEditor?.getFontsize());
+        this.preferencesSrv.set('fontsize', this.codeEditor?.getFontsize());
     }
 
     /**
@@ -624,8 +634,8 @@ export class ViewManager {
         this._tClose();
         this.destroyCodeEditor();
         // Toggle user preference
-        const uiMode = getPref('view', 'dialog');
-        setPref('view', uiMode === 'dialog' ? 'panel' : 'dialog', true);
+        const uiMode = this.preferencesSrv.get('view', 'dialog');
+        this.preferencesSrv.set('view', uiMode === 'dialog' ? 'panel' : 'dialog');
         // Call the action again
         this.editor.execCommand('mceCodeProEditor', false);
     }

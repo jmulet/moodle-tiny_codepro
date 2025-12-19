@@ -58,3 +58,11 @@ Safer cursor synchronization logic
 Fix bug not autosaving in panel mode when form is submitted
 New configuration property disableonpagesregex allows to disable the plugin on certain pages
 Updated library versions: htmlfy to 1.0.0 and codemirror to 6.0.2
+
+== 2.1.3 ==
+Solved issue with css in panel mode
+
+== 2.1.4 ==
+Support for Moodle 5.1
+Upgrade codemirror and htmlfy dependencies
+Store user preferences in database

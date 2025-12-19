@@ -22,8 +22,8 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getPluginOptionName} from 'editor_tiny/options';
-import {pluginName, isPanelCapable} from './common';
+import { getPluginOptionName } from 'editor_tiny/options';
+import { pluginName, isPanelCapable } from './common';
 
 const showPlugin = getPluginOptionName(pluginName, 'showplugin');
 const autoPrettify = getPluginOptionName(pluginName, 'autoprettify');
@@ -34,6 +34,7 @@ const validChildren = getPluginOptionName(pluginName, 'validchildren');
 const customElements = getPluginOptionName(pluginName, 'customelements');
 const panelCapable = getPluginOptionName(pluginName, 'panelcapable');
 const disableOnPages = getPluginOptionName(pluginName, 'disableonpagesregex');
+const userPrefs = getPluginOptionName(pluginName, 'userprefs');
 
 /**
  * @param {TinyMCE} editor
@@ -84,6 +85,11 @@ export const register = (editor, majorVersion, minorVersion) => {
     });
 
     registerOption(disableOnPages, {
+        processor: 'string',
+        "default": '',
+    });
+
+    registerOption(userPrefs, {
         processor: 'string',
         "default": '',
     });
@@ -171,3 +177,11 @@ export const getValidChildren = (editor) => editor.options.get(validChildren);
  * @returns {string}
  */
 export const getCustomElements = (editor) => editor.options.get(customElements);
+
+/**
+ * The user preferences stored in the database
+ * @param {TinyMCE} editor
+ * @returns {string | null}
+ */
+export const getUserPrefs = (editor) => editor.options.get(userPrefs);
+

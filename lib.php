@@ -15,17 +15,28 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Tiny CodePro plugin version details.
+ * Tiny WidgetHub plugin version details.
  *
  * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2025 Josep Mulet <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+// Keep MOODLE_INTERNAL check for backward compatibility with Moodle <4.3.
+// phpcs:ignore Moodle.Files.MoodleInternal.MoodleInternalNotNeeded
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'tiny_codepro';
-$plugin->release = '2.1.4';
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_STABLE;
-$plugin->version = 2025121802;
+/**
+ * Returns the user preferences for the Tiny WidgetHub plugin.
+ *
+ * @return array
+ */
+function tiny_codepro_user_preferences() {
+    return [
+        'tiny_codepro_userprefs' => [
+            'type' => PARAM_RAW,
+            'null' => NULL_NOT_ALLOWED,
+            'default' => '',
+            'permissioncallback' => [core_user::class, 'is_current_user'],
+        ],
+    ];
+}

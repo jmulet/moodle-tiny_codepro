@@ -29,10 +29,9 @@ import { cm6proDark } from './cm6pro-dark-theme';
 
 // 3rd party extensions.
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
-import { colorPicker } from '@replit/codemirror-css-color-picker';
 import { showMinimap } from "@replit/codemirror-minimap";
 
-
+import { colorPicker } from './cm6pro-css-colorpicker';
 import { CursorSync } from "./cursorsync.mjs";
 
 // Hardcoded fontsize limits.
@@ -137,8 +136,8 @@ export default class CodeProEditor {
                 }
             }));
         }
-        if (typeof(this.config.onblur) === 'function') {
-            extensions.push( EditorView.domEventHandlers({
+        if (typeof (this.config.onblur) === 'function') {
+            extensions.push(EditorView.domEventHandlers({
                 blur: (event) => {
                     this.config.onblur(event);
                     return false;
@@ -246,6 +245,7 @@ export default class CodeProEditor {
             annotations: [Transaction.addToHistory.of(false)]
         });
         this.cursorSync.scrollToCaretPosition();
+        view.focus();
     }
 
     /**
