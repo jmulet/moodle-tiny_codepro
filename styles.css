@@ -6,54 +6,69 @@
     height: 100%;
     width: 100%;
 }
+
 .tiny_codepro-themeselector {
     max-width: 150px !important;
     margin-right: auto !important;
 }
-.tiny_codepro-editorview .cm-gutter, .tiny_codepro-editorview .cm-content {
+
+.tiny_codepro-editorview .cm-gutter,
+.tiny_codepro-editorview .cm-content {
     height: 100%;
 }
+
 .tiny_codepro-editorview .cm-scroller {
     overflow: auto;
     overscroll-behavior: contain;
     width: 100%;
 }
+
 .tiny_codepro-editorview .cm-editor.cm-focused {
     border-color: #86b7fe;
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     border-radius: 4px;
 }
+
 .tiny_codepro-fullscreen .modal-content {
     height: 100%;
 }
+
 .tiny_codepro-fullscreen #codepro_editorroot {
     height: 100% !important;
 }
+
 .tiny_codepro-fullscreen .tiny_codepro-editorview {
     max-height: unset !important;
 }
+
 .tiny_codepro-dark {
-    background: #2e2e2e!important;
+    background: #2e2e2e !important;
 }
+
 .tiny_codepro-dark .modal-header h5,
 .tiny_codepro-dark .modal-header span {
     color: whitesmoke;
 }
+
 .tiny_codepro-dark .modal-header {
     border-bottom: 1px solid #3e3e3e;
 }
+
 .tiny_codepro-dark .modal-footer {
     border-top: 1px solid #3e3e3e;
 }
+
 .tiny_codepro-left {
     margin-right: auto !important;
 }
+
 @media screen and (min-width: 576px) {
     .tiny_codepro-dlg {
         max-width: 85% !important;
-    }    
+    }
 }
+
 .tiny_codepro-fullscreen {
     position: fixed;
     left: 0;
@@ -62,16 +77,20 @@
     height: 100%;
     max-width: 100% !important;
 }
+
 .tiny_codepro-view__pane {
     height: 350px;
     overflow: hidden;
 }
+
 /** Ensure a minimum height in pane view **/
 .tox.tox-tinymce:has(.tox-view-wrap:not([aria-hidden])):has(.tiny_codepro-view__pane) {
     min-height: 350px;
 }
+
 /** Fix panel not scrolling in fullscreen for Moodle <4.5 **/
-.tox-fullscreen .tox-view-wrap, .tox-fullscreen .tox-view-wrap > div {
+.tox-fullscreen .tox-view-wrap,
+.tox-fullscreen .tox-view-wrap>div {
     height: 100%;
 }
 
@@ -86,24 +105,27 @@
     background-color: #999;
     box-shadow: 32px 0 #999, -32px 0 #999;
     animation: tiny_codepro-flash 0.5s ease-out infinite alternate;
-  }
+}
+
 @keyframes tiny_codepro-flash {
     0% {
-      background-color: #FFF2;
-      box-shadow: 32px 0 #FFF2, -32px 0 #999;
+        background-color: #fff2;
+        box-shadow: 32px 0 #fff2, -32px 0 #999;
     }
+
     50% {
-      background-color: #999;
-      box-shadow: 32px 0 #FFF2, -32px 0 #FFF2;
+        background-color: #999;
+        box-shadow: 32px 0 #fff2, -32px 0 #fff2;
     }
+
     100% {
-      background-color: #FFF2;
-      box-shadow: 32px 0 #999, -32px 0 #FFF2;
+        background-color: #fff2;
+        box-shadow: 32px 0 #999, -32px 0 #fff2;
     }
 }
 
 @media only screen and (max-width: 767px) {
-  .cm-gutters.cm-minimap-gutter {
-    display: none!important;
-  }
+    .cm-gutters.cm-minimap-gutter {
+        display: none !important;
+    }
 }

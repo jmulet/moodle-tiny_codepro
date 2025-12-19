@@ -31988,8 +31988,8 @@ class CodeProEditor {
                 }
             }));
         }
-        if (typeof(this.config.onblur) === 'function') {
-            extensions.push( EditorView.domEventHandlers({
+        if (typeof (this.config.onblur) === 'function') {
+            extensions.push(EditorView.domEventHandlers({
                 blur: (event) => {
                     this.config.onblur(event);
                     return false;
@@ -32097,6 +32097,7 @@ class CodeProEditor {
             annotations: [Transaction.addToHistory.of(false)]
         });
         this.cursorSync.scrollToCaretPosition();
+        view.focus();
     }
 
     /**

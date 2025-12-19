@@ -27,7 +27,7 @@ import * as Config from 'core/config';
 const baseUrl = `${Config.wwwroot}/lib/editor/tiny/plugins/codepro`;
 const component = 'tiny_codepro';
 
-// --- Helper function to parse version string into comparable numbers ---
+// Helper function to parse version string into comparable numbers ---
 // This handles strings like "6", "6.0", "6.2", "6.2.1" and returns [major, minor, patch...]
 // It also handles null, undefined, and blank strings by returning null.
 /**
@@ -35,12 +35,12 @@ const component = 'tiny_codepro';
  * @returns {number[] | null}
  */
 function parseMinorVersion(version) {
-        if (version === null || version === undefined || (typeof version === 'string' && version.trim() === '')) {
-            return null;
-        }
-        // Convert to string to ensure split works
-        const versionStr = String(version);
-        return versionStr.split('.').map(Number);
+    if (version === null || version === undefined || (typeof version === 'string' && version.trim() === '')) {
+        return null;
+    }
+    // Convert to string to ensure split works
+    const versionStr = String(version);
+    return versionStr.split('.').map(Number);
 }
 
 /**
@@ -53,20 +53,20 @@ function isPanelCapable(majorVersion, minorVersion) {
     const REQUIRED_MINOR_WHOLE = 6; // Refers to the "6" in "6.2"
     const REQUIRED_MINOR_DECIMAL = 2; // Refers to the ".2" in "6.2"
 
-    // --- Parse majorVersion ---
+    // Parse majorVersion.
     // Since majorVersion is assumed to be a whole integer, we can use parseInt directly.
     let panelMajor;
     if (majorVersion === null || majorVersion === undefined || (typeof majorVersion === 'string' && majorVersion.trim() === '')) {
-        panelMajor = null; // Treat as invalid if null, undefined, or blank
+        panelMajor = null;
     } else {
         panelMajor = parseInt(String(majorVersion), 10);
-        // If parseInt results in NaN (e.g., input was "abc"), treat as invalid
+        // If parseInt results in NaN (e.g., input was "abc"), treat as invalid.
         if (isNaN(panelMajor)) {
             panelMajor = null;
         }
     }
 
-    // --- Parse minorVersion ---
+    // Parse minorVersion.
     const parsedMinorVersion = parseMinorVersion(minorVersion);
 
     // If either version is invalid/unparseable, consider it capable.
@@ -74,28 +74,28 @@ function isPanelCapable(majorVersion, minorVersion) {
         return true;
     }
 
-    // --- Compare majorVersion against '6' ---
+    // Compare majorVersion against '6'.
     if (panelMajor < REQUIRED_MAJOR) {
         return false; // E.g., majorVersion is 5.
     } else if (panelMajor > REQUIRED_MAJOR) {
         return true; // E.g., majorVersion is 7.
     }
 
-    // --- If majorVersion is exactly '6', then compare minorVersion against '6.2' ---
-    // (This block only executes if panelMajor === REQUIRED_MAJOR)
+    // If majorVersion is exactly '6', then compare minorVersion against '6.2'.
+    // (This block only executes if panelMajor === REQUIRED_MAJOR).
 
-    const panelMinorMajorPart = parsedMinorVersion[0] || 0;   // E.g., 6 from "6.2"
-    const panelMinorDecimalPart = parsedMinorVersion[1] || 0; // E.g., 2 from "6.2", default to 0 if no minor part (e.g., "6")
+    const panelMinorMajorPart = parsedMinorVersion[0] || 0; // E.g., 6 from "6.2".
+    const panelMinorDecimalPart = parsedMinorVersion[1] || 0; // E.g., 2 from "6.2", default to 0 if no minor part (e.g., "6").
 
-    // First, compare the main part of the minorVersion string (e.g., the '6' in "6.2")
+    // First, compare the main part of the minorVersion string (e.g., the '6' in "6.2").
     if (panelMinorMajorPart < REQUIRED_MINOR_WHOLE) {
-        return false; // E.g., minorVersion "5.x" when required is "6.2"
+        return false; // E.g., minorVersion "5.x" when required is "6.2".
     } else if (panelMinorMajorPart > REQUIRED_MINOR_WHOLE) {
-        return true; // E.g., minorVersion "7.x" when required is "6.2"
+        return true; // E.g., minorVersion "7.x" when required is "6.2".
     }
 
-    // If the main part of the minorVersion string is exactly '6', then compare the decimal part (e.g., the '.2')
-    // (This block only executes if panelMinorMajorPart === REQUIRED_MINOR_WHOLE)
+    // If the main part of the minorVersion string is exactly '6', then compare the decimal part (e.g., the '.2').
+    // (This block only executes if panelMinorMajorPart === REQUIRED_MINOR_WHOLE).
     return panelMinorDecimalPart >= REQUIRED_MINOR_DECIMAL;
 }
 

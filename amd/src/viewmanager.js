@@ -53,12 +53,15 @@ const requireCm6Pro = () => {
     });
 };
 
+/**
+ * @type {((str: string) => string) | null}
+ */
 let _htmlFormatter = null;
 /**
  * Loads HTML formatter on demand  (The first load will be delayed a little bit).
  * To avoid loading multiple formatters, take advantge of that shipped with tiny_html plugin.
  * If this plugin is not available, fallback on htmlfy.
- * @returns {Promise<(str: string) => string>}
+ * @returns {Promise<(str: string) => string> | Promise<null>}
  */
 const requireHTMLFormatter = () => {
     if (_htmlFormatter) {
@@ -76,18 +79,17 @@ const requireHTMLFormatter = () => {
             }, () => resolve(null));
         };
         window.require(['tiny_html/beautify/beautify-html'], (beautify) => {
-            _htmlFormatter = (src) => beautify.html_beautify(src, {
-                indent_size: 2,
-                wrap_line_length: 80,
-                unformatted: [],
-                preserve_newlines: true,
-                max_preserve_newlines: 1,
-            });
-            if (_htmlFormatter) {
-                resolve(_htmlFormatter);
+            if (typeof beautify?.html_beautify !== 'function') {
+                fallback();
                 return;
             }
-            fallback();
+            _htmlFormatter = (src) => beautify.html_beautify(src, {
+                indent_size: 2,
+                wrap_line_length: 0,
+                unformatted: [],
+                preserve_newlines: false,
+            });
+            resolve(_htmlFormatter);
         }, fallback);
     });
 };
@@ -187,6 +189,13 @@ export class ViewManager {
      */
     _tDestroy() {
         throw new Error("Method not implemented");
+    }
+
+    /**
+     * Template method that can be overridden by the actual view manager.
+     * Adjusts the options for the CodeMirror editor.
+     */
+    _tAdjustOptions() {
     }
 
     /**
@@ -394,27 +403,7 @@ export class ViewManager {
             minimap: !this.opts.autosave && this.preferencesSrv.get("minimap", true),
             commands
         };
-        if (this.opts.autosave) {
-            // View-panel case. Detect changes on CM editor.
-            options.changesListener = () => {
-                this.pendingChanges = true;
-            };
-            // If the form containing the editor has no submit button, must rely on blur to implement autosave.
-            const hasFormSubmit = this.editor.container.closest('form')?.querySelector('[type="submit"]');
-            if (!hasFormSubmit) {
-                // Blur strategy on this resource.
-                options.onblur = () => {
-                    if (this.pendingChanges) {
-                        this._quickSave();
-                    }
-                };
-            }
-            // Always enable linewrapping in panel view when not in Fullscreen.
-            const isFS = this.preferencesSrv.get('fs', false);
-            if (!isFS) {
-                options.lineWrapping = true;
-            }
-        }
+        this._tAdjustOptions(options);
         this.codeEditor = new CodeProEditor(codeEditorElement, options);
         this.codeEditor.focus();
         this.pendingChanges = false;
@@ -436,6 +425,8 @@ export class ViewManager {
         let html;
         let markerNode;
         const MARKER_COMMENT_TEXT = `__${TINY_MARKER_CLASS}_${Date.now()}__`;
+        const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
+
         // A more comprehensive list of tags to avoid inserting into.
         const forbiddenTagSelector = 'script,style,textarea,title,pre,code,canvas,svg,iframe';
 
@@ -503,7 +494,7 @@ export class ViewManager {
 
             /** @type {string} */
             html = this.editor.getContent({ source_view: true });
-
+            html = html.replace(reg, MARKER);
         });
 
         // According to global preference prettify code when opening the editor
@@ -516,21 +507,20 @@ export class ViewManager {
             }
         }
 
+        // Remove the marker comment node
         if (markerNode) {
-            const reg = new RegExp(`<\\s?!--\\s*${MARKER_COMMENT_TEXT}\\s*-->`, 'g');
-            html = html.replace(reg, (str, pos) => {
+            html = html.replace(new RegExp(MARKER, 'g'), (str, pos) => {
                 head = pos;
                 return '';
             });
             markerNode.remove();
         }
+
+
         // For security get rid of any possible span markers that couldn't eventually
         // be removed by backwards synchronization.
         const reg2 = new RegExp(`<span\\s+class=["']${TINY_MARKER_CLASS}["']([^>]*)>([^<]*)<\\/span>`, 'gm');
         html = html.replace(reg2, '');
-
-        // Remove any marker character used internally by the code editor.
-        html = html.replace(new RegExp(MARKER, 'g'), '');
 
         return { html, head };
     }
@@ -552,16 +542,13 @@ export class ViewManager {
             btn.disabled = true;
         }
         const prettifier = await requireHTMLFormatter();
-        if (!prettifier) {
-            console.error("No HTML formatter available");
-            if (btn) {
-                btn.disabled = false;
-            }
-            return true;
+        if (prettifier) {
+            const html = this.codeEditor.getValue(2);
+            const pretty = prettifier(html);
+            this.codeEditor.setValue(pretty);
+        } else {
+            console.error('No HTML formatter available');
         }
-        const html = this.codeEditor.getValue(2);
-        const pretty = prettifier(html);
-        this.codeEditor.setValue(pretty);
         if (btn) {
             btn.disabled = false;
         }
@@ -570,15 +557,17 @@ export class ViewManager {
 
     /**
      * Action to toggle line wrapping in the codeMirror editor.
-     *
+     * @param {boolean} mustSave Save the state.
      */
-    toggleLineWrapping() {
+    toggleLineWrapping(mustSave = true) {
         if (!this.codeEditor || (!this.preferencesSrv.get('fs', false) && this.opts.autosave)) {
             // Panel mode which is not in fullscreen, should always be wrapping on
             return true;
         }
         const isWrap = this.codeEditor.toggleLineWrapping();
-        this.preferencesSrv.set('wrap', isWrap);
+        if (mustSave) {
+            this.preferencesSrv.set('wrap', isWrap);
+        }
 
         ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span',
             isWrap ? ViewManager.icons.exchange : ViewManager.icons.rightarrow);

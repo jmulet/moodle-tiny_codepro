@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-/* eslint-disable max-len */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -48,6 +47,28 @@ export class ViewPanelManager extends ViewManager {
     }
     _tDestroy() {
         activeViewPanels.delete(this.editor.id);
+    }
+
+    _tAdjustOptions(options) {
+        // View-panel case. Detect changes on CM editor.
+        options.changesListener = () => {
+            this.pendingChanges = true;
+        };
+        // If the form containing the editor has no submit button, must rely on blur to implement autosave.
+        const hasFormSubmit = this.editor.container.closest('form')?.querySelector('[type="submit"]');
+        if (!hasFormSubmit) {
+            // Blur strategy on this resource.
+            options.onblur = () => {
+                if (this.pendingChanges) {
+                    this._quickSave();
+                }
+            };
+        }
+        // Always enable linewrapping in panel view when not in Fullscreen.
+        const isFS = isFullscreen(this.editor);
+        if (!isFS) {
+            options.lineWrapping = true;
+        }
     }
 
     async _tCreate() {
@@ -229,7 +250,8 @@ export class ViewPanelManager extends ViewManager {
     }
 
     _createButtons() {
-        const [opendialogStr, fullscreenStr, themesStr, linewrapStr, prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
+        const [opendialogStr, fullscreenStr, themesStr, linewrapStr,
+            prettifyStr, decreaseFontsizeStr, increaseFontsizeStr] = this.translations;
 
         const buttons = [
             {
@@ -253,7 +275,7 @@ export class ViewPanelManager extends ViewManager {
                         }
                         // Always show with linewrapping on
                         if (!this.codeEditor.config.lineWrapping) {
-                            this.toggleLineWrapping();
+                            this.toggleLineWrapping(false);
                         }
                     }
                     // Never store fs state in panel mode.
