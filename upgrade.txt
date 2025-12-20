@@ -66,3 +66,7 @@ Solved issue with css in panel mode
 Support for Moodle 5.1
 Upgrade codemirror and htmlfy dependencies
 Store user preferences in database
+
+== 2.1.5 ==
+Upgrade privacy metadata
+
