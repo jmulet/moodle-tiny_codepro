@@ -61,7 +61,12 @@ class PreferencesService {
             } else if (localPrefsJson) {
                 const localPrefs = JSON.parse(localPrefsJson);
                 // Migrate old local prefs to remote
-                getRemoteService().saveUserPref(localPrefsJson);
+                getRemoteService().saveUserPref(localPrefsJson).then(() => {
+                    localStorage.removeItem("tiny-codepro");
+                }).catch(() => {
+                    // eslint-disable-next-line no-console
+                    console.error("Cannot save user preferences");
+                });
                 storedParsed = localPrefs;
             }
         } catch (ex) {

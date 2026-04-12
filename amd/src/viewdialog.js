@@ -43,10 +43,10 @@ export class ViewDialogManager extends ViewManager {
 
         // Update the two-state icons
         if (!this.codeEditor.config.lineWrapping) {
-            this.domElements.btnWrap.querySelector('span').innerHTML = ViewManager.icons.rightarrow;
+            ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span', ViewManager.icons.rightarrow);
         }
         if (this.codeEditor.config.themeName === 'dark') {
-            this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
+            ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span', ViewManager.icons.moon);
         }
     }
 

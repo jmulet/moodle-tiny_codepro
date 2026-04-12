@@ -488,7 +488,7 @@ export class ViewManager {
                     // If any part of the insertion logic fails, we'll end up here.
                     console.error("Failed to insert cursor marker:", ex);
                     // Crucially, ensure markerNode is nullified so the replacement logic doesn't run.
-                    // (You would need to declare markerNode outside the try block for this to work)
+                    markerNode = null;
                 }
             }
 
