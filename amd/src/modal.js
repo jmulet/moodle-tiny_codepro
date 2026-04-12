@@ -17,7 +17,7 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2026 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -60,6 +60,7 @@ const _modalFactoryPromise = (async () => {
 export async function createModal(opts) {
     const options = {
         large: true,
+        type: CodeProModal.TYPE,
         ...opts
     };
     let modal;

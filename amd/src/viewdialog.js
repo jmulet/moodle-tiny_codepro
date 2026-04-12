@@ -54,15 +54,14 @@ export class ViewDialogManager extends ViewManager {
         const defaultUI = getDefaultUI(this.editor) ?? 'dialog';
         const canuserswitchui = defaultUI.startsWith('user:');
 
-        const data = {
-            elementid: Math.random().toString(32).substring(2),
+        const templateContext = {
             canuserswitchui,
             icons: ViewManager.icons
         };
 
         // Show modal with buttons.
         const modal = await createModal({
-            templateContext: data,
+            templateContext,
         });
         this.modal = modal;
 
