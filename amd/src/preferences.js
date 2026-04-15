@@ -118,6 +118,7 @@ class PreferencesService {
         }
         const json = JSON.stringify(prefs);
         if (json === this._lastSavedJson) {
+            this._dirty = false;
             return;
         }
         this._lastSavedJson = json;
@@ -136,7 +137,6 @@ class PreferencesService {
             return;
         }
         this._save();
-        this._dirty = false;
     }
 
     /**

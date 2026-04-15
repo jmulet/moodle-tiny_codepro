@@ -24,7 +24,7 @@
 $string['autoprettify'] = 'Auto format';
 $string['autoprettify_desc'] = 'Formata automàticament quan l\'editor s\'obri';
 $string['cancel'] = 'Cancel·la';
-$string['codepro:use'] = 'Veure plugin';
+$string['codepro:use'] = 'Usar plugin';
 $string['codepro:viewplugin'] = 'Veure plugin';
 $string['customelements'] = 'Elements addicionals';
 $string['customelements_def'] = 'Elements HTML addicionals separats per coma';
@@ -32,7 +32,7 @@ $string['decreasefontsize'] = 'Reduir mida font';
 $string['disableonpagesregex'] = 'Deshabilitar en pàgines';
 $string['disableonpagesregex_def'] = 'Deshabilita el plugin en les pàgines HTML que tinguin un body.id que compleix aquesta expressió regular';
 $string['extendedvalidelements'] = 'Elements vàlids';
-$string['extendedvalidelements_def'] = 'Especifica quins elements HTML són vàlids, e.g.: tag1[attr1|attr2|...],tag2[*],...';
+$string['extendedvalidelements_def'] = 'Especifica quins elements HTML són vàlids, e.g.: tag1[attr1|attr2|...],tag2[*],... (Alerta amb les vulnerabilitats XSS si permets certs elements.)';
 $string['fullscreen'] = 'Pantalla completa';
 $string['helplinktext'] = 'Source code Pro';
 $string['increasefontsize'] = 'Augmentar mida font';
