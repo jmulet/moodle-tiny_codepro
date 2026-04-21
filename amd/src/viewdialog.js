@@ -43,10 +43,10 @@ export class ViewDialogManager extends ViewManager {
 
         // Update the two-state icons
         if (!this.codeEditor.config.lineWrapping) {
-            this.domElements.btnWrap.querySelector('span').innerHTML = ViewManager.icons.rightarrow;
+            ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span', ViewManager.icons.rightarrow);
         }
         if (this.codeEditor.config.themeName === 'dark') {
-            this.domElements.btnTheme.querySelector('span').innerHTML = ViewManager.icons.moon;
+            ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span', ViewManager.icons.moon);
         }
     }
 
@@ -54,15 +54,14 @@ export class ViewDialogManager extends ViewManager {
         const defaultUI = getDefaultUI(this.editor) ?? 'dialog';
         const canuserswitchui = defaultUI.startsWith('user:');
 
-        const data = {
-            elementid: Math.random().toString(32).substring(2),
+        const templateContext = {
             canuserswitchui,
             icons: ViewManager.icons
         };
 
         // Show modal with buttons.
         const modal = await createModal({
-            templateContext: data,
+            templateContext,
         });
         this.modal = modal;
 

@@ -138,6 +138,8 @@ export class ViewManager {
         this.opts = { autosave: false, translations: [], ...(opts ?? {}) };
         this.isLoading = false;
         this.preferencesSrv = getPreferencesSrv(editor);
+        /** @type {ReturnType<typeof setTimeout> | null} */
+        this._saveTimer = null;
     }
 
     /**
@@ -258,10 +260,21 @@ export class ViewManager {
             html = this.codeEditor.getValue();
         }
         this._tClose();
+        // Cancel any previously scheduled save that has not fired yet.
+        if (this._saveTimer !== null) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+        }
         // Do it in a transaction
         return new Promise((resolve) => {
-            // Wait for closing
-            setTimeout(() => {
+            // Wait for view closing
+            this._saveTimer = setTimeout(() => {
+                this._saveTimer = null;
+                // Guard: do nothing if the editor was destroyed before the timer fired.
+                if (this.editor.removed) {
+                    resolve(html);
+                    return;
+                }
                 // Restore cursor and scroll position
                 this.editor.focus();
                 this.editor.undoManager.transact(() => {
@@ -344,6 +357,9 @@ export class ViewManager {
      * It basically calls _saveAction in addition to handling cursor synchronization.
      */
     accept() {
+        if (!this.codeEditor) {
+            return false;
+        }
         // Add marker if cursor synchronization is enabled.
         const isSynEnabled = getSyncCaret(this.editor) === 'both';
         const htmlNoMarker = this.codeEditor.getValue(isSynEnabled ? 1 : 0);
@@ -390,7 +406,7 @@ export class ViewManager {
             accept: this.accept.bind(this),
             cancel: this.close.bind(this),
             savePrefs: () => {
-                this.preferencesSrv.save();
+                this.preferencesSrv.flush();
             }
         };
 
@@ -488,7 +504,7 @@ export class ViewManager {
                     // If any part of the insertion logic fails, we'll end up here.
                     console.error("Failed to insert cursor marker:", ex);
                     // Crucially, ensure markerNode is nullified so the replacement logic doesn't run.
-                    // (You would need to declare markerNode outside the try block for this to work)
+                    markerNode = null;
                 }
             }
 
@@ -529,7 +545,13 @@ export class ViewManager {
      * This method destroys the CodeMirror instance.
      */
     destroyCodeEditor() {
+        // Cancel any pending save timer so it cannot fire against a destroyed editor.
+        if (this._saveTimer !== null) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+        }
         this.codeEditor?.destroy();
+        this.codeEditor = null;
         this._tDestroy();
     }
 

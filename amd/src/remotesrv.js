@@ -14,10 +14,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tiny WidgetHub plugin.
+ * Tiny CodePro plugin.
  * Include all calls to core/ajax here.
  *
- * @module      tiny_widgethub/plugin
+ * @module      tiny_codepro/plugin
  * @copyright   2025 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

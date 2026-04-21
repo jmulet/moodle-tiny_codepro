@@ -18,14 +18,14 @@
  * Tiny CodePro plugin version details.
  *
  * @package     tiny_codepro
- * @copyright   2023 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2026 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tiny_codepro';
-$plugin->release = '2.1.4';
+$plugin->release = '2.1.5';
 $plugin->requires = 2022112800;
 $plugin->maturity = MATURITY_STABLE;
-$plugin->version = 2025121802;
+$plugin->version = 2026042201;

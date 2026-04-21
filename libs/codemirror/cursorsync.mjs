@@ -52,7 +52,7 @@ export class CursorSync {
         if (!head) {
             // Look for the marker.
             const state = this.editorView.state;
-            const cursor = new SearchCursor(state.doc, this.marker, 0, state.doc.length);            
+            const cursor = new SearchCursor(state.doc, this.marker, 0, state.doc.length);
             while (!cursor.next().done) {
                 const value = cursor.value;
                 if (!cursor.value) {
@@ -157,15 +157,18 @@ export class CursorSync {
 
 
     /**
-     * Inserta un marcador HTML final utilizando un marcador de texto provisional
-     * y validando la estructura a través de la API del DOM.
+     * Inserts a final HTML marker using a provisional text marker
+     * and validating the structure through the DOM API.
+     * @param {string} html - The HTML content to insert the marker into.
+     * @param {number} initialOffset - The initial offset to insert the marker at.
+     * @returns {string} The HTML content with the marker inserted.
      */
     getHtmlWithHybridMarker(html, initialOffset) {
         const DISALLOWED_PARENTS = new Set(["script", "style", "textarea", "title", "noscript",
-        "option", "optgroup", "select",
-        "svg", "math", "object", "iframe",
-        "head", "meta", "link", "base", "source", "track", "param",
-        "img", "input", "br", "hr", "col", "embed", "area", "wbr"]);
+            "option", "optgroup", "select",
+            "svg", "math", "object", "iframe",
+            "head", "meta", "link", "base", "source", "track", "param",
+            "img", "input", "br", "hr", "col", "embed", "area", "wbr"]);
 
         // 1. Insert a text marker at the best position found so far
         const htmlWithTextMarker = html.slice(0, initialOffset) + this.marker + html.slice(initialOffset);
@@ -192,7 +195,7 @@ export class CursorSync {
         // Divide the TextNode with the marker (to remove the textMarker)
         const [nodeBefore, nodeAfter] = textNodeWithMarker.nodeValue.split(this.marker);
         textNodeWithMarker.nodeValue = nodeBefore;
-        const newNodeAfter = document.createTextNode(nodeAfter);
+        const newNodeAfter = doc.createTextNode(nodeAfter);
         textNodeWithMarker.parentElement.insertBefore(newNodeAfter, textNodeWithMarker.nextSibling);
 
         // 4. Validate the context and find the final insertion point for the SPAN marker.

@@ -31,6 +31,8 @@ import { cm6proDark } from './cm6pro-dark-theme';
 import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { showMinimap } from "@replit/codemirror-minimap";
 
+import { expandAbbreviation, abbreviationTracker } from '@emmetio/codemirror6-plugin';
+
 import { colorPicker } from './cm6pro-css-colorpicker';
 import { CursorSync } from "./cursorsync.mjs";
 
@@ -121,6 +123,7 @@ export default class CodeProEditor {
         const extensions = [
             basicSetup,
             htmlLang(),
+            abbreviationTracker({ syntax: 'html' }),
             indentationMarkers(),
             colorPicker,
             this.linewrapConfig.of(this.config.lineWrapping ? [EditorView.lineWrapping] : []),
@@ -153,6 +156,12 @@ export default class CodeProEditor {
 
     _createKeyMap() {
         return [
+            {
+                key: "Mod-e",
+                run: expandAbbreviation,
+                preventDefault: true,
+                stopPropagation: true
+            },
             {
                 key: "Shift-Alt-m",
                 preventDefault: true,

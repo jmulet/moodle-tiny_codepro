@@ -23,6 +23,9 @@ autocompletion, block folding, and more.
   - Improved cursor synchronization
   - Color picker
   - VSCode-like minimap
+- **New in v2.1.5**:
+  - Emmet expand abbreviation
+  
 
 <img src="./pix/pict04.gif" alt="CodePro in action" style="max-width:350px;">
 
@@ -45,6 +48,7 @@ An administrator setting allows choosing the default mode or enabling users to s
 
 | Shortcut | Action |
 |----------|--------|
+| `Cmd-E` or `Ctrl-E` | Expand Abbreviation (Emmet plugin) |
 | `Shift-Alt-M` | Toggle minimap |
 | `Shift-Alt-W` | Toggle line wrapping* |
 | `Shift-Alt-T` | Toggle theme (light/dark) |
@@ -193,6 +197,12 @@ npx grunt amd
 ### Build CodeMirror with custom features
 
 Refer to the documentation in `libs/codemirror` for details on modifying the CodeMirror dependency.
+
+## Privacy
+
+This plugin implements the Moodle Privacy API. It uses the `user_preferences` system to store user-specific settings such as: theme, ui mode, line wrapping and font size.
+
+No personal data is collected or transmitted externally. All preferences are stored within the Moodle instance to enhance the user experience.
 
 ## Credits
 

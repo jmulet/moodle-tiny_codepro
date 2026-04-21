@@ -75,7 +75,7 @@ if ($hassiteconfig) {
         ));
 
         // Controlling TinyMCE content filtering options.
-
+        // Beware of XSS vulnerabilities if you allow script tags.
         $settings->add(new admin_setting_configtext(
             'tiny_codepro/extendedvalidelements',
             new lang_string('extendedvalidelements', $pluginname),

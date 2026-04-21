@@ -109,7 +109,12 @@ export const isPluginVisible = (editor) => {
     let isEnabled = true;
     if (expr) {
         try {
-            isEnabled = !RegExp(expr).test(document.body.id ?? '');
+            // Bound the subject string to prevent ReDoS: pathological backtracking scales with
+            // input length, so capping here limits worst-case runtime to a fixed maximum even
+            // when an admin supplies a catastrophic pattern like (a+)+b.
+            // Moodle body IDs (e.g. "page-mod-quiz-attempt") are always well under this limit.
+            const subject = (document.body.id ?? '').slice(0, 128);
+            isEnabled = !RegExp(expr).test(subject);
         } catch (ex) {
             console.error(ex);
         }

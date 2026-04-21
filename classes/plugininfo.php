@@ -31,25 +31,24 @@ use editor_tiny\plugin_with_configuration;
 use editor_tiny\plugin_with_menuitems;
 
 /**
- * Gets the value of a configuration key with a default fallback.
- *
- * @param object $cfg       The configuration object.
- * @param string $key       The key to check in the configuration object.
- * @param mixed  $default   The default value to return if the key is not found.
- *
- * @return mixed The value of the key if it exists, or the default value.
- */
-function tiny_codepro_cfgwithdefault(object $cfg, string $key, $default) {
-    return property_exists($cfg, $key) ? $cfg->$key : $default;
-}
-
-/**
  * Summary of plugininfo
  */
 class plugininfo extends plugin implements
     plugin_with_buttons,
     plugin_with_configuration,
     plugin_with_menuitems {
+    /**
+     * Gets the value of a configuration key with a default fallback.
+     *
+     * @param object $cfg       The configuration object.
+     * @param string $key       The key to check in the configuration object.
+     * @param mixed  $default   The default value to return if the key is not found.
+     *
+     * @return mixed The value of the key if it exists, or the default value.
+     */
+    private static function cfgwithdefault(object $cfg, string $key, $default) {
+        return property_exists($cfg, $key) ? $cfg->$key : $default;
+    }
     /**
      * Get the editor buttons for this plugins
      *
@@ -98,14 +97,14 @@ class plugininfo extends plugin implements
 
         if ($showplugin) {
             $cfg = get_config('tiny_codepro');
-            $params['disableonpagesregex'] = trim(tiny_codepro_cfgwithdefault($cfg, 'disableonpagesregex', ''));
-            $params['autoprettify'] = tiny_codepro_cfgwithdefault($cfg, 'autoprettify', 1) == 1;
-            $params['synccaret'] = tiny_codepro_cfgwithdefault($cfg, 'synccaret', 'forward');
-            $params['uimode'] = tiny_codepro_cfgwithdefault($cfg, 'uimode', 'user:dialog');
+            $params['disableonpagesregex'] = trim(self::cfgwithdefault($cfg, 'disableonpagesregex', ''));
+            $params['autoprettify'] = self::cfgwithdefault($cfg, 'autoprettify', 1) == 1;
+            $params['synccaret'] = self::cfgwithdefault($cfg, 'synccaret', 'forward');
+            $params['uimode'] = self::cfgwithdefault($cfg, 'uimode', 'user:dialog');
             // Content filtering options.
-            $params['customelements'] = trim(tiny_codepro_cfgwithdefault($cfg, 'customelements', ''));
-            $params['extendedvalidelements'] = trim(tiny_codepro_cfgwithdefault($cfg, 'extendedvalidelements', ''));
-            $params['validchildren'] = trim(tiny_codepro_cfgwithdefault($cfg, 'validchildren', ''));
+            $params['customelements'] = trim(self::cfgwithdefault($cfg, 'customelements', ''));
+            $params['extendedvalidelements'] = trim(self::cfgwithdefault($cfg, 'extendedvalidelements', ''));
+            $params['validchildren'] = trim(self::cfgwithdefault($cfg, 'validchildren', ''));
             $params['userprefs'] = get_user_preferences('tiny_codepro_userprefs', '');
         }
         return $params;

@@ -17,13 +17,11 @@
  * Tiny CodePro plugin.
  *
  * @module      tiny_codepro/plugin
- * @copyright   2023-2025 Josep Mulet Pol <pep.mulet@gmail.com>
+ * @copyright   2023-2026 Josep Mulet Pol <pep.mulet@gmail.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import Modal from 'core/modal';
-import ModalFactory from 'core/modal_factory';
-import ModalRegistry from 'core/modal_registry';
 
 class CodeProModal extends Modal {
     static TYPE = 'tiny_codepro/modal';
@@ -35,27 +33,44 @@ class CodeProModal extends Modal {
     }
 }
 
-ModalRegistry.register(CodeProModal.TYPE, CodeProModal, CodeProModal.TEMPLATE);
+// For Moodle < 4.3, Modal.create() did not exist yet so ModalFactory is used instead.
+// ModalFactory resolves the class by type string via ModalRegistry, so both must be loaded.
+// In Moodle 4.3+, cls.create() is called directly on the subclass — no registry needed.
+/** @type {Promise<object|null>} */
+const _modalFactoryPromise = (async () => {
+    if (typeof Modal.create === 'function') {
+        // Moodle 4.3+: direct subclass create(), neither ModalFactory nor ModalRegistry needed.
+        return null;
+    }
+    // Moodle < 4.3: register modals so ModalFactory can look them up by type string.
+    await import('core/modal_registry')
+        .then(m => {
+            const ModalRegistry = m.default ?? m;
+            ModalRegistry.register(CodeProModal.TYPE, CodeProModal, CodeProModal.TEMPLATE);
+        })
+        .catch(() => { });
+    const m = await import('core/modal_factory').catch(() => null);
+    return m ? (m.default ?? m) : null;
+})();
 
 /**
  * @param {*} opts
  * @returns {Promise<*>}
  */
-export function createModal(opts) {
-    let modalPromise;
+export async function createModal(opts) {
+    const options = {
+        large: true,
+        type: CodeProModal.TYPE,
+        ...opts
+    };
+    let modal;
     if (CodeProModal.create) {
-        // On newer versions, create directly from modal class.
-        modalPromise = CodeProModal.create({
-            large: true,
-            ...opts
-        });
+        // Moodle 4.3+: static create() handles template rendering and instantiation
+        modal = await CodeProModal.create(options);
     } else {
-        // On old versions of Moodle, use ModalFactory
-        modalPromise = ModalFactory.create({
-            type: CodeProModal.TYPE,
-            large: true,
-            ...opts
-        });
+        // Moodle < 4.3: legacy ModalFactory fallback
+        const ModalFactory = await _modalFactoryPromise;
+        modal = await ModalFactory.create(options);
     }
-    return modalPromise;
+    return modal;
 }
