@@ -72,5 +72,5 @@ Upgrade privacy metadata
 Support for Moodle 5.2, issue for Modal.create
 Minor bug fixes
 Updated npm dependencies
-Emmet Keybinding
+Support for Emmet Keybinding
 

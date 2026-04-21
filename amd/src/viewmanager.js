@@ -357,6 +357,9 @@ export class ViewManager {
      * It basically calls _saveAction in addition to handling cursor synchronization.
      */
     accept() {
+        if (!this.codeEditor) {
+            return false;
+        }
         // Add marker if cursor synchronization is enabled.
         const isSynEnabled = getSyncCaret(this.editor) === 'both';
         const htmlNoMarker = this.codeEditor.getValue(isSynEnabled ? 1 : 0);
