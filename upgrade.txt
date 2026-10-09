@@ -74,3 +74,5 @@ Minor bug fixes
 Updated npm dependencies
 Support for Emmet Keybinding
 
+== 2.1.6 ==
+New build with updated npm dependencies
