@@ -22,7 +22,7 @@ const VOID_ELEMENTS = [
 ];
 
 /**
- * Defined by state.js and configuration.
+ * Defined per formatting operation from configuration.
  * 
  * CONTENT_IGNORE_PLACEHOLDER
  * SELF_CLOSING_PLACEHOLDER
@@ -30,46 +30,110 @@ const VOID_ELEMENTS = [
  */
 
 /**
- * @typedef {object} Constants
+ * @typedef {object} HtmlfyConstants
  * @property {string} CONTENT_IGNORE_PLACEHOLDER
  * @property {string} SELF_CLOSING_PLACEHOLDER
  * @property {string} ATTRIBUTE_IGNORE_PLACEHOLDER
  */
-/**
- * @typedef {object} State
- * @property {boolean} checked_html - If passed in HTML has been checked for HTML within it.
- * @property {import("htmlfy").Config} config - Validated configuration.
- * @property {boolean} ignored
- * @property {Constants} constants - Constant strings, influenced by ignore_with.
- */
 
 /**
- * @type State
- * 
- * `constants` prefixes and suffixes must be in sync with those in utils.js
+ * Create the placeholders used during one formatting operation.
+ *
+ * @param {string} [ignore_with]
+ * @returns {HtmlfyConstants}
  */
-const state = {
-  checked_html: false,
-  config: { ...CONFIG },
-  ignored: false,
-  constants: {
-    CONTENT_IGNORE_PLACEHOLDER: `${CONFIG.ignore_with}_`,
-    SELF_CLOSING_PLACEHOLDER: `${CONFIG.ignore_with}/_>`,
-    ATTRIBUTE_IGNORE_PLACEHOLDER: `${CONFIG.ignore_with}=_`
+const createConstants = (ignore_with = CONFIG.ignore_with) => ({
+  CONTENT_IGNORE_PLACEHOLDER: `${ignore_with}_`,
+  SELF_CLOSING_PLACEHOLDER: `${ignore_with}/_>`,
+  ATTRIBUTE_IGNORE_PLACEHOLDER: `${ignore_with}=_`
+});
+
+const DEFAULT_CONSTANTS = createConstants();
+
+/**
+ * Visit complete tags without treating brackets inside quoted attributes as boundaries.
+ * Returning true from the visitor stops the scan.
+ *
+ * @param {string} content
+ * @param {(tag: string, start: number, end: number) => boolean | void} visitor
+ * @returns {boolean}
+ */
+const scanTags = (content, visitor) => {
+  let tag_start = -1;
+  let quote = '';
+
+  for (let index = 0; index < content.length; index++) {
+    const character = content[index];
+
+    if (tag_start === -1) {
+      if (character === '<') tag_start = index;
+      continue
+    }
+
+    if (quote) {
+      if (character === quote) quote = '';
+      continue
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === '<') {
+      tag_start = index;
+    } else if (character === '>') {
+      if (visitor(content.slice(tag_start, index + 1), tag_start, index + 1)) return true
+      tag_start = -1;
+    }
   }
+
+  return false
 };
 
 /**
- * 
- * @returns {State}
+ * Parse the name of an opening tag and return its end offset within the tag.
+ *
+ * @param {string} tag
+ * @returns {{ name: string, name_end: number } | undefined}
  */
-const getState = () => state;
+const getOpeningTag = (tag) => {
+  let name_start = 1;
+  while (/\s/.test(tag[name_start] || '')) name_start++;
+  if (!/[A-Za-z]/.test(tag[name_start] || '')) return
+
+  let name_end = name_start + 1;
+  while (name_end < tag.length && !/[\s/>]/.test(tag[name_end])) name_end++;
+
+  const name = tag.slice(name_start, name_end);
+  if (!/^[A-Za-z][A-Za-z0-9:._-]*$/.test(name)) return
+
+  return { name, name_end }
+};
 
 /**
- * 
- * @param {Partial<State>} new_state 
+ * Transform complete opening tags while preserving all content between them.
+ *
+ * @param {string} content
+ * @param {(tag: string, name: string, name_end: number) => string} transform
+ * @returns {string}
  */
-const setState = (new_state) => Object.assign(state, new_state);
+const transformOpeningTags = (content, transform) => {
+  const chunks = [];
+  let previous_end = 0;
+
+  scanTags(content, (tag, start, end) => {
+    const opening_tag = getOpeningTag(tag);
+    if (!opening_tag) return
+
+    chunks.push(
+      content.slice(previous_end, start),
+      transform(tag, opening_tag.name, opening_tag.name_end)
+    );
+    previous_end = end;
+  });
+
+  if (chunks.length === 0) return content
+  chunks.push(content.slice(previous_end));
+  return chunks.join('')
+};
 
 /**
  * Checks if content contains at least one HTML element or custom HTML element.
@@ -94,11 +158,30 @@ const setState = (new_state) => Object.assign(state, new_state);
  * @returns {boolean} A boolean.
  */
 const isHtml = (content) => {
-  setState({ checked_html: true });
+  const paired_elements = new Set();
+  const standard_element = /^[A-Za-z][A-Za-z0-9]*$/;
+  const namespaced_element = /^(?:[A-Za-z][A-Za-z0-9]*:)[A-Za-z][A-Za-z0-9]*$/;
+  const custom_element = /^(?:[a-z][a-z0-9._]*:)?[a-z][a-z0-9._]*-[a-z0-9._-]+$/;
 
-  return /<(?:[A-Za-z]+[A-Za-z0-9]*)(?:\s+.*?)*?\/{0,1}>/.test(content) ||
-  /<(?<Element>(?:[A-Za-z]+[A-Za-z0-9]*:)?(?:[A-Za-z]+[A-Za-z0-9]*))(?:\s+.*?)*?>(?:.|\n)*?<\/{1}\k<Element>>/.test(content) || 
-  /<(?<Element>(?:[a-z][a-z0-9._]*:)?[a-z][a-z0-9._]*-[a-z0-9._-]+)(?:\s+.*?)*?>(?:.|\n)*?<\/{1}\k<Element>>/.test(content)
+  return scanTags(content, (tag) => {
+    if (tag.startsWith('</')) {
+      const name = tag.slice(2, -1);
+      return paired_elements.has(name)
+    }
+
+    const opening_tag = getOpeningTag(tag);
+    if (!opening_tag) return false
+
+    const suffix_start = tag[opening_tag.name_end];
+    if (!(suffix_start === '>' || /\s/.test(suffix_start) || (suffix_start === '/' && tag[opening_tag.name_end + 1] === '>')))
+      return false
+
+    if (standard_element.test(opening_tag.name)) return true
+    if (namespaced_element.test(opening_tag.name) || custom_element.test(opening_tag.name))
+      paired_elements.add(opening_tag.name);
+
+    return false
+  })
 };
 
 /**
@@ -142,27 +225,15 @@ const mergeObjects = (current, updates) => {
  * @returns {import('htmlfy').Config}
  */
 const mergeConfig = (default_config, config) => {
-  const validated_config = mergeObjects(default_config, config);
-
-  /* Below `constants` prefixes and suffixes must be in sync with those in state.js */
-  setState({ 
-    config: validated_config,
-    constants: {
-      CONTENT_IGNORE_PLACEHOLDER: `${validated_config.ignore_with}_`,
-      SELF_CLOSING_PLACEHOLDER: `${validated_config.ignore_with}/_>`,
-      ATTRIBUTE_IGNORE_PLACEHOLDER: `${validated_config.ignore_with}=_`
-    }
-  });
-  return validated_config
+  return mergeObjects(default_config, config)
 };
 
 /**
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  */
-const protectAttributes = (html) => {
-  const { constants } = getState();
-
+const protectAttributes = (html, constants = DEFAULT_CONSTANTS) => {
   html = html.replace(/<[\w:\-]+([^>]*[^\/])>/g, (/** @type {string} */match, /** @type {any} */capture) => {
     return match.replace(capture, (match) => {
       return match
@@ -177,11 +248,10 @@ const protectAttributes = (html) => {
 
 /**
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  */
-const protectContent = (html) => {
-  const { constants } = getState();
-
+const protectContent = (html, constants = DEFAULT_CONSTANTS) => {
   return html
     .replace(/\n/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'nl!')
     .replace(/\r/g, constants.CONTENT_IGNORE_PLACEHOLDER + 'cr!')
@@ -190,11 +260,11 @@ const protectContent = (html) => {
 
 /**
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  */
-const finalProtectContent = (html) => {
+const finalProtectContent = (html, constants = DEFAULT_CONSTANTS) => {
   const regex = /\s*<([a-zA-Z0-9:-]+)[^>]*>\n\s*<\/\1>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n)|<([a-zA-Z0-9:-]+)[^>]*>(?=\n[ ]*[^\n]*__!i-£___£%__[^\n]*\n)(\n[ ]*\S[^\n]*\n\s*)<\/\3>/g; 
-  const { constants } = getState();
 
   return html
     .replace(regex, (/** @type {string} */match, p1, p2, p3, p4) => {
@@ -215,22 +285,39 @@ const finalProtectContent = (html) => {
 /**
  * Replace html brackets with ignore string.
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  * @returns {string}
  */
-const setIgnoreAttribute = (html) => {
-  const regex = /<([A-Za-z][A-Za-z0-9]*|[a-z][a-z0-9._]*-[a-z0-9._-]+)((?:\s+[A-Za-z0-9_-]+="[^"]*"|\s*[a-z]*)*)>/g; 
-  const { constants } = getState();
+const setIgnoreAttribute = (html, constants = DEFAULT_CONSTANTS) => {
+  // Most documents do not contain HTML-like brackets inside attribute values.
+  if (!/=\s*(?:"[^"]*[<>][^"]*"|'[^']*[<>][^']*')/.test(html)) return html
 
-  html = html.replace(regex, (/** @type {string} */match, p1, p2) => {
-    return match.replace(p2, (match) => {
-      return match
-        .replace(/</g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'lt!')
-        .replace(/>/g, constants.ATTRIBUTE_IGNORE_PLACEHOLDER + 'gt!')
-    })
-  });
-  
-  return html
+  return transformOpeningTags(html, (tag, name, name_end) => {
+    let quote = '';
+    let previous_end = 0;
+    const chunks = [];
+
+    for (let index = name_end; index < tag.length - 1; index++) {
+      const character = tag[index];
+
+      if (!quote && (character === '"' || character === "'")) {
+        quote = character;
+      } else if (quote && character === quote) {
+        quote = '';
+      } else if (quote && (character === '<' || character === '>')) {
+        chunks.push(
+          tag.slice(previous_end, index),
+          constants.ATTRIBUTE_IGNORE_PLACEHOLDER + (character === '<' ? 'lt!' : 'gt!')
+        );
+        previous_end = index + 1;
+      }
+    }
+
+    if (chunks.length === 0) return tag
+    chunks.push(tag.slice(previous_end));
+    return chunks.join('')
+  })
 };
 
 /**
@@ -256,11 +343,10 @@ const trimify = (html, trim) => {
 
 /**
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  */
-const unprotectAttributes = (html) => {
-  const { constants } = getState();
-
+const unprotectAttributes = (html, constants = DEFAULT_CONSTANTS) => {
   html = html.replace(/<[\w:\-]+([^>]*[^\/])>/g, (/** @type {string} */match, /** @type {any} */capture) => {
     return match.replace(capture, (match) => {
       return match
@@ -275,11 +361,10 @@ const unprotectAttributes = (html) => {
 
 /**
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  */
-const unprotectContent = (html) => {
-  const { constants } = getState();
-
+const unprotectContent = (html, constants = DEFAULT_CONSTANTS) => {
   html = html.replace(new RegExp(`.*${constants.CONTENT_IGNORE_PLACEHOLDER}[a-z]{2}!.*`, "g"), (/** @type {string} */match) => {
     return match.replace(new RegExp(`${constants.CONTENT_IGNORE_PLACEHOLDER}[a-z]{2}!`, "g"), (match) => {
       return match
@@ -295,13 +380,13 @@ const unprotectContent = (html) => {
 /**
  * Replace ignore string with html brackets.
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  * @returns {string}
  */
-const unsetIgnoreAttribute = (html) => {
+const unsetIgnoreAttribute = (html, constants = DEFAULT_CONSTANTS) => {
   /* Regex to find opening tags and capture their attributes. */
   const tagRegex = /<([\w:\-]+)([^>]*)>/g;
-  const { constants } = getState();
   const escapedIgnoreString = constants.ATTRIBUTE_IGNORE_PLACEHOLDER.replace(
     /[-\/\\^$*+?.()|[\]{}]/g,
     "\\$&"
@@ -334,6 +419,8 @@ const unsetIgnoreAttribute = (html) => {
  */
 const validateConfig = (config) => {
   if (typeof config !== 'object') throw new Error('Config must be an object.')
+
+  config = { ...config };
   
   const default_config = { ...CONFIG };
 
@@ -348,7 +435,6 @@ const validateConfig = (config) => {
   );
 
   if (config_empty) {
-    setState({ config: default_config });
     return default_config
   }
 
@@ -406,113 +492,165 @@ const validateConfig = (config) => {
  * @param {string} text 
  * @param {number} width 
  * @param {string} indent
+ * @param {HtmlfyConstants} [constants]
  */
-const wordWrap = (text, width, indent) => {
+const wordWrap = (text, width, indent, constants = DEFAULT_CONSTANTS) => {
   const words = text.trim().split(/\s+/);
   
   if (words.length === 0 || (words.length === 1 && words[0] === ''))
     return ""
 
+  /** @type {string[]} */
   const lines = [];
-  let current_line = "";
-  const padding_string = indent;
+  /** @type {string[]} */
+  const current_words = [];
+  let current_length = 0;
 
-  words.forEach((word) => {
-    if (word === "") return
+  const flushLine = () => {
+    if (current_words.length === 0) return
+    lines.push(indent + current_words.join(' '));
+    current_words.length = 0;
+    current_length = 0;
+  };
+
+  for (const word of words) {
+    if (word === "") continue
 
     if (word.length >= width) {
-      /* If there's content on the current line, push it first with correct padding. */
-      if (current_line !== "")
-        lines.push(lines.length === 0 ? indent + current_line : padding_string + current_line);
-
-      /* Push a long word on its own line with correct padding. */
-      lines.push(lines.length === 0 ? indent + word : padding_string + word);
-      current_line = ""; // Reset current line
-      return // Move to the next word
+      flushLine();
+      lines.push(indent + word);
+      continue
     }
 
-    /* Check if adding the next word exceeds the wrap width. */
-    const test_line = current_line === "" ? word : current_line + " " + word;
-
-    if (test_line.length <= width) {
-      current_line = test_line;
+    const next_length = current_length + (current_words.length === 0 ? 0 : 1) + word.length;
+    if (next_length <= width) {
+      current_words.push(word);
+      current_length = next_length;
     } else {
-      /* Word doesn't fit, finish the current line and push it. */
-      if (current_line !== "") {
-         /* Add padding based on whether it's the first line added or not. */
-         lines.push(lines.length === 0 ? indent + current_line : padding_string + current_line);
-      }
-      /* Start a new line with the current word. */
-      current_line = word;
+      flushLine();
+      current_words.push(word);
+      current_length = word.length;
     }
-  });
+  }
 
-  /* Add the last remaining line with appropriate padding. */
-  if (current_line !== "")
-    lines.push(lines.length === 0 ? indent + current_line : padding_string + current_line);
+  flushLine();
 
   const result = lines.join("\n");
 
-  return protectContent(result)
+  return protectContent(result, constants)
+};
+
+const IGNORE_MARKER_PREFIX = "___HTMLFY_SPECIAL_IGNORE_MARKER_";
+const IGNORE_MARKER_REGEX = /___HTMLFY_SPECIAL_IGNORE_MARKER_\d+___/g;
+const TEXTAREA_MARKER_PREFIX = "___HTMLFY_TEXTAREA_MARKER_";
+const TEXTAREA_MARKER_REGEX = /___HTMLFY_TEXTAREA_MARKER_\d+___/g;
+
+/**
+ * Extract the contents of matching elements in one traversal.
+ *
+ * @param {string} html
+ * @param {Set<string>} names
+ * @param {string} marker_prefix
+ * @param {(content: string) => string} [transform]
+ * @returns {{ html_with_markers: string, extracted_map: Map<string,string> }}
+ */
+const extractBlocks = (html, names, marker_prefix, transform = content => content) => {
+  const extracted_blocks = new Map();
+  const chunks = [];
+  let marker_id = 0;
+  let previous_end = 0;
+
+  /** @type {{ name: string, content_start: number } | undefined} */
+  let active_block;
+  let tag_start = -1;
+  let quote = '';
+
+  for (let index = 0; index < html.length; index++) {
+    const character = html[index];
+
+    if (active_block) {
+      if (character !== '<') continue
+
+      let closing_index = index + 1;
+      while (/\s/.test(html[closing_index] || '')) closing_index++;
+      if (html[closing_index] !== '/') continue
+
+      closing_index++;
+      while (/\s/.test(html[closing_index] || '')) closing_index++;
+      if (!html.startsWith(active_block.name, closing_index)) continue
+
+      closing_index += active_block.name.length;
+      while (/\s/.test(html[closing_index] || '')) closing_index++;
+      if (html[closing_index] !== '>') continue
+
+      const marker = `${marker_prefix}${marker_id++}___`;
+      chunks.push(html.slice(previous_end, active_block.content_start), marker);
+      extracted_blocks.set(marker, transform(html.slice(active_block.content_start, index)));
+      previous_end = index;
+      active_block = undefined;
+      index = closing_index;
+      continue
+    }
+
+    if (tag_start === -1) {
+      if (character === '<') tag_start = index;
+      continue
+    }
+
+    if (quote) {
+      if (character === quote) quote = '';
+      continue
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === '<') {
+      tag_start = index;
+    } else if (character === '>') {
+      const opening_tag = getOpeningTag(html.slice(tag_start, index + 1));
+      if (opening_tag && names.has(opening_tag.name)) {
+        active_block = { name: opening_tag.name, content_start: index + 1 };
+      }
+      tag_start = -1;
+    }
+  }
+
+  if (extracted_blocks.size === 0)
+    return { html_with_markers: html, extracted_map: extracted_blocks }
+
+  chunks.push(html.slice(previous_end));
+  return { html_with_markers: chunks.join(''), extracted_map: extracted_blocks }
 };
 
 /**
  * Extract any HTML blocks to be ignored,
- * and replace them with a placeholder
- * for re-insertion later.
- * 
- * @param {string} html 
- * @returns {{ html_with_markers: string, extracted_map: Map<any,any> }}
+ * and replace them with a placeholder for re-insertion later.
+ *
+ * @param {string} html
+ * @param {string[]} ignore
+ * @returns {{ html_with_markers: string, extracted_map: Map<string,string> }}
  */
-function extractIgnoredBlocks(html) {
-  setState({ ignored: true });
-  const config = (getState()).config;
-  let current_html = html;
-  const extracted_blocks = new Map();
-  let marker_id = 0;
-  const MARKER_PREFIX = "___HTMLFY_SPECIAL_IGNORE_MARKER_";
+function extractIgnoredBlocks(html, ignore) {
+  return extractBlocks(html, new Set(ignore), IGNORE_MARKER_PREFIX)
+}
 
-  for (const tag of config.ignore) {
-    /* Ensure tag is escaped if it can contain regex special chars. */
-    const safe_tag_name = tag.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-
-    const regex = new RegExp(
-      `(<\\s*${safe_tag_name}[^>]*>)(.*?)(<\\s*\/\\s*${safe_tag_name}\\s*>)`,
-      "gs" // global and dotAll
-    );
-
-    /** @type RegExpExecArray | null */
-    let match;
-
-    /**
-     * @type {{ start: number; end: number; marker: string }[]}
-     */
-    const replacements = [];
-
-    while ((match = regex.exec(current_html)) !== null) {
-      const marker = `${MARKER_PREFIX}${marker_id++}___`;
-
-      /* Only store content, and minify tags later. */
-      extracted_blocks.set(marker, match[2]);
-      
-      replacements.push({
-        start: match.index + match[1].length, // start of content
-        end: match.index + match[1].length + match[2].length, // end of content
-        marker: marker,
-      });
-    }
-
-    /* Apply replacements from the end to the beginning to keep indices valid. */
-    for (let i = replacements.length - 1; i >= 0; i--) {
-      const rep = replacements[i];
-      current_html =
-        current_html.substring(0, rep.start) +
-        rep.marker +
-        current_html.substring(rep.end);
-    }
-  }
-
-  return { html_with_markers: current_html, extracted_map: extracted_blocks }
+/**
+ * Protect textarea contents without expanding them into entities.
+ *
+ * @param {string} html
+ * @returns {{ html_with_markers: string, extracted_map: Map<string,string> }}
+ */
+function extractTextareaBlocks(html) {
+  return extractBlocks(html, new Set(['textarea']), TEXTAREA_MARKER_PREFIX, content => content
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#10;/g, '\n')
+    .replace(/&#13;/g, '\r')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+  )
 }
 
 /**
@@ -523,13 +661,18 @@ function extractIgnoredBlocks(html) {
  * @returns 
  */
 function reinsertIgnoredBlocks(html_with_markers, extracted_map) {
-  setState({ ignored: false });
-  let final_html = html_with_markers;
+  return html_with_markers.replace(IGNORE_MARKER_REGEX, marker => extracted_map.get(marker) ?? marker)
+}
 
-  for (const [marker, original_block] of extracted_map) {
-    final_html = final_html.split(marker).join(original_block);
-  }
-  return final_html
+/**
+ * Re-insert protected textarea contents in one pass.
+ *
+ * @param {string} html_with_markers
+ * @param {Map<string,string>} extracted_map
+ * @returns {string}
+ */
+function reinsertTextareaBlocks(html_with_markers, extracted_map) {
+  return html_with_markers.replace(TEXTAREA_MARKER_REGEX, marker => extracted_map.get(marker) ?? marker)
 }
 
 const void_element_regex = new RegExp(`<(${VOID_ELEMENTS.join("|")})(?:\\s(?:[^/>]|/(?!>))*)*>`, 'g');
@@ -538,12 +681,11 @@ const void_element_regex = new RegExp(`<(${VOID_ELEMENTS.join("|")})(?:\\s(?:[^/
  * Add a placeholder for void elements that are not self-closing.
  * This is for internal processing only.
  * 
- * @param {string} html 
+ * @param {string} html
+ * @param {HtmlfyConstants} [constants]
  * @returns 
  */
-function setSelfClosing(html) {
-  const { constants } = getState();
-
+function setSelfClosing(html, constants = DEFAULT_CONSTANTS) {
   return html.replace(
     // match only void elements that are not self-closing
     void_element_regex,
@@ -552,130 +694,24 @@ function setSelfClosing(html) {
 }
 
 /**
- * Remove internal placeholder for non-native self-closing void elements.
- * 
- * @param {string} html 
- * @returns 
- */
-function unsetSelfClosing(html) {
-  const { constants } = getState();
-
-  return html.replace(constants.SELF_CLOSING_PLACEHOLDER, ">")
-}
-
-/**
- * Enforce entity characters for textarea content.
- * To also minifiy tags, pass `minify` as `true`.
- * 
- * @param {string} html The HTML string to evaluate.
- * @param {boolean} [minify] Minifies the textarea tags themselves. 
- * Defaults to `false`. We recommend a value of `true` if you're running `entify()` 
- * as a standalone function.
+ * Minify HTML using configuration already validated by the caller.
+ *
+ * @param {string} html
+ * @param {import('htmlfy').Config} validated_config
+ * @param {boolean} extract_ignored
  * @returns {string}
- * @example <textarea>3 > 2</textarea> => <textarea>3&nbsp;&gt;&nbsp;2</textarea>
- * @example With minify.
- * <textarea  >3 > 2</textarea> => <textarea>3&nbsp;&gt;&nbsp;2</textarea>
  */
-const entify = (html, minify = false) => {
-  /** 
-   * Use entities inside textarea content.
-   */
-  html = html.replace(/<\s*textarea[^>]*>((.|\n)*?)<s*\/\s*textarea\s*>/g, (match, capture) => {
-    return match.replace(capture, (match) => {
-      return match
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;')
-        .replace(/\n/g, '&#10;')
-        .replace(/\r/g, '&#13;')
-        .replace(/\s/g, '&nbsp;')
-    })
-  });
+const minifyHtml = (html, validated_config, extract_ignored) => {
+  /** @type {Map<string,string> | undefined} */
+  let textarea_map;
+  validated_config.ignore.length > 0;
 
-  if (minify) {
-    html = html.replace(/<\s*textarea[^>]*>(.|\n)*?<\s*\/\s*textarea\s*>/g, (match) => {
-      /* This only affects the html tags, since everything else has been entified. */
-      return match
-        .replace(/\s+/g, ' ')
-        .replace(/\s>/g, '>')
-        .replace(/>\s/g, '>')
-        .replace(/\s</g, '<')
-        .replace(/<\s/g, '<')
-        .replace(/<\/\s/g, '<\/')
-        .replace(/class=["']\s/g, (match) => match.replace(/\s/g, ''))
-        .replace(/(class=.*)\s(["'])/g, '$1'+'$2')
-    });
-  }
-
-  return html
-};
-
-/**
- * Remove entity characters for textarea content.
- * Currently internal use only.
- * 
- * @param {string} html The HTML string to evaluate.
- * @returns {string}
- * @example <textarea>3&nbsp;&gt;&nbsp;2</textarea> => <textarea>3 > 2</textarea>
- */
-const dentify = (html) => {
-  /** 
-   * Remove entities inside textarea content.
-   */
-  return html = html.replace(/<textarea[^>]*>((.|\n)*?)<\/textarea>/g, (match, capture) => {
-    return match.replace(capture, (match) => {
-      match = match
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&#10;/g, '\n')
-        .replace(/&#13;/g, '\r')
-        .replace(/&nbsp;/g, ' ')
-        // Ensure we collapse consecutive spaces, or they'll be completely removed later.
-        .replace(/\s+/g, ' ');
-
-      return match
-    })
-  })
-};
-
-/**
- * @type {Map<any,any>}
- */
-let ignore_map$1;
-
-/**
- * Creates a single-line HTML string
- * by removing line returns, tabs, and relevant spaces.
- * 
- * @param {string} html The HTML string to minify.
- * @param {import('htmlfy').UserConfig} [config] A user configuration object.
- * @returns {string} A minified HTML string.
- */
-const minify = (html, config) => {
-  let reinsert_ignored = false;
-  const { checked_html, ignored, constants } = getState();
-
-  if (!checked_html && !isHtml(html)) return html
-
-  const validated_config = (getState()).config;
-  const ignore = validated_config.ignore.length > 0;
-
-  /* Extract ignored elements. Skipped if prettify has already ignored blocks. */
-  if (!ignored && ignore) {
-    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html);
+  /* Keep textarea markup out of the general minification passes. */
+  if (!validated_config.ignore.includes('textarea') && html.includes('textarea')) {
+    const { html_with_markers, extracted_map } = extractTextareaBlocks(html);
     html = html_with_markers;
-    ignore_map$1 = extracted_map;
-    reinsert_ignored = true;
+    textarea_map = extracted_map;
   }
-
-  /**
-   * Ensure textarea content is protected
-   * before general minification.
-   */
-  html = entify(html, true);
 
   /* All other minification. */
   // Remove ALL newlines and tabs explicitly.
@@ -715,131 +751,230 @@ const minify = (html, config) => {
   html = html.replace(/ = /g, "=");
   // Consider safer alternatives if needed (e.g., / = "/g, '="')
 
-  // Trim whitespace inside attribute values
-  html = html.replace(
-    /([a-zA-Z0-9_-]+)=(['"])(.*?)\2/g,
-    (match, attr_name, quote, value) => {
-      // value.trim() handles both leading/trailing spaces
-      // and cases where the value is only whitespace (becomes empty string)
-      const trimmed_value = value.trim();
-      return `${attr_name}=${quote}${trimmed_value}${quote}`
-    }
-  );
+  // Trim whitespace inside quoted attribute values when any are padded.
+  if (/=["']\s|\s["']/.test(html)) {
+    html = transformOpeningTags(html, (tag, name, name_end) => {
+      const chunks = [];
+      let previous_end = 0;
+      let index = name_end;
+
+      while (index < tag.length - 1) {
+        while (/\s/.test(tag[index] || '')) index++;
+
+        const attribute_start = index;
+        while (/[a-zA-Z0-9_-]/.test(tag[index] || '')) index++;
+        if (index === attribute_start || tag[index] !== '=') {
+          index++;
+          continue
+        }
+
+        const quote = tag[index + 1];
+        if (quote !== '"' && quote !== "'") {
+          index++;
+          continue
+        }
+
+        const value_start = index + 2;
+        const value_end = tag.indexOf(quote, value_start);
+        if (value_end === -1) break
+
+        const value = tag.slice(value_start, value_end);
+        const trimmed_value = value.trim();
+        if (trimmed_value !== value) {
+          chunks.push(tag.slice(previous_end, value_start), trimmed_value);
+          previous_end = value_end;
+        }
+        index = value_end + 1;
+      }
+
+      if (chunks.length === 0) return tag
+      chunks.push(tag.slice(previous_end));
+      return chunks.join('')
+    });
+  }
 
   // Final trim for the whole string
   html = html.trim();
 
-  /* Remove protective entities. */
-  html = dentify(html);
-
-  /* Re-insert ignored elements. Skipped unless minify did the ignore. */
-  if (reinsert_ignored) {
-    html = reinsertIgnoredBlocks(html, ignore_map$1);
+  if (textarea_map) {
+    html = reinsertTextareaBlocks(html, textarea_map);
   }
 
   return html
 };
 
 /**
- * @type {{ line: Record<string,string>[] }}
+ * Minify HTML that has already been checked and had ignored blocks extracted.
+ *
+ * @param {string} html
+ * @param {import('htmlfy').Config} config
+ * @returns {string}
  */
-const convert = {
-  line: []
-};
+const minifyKnownHtml = (html, config) => minifyHtml(html, config);
+
+const VOID_ELEMENT_SET = new Set(VOID_ELEMENTS);
+const TOKEN_CLOSING = 1;
+const TOKEN_COMMENT = 2;
+const TOKEN_DOCTYPE = 4;
+const TOKEN_IGNORED = 8;
+const TOKEN_SELF_CLOSING = 16;
+const TOKEN_SYNTHETIC_SELF_CLOSING = 32;
+const TOKEN_INLINE = 64;
 
 /**
- * @type {Map<any,any>}
+ * @typedef {object} Token
+ * @property {'tag' | 'text'} type
+ * @property {string} value
+ * @property {number} flags
  */
-let ignore_map;
 
 /**
  * Isolate tags, content, and comments.
  * 
  * @param {string} html The HTML string to evaluate.
- * @example <div>Hello World!</div> => 
- *  [#-# : 0 : <div> : #-#]
- *  Hello World!
- *  [#-# : 1 : </div> : #-#]
+ * @param {import('./utils.js').HtmlfyConstants} constants
+ * @returns {Token[]}
  */
-const enqueue = (html) => {
-  convert.line = [];
-  let i = -1;
+const enqueue = (html, constants) => {
+  /** @type {Token[]} */
+  const lines = [];
   /* Regex to find tags OR text content between tags. */
-  const regex = /(<[^>]+>)|([^<]+)/g;
+  const regex = /<[^>]+>|[^<]+/g;
 
-  html.replace(regex, (match, c1, c2) => {
-    if (c1) {
-      convert.line.push({ type: "tag", value: match });
-    } else if (c2 && c2.trim().length > 0) {
-      /* It's text content (and not just whitespace). */
-      convert.line.push({ type: "text", value: match });
+  /* Use replace for callback iteration, but avoid constructing the old marker output. */
+  html.replace(regex, (value) => {
+    const type = value.startsWith('<') ? 'tag' : 'text';
+
+    if (type === 'text') {
+      if (value.trim().length > 0) {
+        lines.push({
+          type,
+          value,
+          flags: value.startsWith('___HTMLFY_SPECIAL_IGNORE_MARKER_') ? TOKEN_IGNORED : 0,
+        });
+      }
+      return ''
     }
 
-    i++;
-    return `\n[#-# : ${i} : ${match} : #-#]\n`
+    const trimmed = value.trim();
+    const synthetic_self_closing = trimmed.endsWith(constants.SELF_CLOSING_PLACEHOLDER);
+    let flags = 0;
+    if (trimmed.startsWith('</')) flags |= TOKEN_CLOSING;
+    if (trimmed.startsWith('<!--')) flags |= TOKEN_COMMENT;
+    if (trimmed.startsWith('<!doctype')) flags |= TOKEN_DOCTYPE;
+    if (trimmed.endsWith('/>') || synthetic_self_closing) flags |= TOKEN_SELF_CLOSING;
+    if (synthetic_self_closing) flags |= TOKEN_SYNTHETIC_SELF_CLOSING;
+
+    lines.push({
+      type,
+      value,
+      flags,
+    });
+    return ''
   });
+
+  return lines
+};
+
+/**
+ * Collapse the same simple element pairs handled by the final output regex.
+ *
+ * @param {Token[]} lines
+ * @returns {Token[]}
+ */
+const collapseInlineTokens = (lines) => {
+  /** @type {Token[]} */
+  const collapsed = [];
+
+  for (let index = 0; index < lines.length; index++) {
+    const opening = lines[index];
+
+    if (opening.type === 'tag' && !(opening.flags & (
+      TOKEN_CLOSING |
+      TOKEN_COMMENT |
+      TOKEN_DOCTYPE |
+      TOKEN_SELF_CLOSING
+    ))) {
+      const name_match = opening.value.match(/^<([^>\s]+)[^>]*>$/);
+      const name = name_match?.[1];
+      const content = lines[index + 1];
+      const possible_closing = content?.type === 'text' ? lines[index + 2] : content;
+
+      if (name && possible_closing?.value === `</${name}>`) {
+        const empty_pair = content?.type === 'tag' && /^[\w:._-]+$/.test(name);
+        const text_pair = content?.type === 'text' && /[^><\/\s]/.test(content.value);
+
+        if (empty_pair || text_pair) {
+          collapsed.push({
+            type: 'tag',
+            value: opening.value + (text_pair ? content.value.trim() : '') + possible_closing.value,
+            flags: TOKEN_INLINE,
+          });
+          index += text_pair ? 2 : 1;
+          continue
+        }
+      }
+    }
+
+    collapsed.push(opening);
+  }
+
+  return collapsed
 };
 
 /**
  * Process enqueued content.
  *  
+ * @param {Token[]} lines
+ * @param {import('htmlfy').Config} config
+ * @param {import('./utils.js').HtmlfyConstants} constants
  * @returns {string}
  */
-const process = () => {
-  const { config, constants } = getState();
+const process = (lines, config, constants) => {
   const step = " ".repeat(config.tab_size);
   const tag_wrap = config.tag_wrap;
   const content_wrap = config.content_wrap;
   const strict = config.strict;
 
   /* Track current number of indentations needed. */
-  let indents = '';
+  let indent_level = 0;
 
   /** @type string[] */
   const output_lines = [];
-  const tag_regex = /<[A-Za-z]+\b[^>]*(?:.|\n)*?\/?>/g; /* Is opening tag or void element. */
-  const attribute_regex = /\s{1}[A-Za-z-]+(?:=".*?")?/g; /* Matches all tag/element attributes. */
+  const tag_regex = /<[A-Za-z]+\b[^>]*(?:.|\n)*?\/?>/; /* Is opening tag or void element. */
+  const attribute_regex = /\s{1}[A-Za-z:@#*?$()\[\].-]+(?:=".*?")?/g; /* Matches all tag/element attributes. */
 
   /* Process lines and indent. */
-  convert.line.forEach((source, index) => {
+  lines.forEach((source, index) => {
     let current_line_value = source.value;
 
-    const is_ignored_content =
-      current_line_value.startsWith('___HTMLFY_SPECIAL_IGNORE_MARKER_');
-
     let subtrahend = 0;
-    const prev_line_data = convert.line[index - 1];
-    const prev_line_value = prev_line_data?.value ?? ""; // Use empty string if no prev line
+    const prev_line_data = lines[index - 1];
 
-    /**
-     * Arbitratry character, to keep track of the string's length.
-     */
-    indents += '0';
+    indent_level++;
 
     if (index === 0) subtrahend++;
     /* We're processing a closing tag. */
-    if (current_line_value.trim().startsWith("</")) subtrahend++;
+    if (source.flags & TOKEN_CLOSING) subtrahend++;
     /* prevLine is a doctype declaration. */
-    if (prev_line_value.trim().startsWith("<!doctype")) subtrahend++;
+    if (prev_line_data && (prev_line_data.flags & TOKEN_DOCTYPE)) subtrahend++;
     /* prevLine is a comment. */
-    if (prev_line_value.trim().startsWith("<!--")) subtrahend++;
+    if (prev_line_data && (prev_line_data.flags & TOKEN_COMMENT)) subtrahend++;
     /* prevLine is a void element. */
-    if (
-      prev_line_value.trim().endsWith("/>") // native self-closing
-      ||
-      prev_line_value.trim().endsWith(constants.SELF_CLOSING_PLACEHOLDER) // synthetic self-closing
-    ) subtrahend++;
+    if (prev_line_data && (prev_line_data.flags & TOKEN_SELF_CLOSING)) subtrahend++;
     /* prevLine is a closing tag. */
-    if (prev_line_value.trim().startsWith("</")) subtrahend++;
+    if (prev_line_data && (prev_line_data.flags & TOKEN_CLOSING)) subtrahend++;
+    /* prevLine opens and closes on the same line. */
+    if (prev_line_data && (prev_line_data.flags & TOKEN_INLINE)) subtrahend++;
     /* prevLine is text. */
     if (prev_line_data?.type === "text") subtrahend++;
 
     /* Determine offset for line indentation. */
-    const offset = Math.max(0, indents.length - subtrahend);
+    const offset = Math.max(0, indent_level - subtrahend);
     /* Correct indent level for *this* line's content */
     const current_indent_level = offset; // Store the level for this line
 
-    indents = indents.substring(0, current_indent_level); // Adjust for *next* round
+    indent_level = current_indent_level;
 
     /**
      * Starts with a single punctuation character.
@@ -862,25 +997,26 @@ const process = () => {
 
     const padding = step.repeat(current_indent_level);
 
-    if (is_ignored_content) {
+    if (source.flags & TOKEN_IGNORED) {
       /* Stop processing this line, as it's set to be ignored. */
       output_lines.push(current_line_value);
     } else {
       /* Remove comment. */
-      if (strict && current_line_value.trim().startsWith("<!--"))
+      if (strict && (source.flags & TOKEN_COMMENT))
         return
 
       let result = current_line_value;
 
       /* Remove self-closing placeholder, if needed. */
-      result = unsetSelfClosing(result);
+      if (source.flags & TOKEN_SYNTHETIC_SELF_CLOSING)
+        result = result.replace(constants.SELF_CLOSING_PLACEHOLDER, '>');
 
       if (
         source.type === 'text' && 
         content_wrap > 0 && 
         result.length >= content_wrap
       ) {
-        result = wordWrap(result, content_wrap, padding);
+        result = wordWrap(result, content_wrap, padding, constants);
       }
       /* Wrap the attributes of open tags and void elements. */
       else if (
@@ -888,30 +1024,36 @@ const process = () => {
         result.length > tag_wrap &&
         tag_regex.test(result)
       ) {
-        tag_regex.lastIndex = 0; // Reset stateful regex
         attribute_regex.lastIndex = 0; // Reset stateful regex
 
-        const tag_parts = result.split(attribute_regex).filter(Boolean);
+        const attributes = [];
+        let first_attribute_start = -1;
+        let last_attribute_end = -1;
+        let attribute_match;
 
-        if (tag_parts.length >= 2) {
-          const attributes = result.matchAll(attribute_regex);
+        while ((attribute_match = attribute_regex.exec(result)) !== null) {
+          if (first_attribute_start === -1) first_attribute_start = attribute_match.index;
+          last_attribute_end = attribute_regex.lastIndex;
+          attributes.push(attribute_match[0].trim());
+        }
+
+        if (attributes.length > 0) {
+          const opening_part = result.slice(0, first_attribute_start);
+          const closing_part = result.slice(last_attribute_end).trim();
           const inner_padding = padding + step;
-          let wrapped_tag = padding + tag_parts[0] + "\n";
+          const wrapped_tag = [padding + opening_part];
 
-          for (const a of attributes) {
-            const attribute_string = a[0].trim();
-            wrapped_tag += inner_padding + attribute_string + "\n";
+          for (const attribute of attributes) {
+            wrapped_tag.push(inner_padding + attribute);
           }
 
-          const tag_name_match = tag_parts[0].match(/<([A-Za-z_:-]+)/);
+          const tag_name_match = opening_part.match(/<([A-Za-z_:-]+)/);
           const tag_name = tag_name_match ? tag_name_match[1] : "";
-          const is_self_closing = tag_parts.at(-1)?.endsWith("/>") && VOID_ELEMENTS.includes(tag_name);
-          const closing_part = tag_parts[1].trim();
+          const is_self_closing = result.endsWith("/>") && VOID_ELEMENT_SET.has(tag_name);
           const closing_padding = padding + (strict && is_self_closing ? " " : "");
 
-          wrapped_tag += closing_padding + closing_part;
-
-          result = wrapped_tag; // Assign the fully wrapped string
+          wrapped_tag.push(closing_padding + closing_part);
+          result = wrapped_tag.join('\n');
         } else {
           result = padding + result;
         }
@@ -929,30 +1071,32 @@ const process = () => {
   let final_html = output_lines.join("\n");
 
   /* Preserve wrapped attributes. */
-  if (tag_wrap > 0) final_html = protectAttributes(final_html);
+  if (tag_wrap > 0) final_html = protectAttributes(final_html, constants);
 
   /* Extra preserve wrapped content. */
   if (content_wrap > 0 && new RegExp(`/\\n[ ]*[^\\n]*${constants.CONTENT_IGNORE_PLACEHOLDER}[^\\n]*\\n/`).test(final_html))
-    final_html = finalProtectContent(final_html);
+    final_html = finalProtectContent(final_html, constants);
 
   /* Remove line returns, tabs, and consecutive spaces within html elements or their content. */
-  final_html = final_html.replace(
-    /<(?<Element>[^>\s]+)[^>]*>[^<]*?[^><\/\s][^<]*?<\/\k<Element>>|<script[^>]*>[\s]*<\/script>|<([\w:\._-]+)([^>]*)><\/\2>|<([\w:\._-]+)([^>]*)>[\s]+<\/\4>/g,
-    match => {
-      // Check if this contains placeholder
-      if (match.includes(constants.SELF_CLOSING_PLACEHOLDER) || match.includes(constants.CONTENT_IGNORE_PLACEHOLDER)) {
-        return match // Don't modify if it contains the placeholder
-      }
+  if (tag_wrap > 0 || content_wrap > 0) {
+    final_html = final_html.replace(
+      /<(?<Element>[^>\s]+)[^>]*>[^<]*?[^><\/\s][^<]*?<\/\k<Element>>|<script[^>]*>[\s]*<\/script>|<([\w:\._-]+)([^>]*)><\/\2>|<([\w:\._-]+)([^>]*)>[\s]+<\/\4>/g,
+      match => {
+        // Check if this contains placeholder
+        if (match.includes(constants.SELF_CLOSING_PLACEHOLDER) || match.includes(constants.CONTENT_IGNORE_PLACEHOLDER)) {
+          return match // Don't modify if it contains the placeholder
+        }
 
-      return match.replace(/\n|\t|\s{2,}/g, '')
-    }
-  );
+        return match.replace(/\n|\t|\s{2,}/g, '')
+      }
+    );
+  }
 
   /* Revert wrapped content. */
-  if (content_wrap > 0) final_html = unprotectContent(final_html);
+  if (content_wrap > 0) final_html = unprotectContent(final_html, constants);
 
   /* Revert wrapped attributes. */
-  if (tag_wrap > 0) final_html = unprotectAttributes(final_html);
+  if (tag_wrap > 0) final_html = unprotectAttributes(final_html, constants);
 
   /* Remove self-closing nature of void elements. */
   if (strict) final_html = final_html.replace(/\s\/>|\/>/g, '>');
@@ -972,43 +1116,44 @@ const process = () => {
  * @returns {string} A well-formed HTML string.
  */
 const prettify = (html, config) => {
-  let reinsert_ignored = false;
-  const { checked_html, ignored } = getState();
-
   /* Return content as-is if it does not contain any HTML elements. */
-  if (!checked_html && !isHtml(html)) return html
+  if (!isHtml(html)) return html
 
-  /* Runs setState for config. */
   const validated_config = validateConfig(config || {});
+  const constants = createConstants(validated_config.ignore_with);
 
   const ignore = validated_config.ignore.length > 0;
+
+  /** @type {Map<any,any> | undefined} */
+  let ignore_map;
 
   /* Allows you to trimify before ignoring. */
   if (validated_config.trim.length > 0) html = trimify(html, validated_config.trim);
 
   /* Extract ignored elements. */
-  if (!ignored && ignore) {
-    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html);
+  if (ignore) {
+    const { html_with_markers, extracted_map } = extractIgnoredBlocks(html, validated_config.ignore);
     html = html_with_markers;
     ignore_map = extracted_map;
-    reinsert_ignored = true;
   }
 
   /* Preserve html text within attribute values. */
-  html = setIgnoreAttribute(html);
+  html = setIgnoreAttribute(html, constants);
 
   /* Insert placeholder for void elements that aren't self-closing. */
-  html = setSelfClosing(html);
+  html = setSelfClosing(html, constants);
 
-  html = minify(html);
-  enqueue(html);
-  html = process();
+  html = minifyKnownHtml(html, validated_config);
+  let lines = enqueue(html, constants);
+  if (validated_config.tag_wrap === 0 && validated_config.content_wrap === 0)
+    lines = collapseInlineTokens(lines);
+  html = process(lines, validated_config, constants);
 
   /* Revert html text within attribute values. */
-  html = unsetIgnoreAttribute(html);
+  html = unsetIgnoreAttribute(html, constants);
 
   /* Re-insert ignored elements. */
-  if (reinsert_ignored) {
+  if (ignore_map) {
     html = reinsertIgnoredBlocks(html, ignore_map);
   }
 
