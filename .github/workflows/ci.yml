@@ -121,7 +121,7 @@ jobs:
         - moodle: 'MOODLE_503_STABLE'
           php: '8.4'
           db: 'pgsql'
-          db_image: 'postgres:16'
+          db_image: 'postgres:17'
           health_cmd: "pg_isready"
           db_user: postgres
           db_pass: postgres
