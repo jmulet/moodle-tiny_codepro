@@ -110,7 +110,7 @@ jobs:
 
         # Moodle 5.1
         - moodle: 'MOODLE_501_STABLE'
-          php: '8.4'
+          php: '8.3'
           db: 'pgsql'
           db_image: 'postgres:15'
           health_cmd: "pg_isready"
@@ -118,10 +118,10 @@ jobs:
           db_pass: postgres
           db_port: 5432
 
-        - moodle: 'MOODLE_501_STABLE'
-          php: '8.3'
+        - moodle: 'MOODLE_503_STABLE'
+          php: '8.4'
           db: 'mariadb'
-          db_image: 'mariadb:10.11'
+          db_image: 'mariadb:11.4'
           health_cmd: "mysqladmin ping"
           db_user: root
           db_pass: ''
