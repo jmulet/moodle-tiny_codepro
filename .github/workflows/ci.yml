@@ -120,12 +120,12 @@ jobs:
 
         - moodle: 'MOODLE_503_STABLE'
           php: '8.4'
-          db: 'mariadb'
-          db_image: 'mariadb:11.4'
-          health_cmd: "mysqladmin ping"
-          db_user: root
-          db_pass: ''
-          db_port: 3306
+          db: 'pgsql'
+          db_image: 'postgres:16'
+          health_cmd: "pg_isready"
+          db_user: postgres
+          db_pass: postgres
+          db_port: 5432
 
     steps:
       - name: Check out repository code
