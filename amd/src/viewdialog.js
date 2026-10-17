@@ -45,7 +45,7 @@ export class ViewDialogManager extends ViewManager {
         if (!this.codeEditor.config.lineWrapping) {
             ViewManager.safeInnerHTML(this.domElements.btnWrap, 'span', ViewManager.icons.rightarrow);
         }
-        if (this.codeEditor.config.themeName === 'dark') {
+        if (this.codeEditor.config.themeName === 'dark' && this.domElements.btnTheme) {
             ViewManager.safeInnerHTML(this.domElements.btnTheme, 'span', ViewManager.icons.moon);
         }
     }
@@ -56,7 +56,8 @@ export class ViewDialogManager extends ViewManager {
 
         const templateContext = {
             canuserswitchui,
-            icons: ViewManager.icons
+            icons: ViewManager.icons,
+            isThemeToggleVisible: this.isThemeToggleVisible,
         };
 
         // Show modal with buttons.
@@ -88,7 +89,7 @@ export class ViewDialogManager extends ViewManager {
 
         const modalContent = this.modal.getRoot().find('.modal-content');
         const isDark = this.preferencesSrv.get('theme') === 'dark';
-        if (isDark) {
+        if (isDark && this.isThemeToggleVisible) {
             modalContent.addClass('tiny_codepro-dark');
         } else {
             modalContent.removeClass('tiny_codepro-dark');
@@ -110,9 +111,11 @@ export class ViewDialogManager extends ViewManager {
         // Setting references to Dom elements
         this.domElements = {
             root: modalContent,
-            btnTheme: this.modal.footer.find("button.btn[data-action='theme']")[0],
             btnWrap: this.modal.footer.find("button.btn[data-action='wrap']")[0],
         };
+        if (this.isThemeToggleVisible) {
+            this.domElements.btnTheme = this.modal.footer.find("button.btn[data-action='theme']")[0];
+        }
 
         this.modal.footer.find("button.btn[data-action]").on("click", (evt) => {
             const btnElem = evt.currentTarget;
@@ -131,7 +134,9 @@ export class ViewDialogManager extends ViewManager {
                     this.increaseFontsize();
                     break;
                 case ("theme"):
-                    this.toggleTheme();
+                    if (this.isThemeToggleVisible) {
+                        this.toggleTheme();
+                    }
                     break;
                 case ("wrap"):
                     this.toggleLineWrapping();

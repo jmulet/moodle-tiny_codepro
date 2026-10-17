@@ -28,13 +28,15 @@
     Context variables required for this template:
     canuserswitchui - Whether the user is allowed to switch between dialog and panel UI modes or not.
     icons - A dictionary of svg icons.
+    isThemeToggleVisible - Whether the theme toggle must be visible in the UI.
 
     Example context (json):
     {
         "canuserswitchui": true,
         "icons": {
             "key": "svg icon"
-        }
+        },
+        "isThemeToggleVisible": true
     }
 }}
 {{< core/modal }}
@@ -50,7 +52,7 @@
             <button class="btn btn-sm btn-secondary" data-action="fs" title="{{#str}} fullscreen, tiny_codepro {{/str}}"><span>{{{icons.fullscreen}}}</span></button>
             <button class="btn btn-sm btn-secondary" data-action="font-" title="{{#str}} decreasefontsize, tiny_codepro {{/str}}"><span>{{{icons.decreasefontsize}}}</span></button>
             <button class="btn btn-sm btn-secondary" data-action="font+" title="{{#str}} increasefontsize, tiny_codepro {{/str}}"><span>{{{icons.increasefontsize}}}</span></button>
-            <button class="btn btn-sm btn-secondary" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}"><span>{{{icons.sun}}}</span></button>
+            {{#isThemeToggleVisible}}<button class="btn btn-sm btn-secondary" data-action="theme" title="{{#str}} themes, tiny_codepro {{/str}}"><span>{{{icons.sun}}}</span></button>{{/isThemeToggleVisible}}
             <button class="btn btn-sm btn-secondary" data-action="wrap" title="{{#str}} linewrap, tiny_codepro {{/str}}"><span>{{{icons.exchange}}}</span></button>
             <button class="btn btn-sm btn-secondary" data-action="prettify" title="{{#str}} prettify, tiny_codepro {{/str}}"><span>{{{icons.magic}}}</span></button>
         </div>

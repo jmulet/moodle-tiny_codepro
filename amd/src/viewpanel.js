@@ -145,13 +145,18 @@ export class ViewPanelManager extends ViewManager {
         btnIncreaseFontsize.style.marginLeft = '0';
 
         // Set the toggle state
-        const isDark = this.preferencesSrv.get('theme', 'light') === 'dark';
-        ViewManager.safeInnerHTML(btnTheme, 'span', isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
-
-        if (isDark) {
-            this.parentContainer.classList.add('tiny_codepro-dark');
+        if (btnTheme) {
+            const isDark = this.preferencesSrv.get('theme', 'light') === 'dark';
+            ViewManager.safeInnerHTML(btnTheme, 'span', isDark ? ViewManager.icons.moon : ViewManager.icons.sun);
+            if (isDark && this.isThemeToggleVisible) {
+                this.parentContainer.classList.add('tiny_codepro-dark');
+            } else {
+                this.parentContainer.classList.remove('tiny_codepro-dark');
+            }
         } else {
-            this.parentContainer.classList.remove('tiny_codepro-dark');
+            if (this.parentContainer) {
+                this.parentContainer.classList.remove('tiny_codepro-dark');
+            }
         }
 
         // Style issue
@@ -215,16 +220,22 @@ export class ViewPanelManager extends ViewManager {
                 // Convert NodeList to an array for easier reverse access
                 const buttonsArray = Array.from(headerButtonElements);
                 const bLen = buttonsArray.length;
+                // The theme button is only present when the Bootstrap theme attribute is absent.
+                // Its absence shifts the fontsize button offsets by one.
+                const themeHiddenOffset = this.isThemeToggleVisible ? 0 : 1;
 
                 this.domElements = {
                     root: this.parentContainer,
-                    btnDescreaseFontsize: buttonsArray[bLen - 6],
-                    btnIncreaseFontsize: buttonsArray[bLen - 5],
-                    btnTheme: buttonsArray[bLen - 4],
+                    btnDescreaseFontsize: buttonsArray[bLen - 6 + themeHiddenOffset],
+                    btnIncreaseFontsize: buttonsArray[bLen - 5 + themeHiddenOffset],
                     btnWrap: buttonsArray[bLen - 3],
                     btnPrettify: buttonsArray[bLen - 2],
                     btnAccept: buttonsArray[bLen - 1],
                 };
+
+                if (this.isThemeToggleVisible) {
+                    this.domElements.btnTheme = buttonsArray[bLen - 4];
+                }
 
                 // Hack to turn regular buttons into toggle ones.
                 this._setButtonsState();
@@ -296,13 +307,7 @@ export class ViewPanelManager extends ViewManager {
                 tooltip: increaseFontsizeStr,
                 onAction: this.increaseFontsize.bind(this)
             },
-            {
-                type: 'button',
-                text: ' ',
-                icon: 'tiny_codepro-sun',
-                tooltip: themesStr,
-                onAction: this.toggleTheme.bind(this)
-            },
+            // Theme button insertion point
             // Linewrapping causes problems in panel view
             {
                 type: 'button',
@@ -326,6 +331,17 @@ export class ViewPanelManager extends ViewManager {
                 onAction: this.accept.bind(this)
             },
         ];
+
+        // Insert the button after increaseFontsize button
+        if (this.isThemeToggleVisible) {
+            buttons.splice(3, 0, {
+                type: 'button',
+                text: ' ',
+                icon: 'tiny_codepro-sun',
+                tooltip: themesStr,
+                onAction: this.toggleTheme.bind(this)
+            });
+        }
 
         // If user is allowed to switch views, add the button
         const defaultUI = getDefaultUI(this.editor) ?? 'dialog';

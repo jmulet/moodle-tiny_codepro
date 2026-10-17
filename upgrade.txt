@@ -76,3 +76,7 @@ Support for Emmet Keybinding
 
 == 2.1.6 ==
 New build with updated npm dependencies
+
+== 2.1.7 ==
+In Moodle 5.3+, the light/dark toggle is set in sync with the UI by Boost theme if enabled.
+
