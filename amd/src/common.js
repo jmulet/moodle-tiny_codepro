@@ -99,6 +99,12 @@ function isPanelCapable(majorVersion, minorVersion) {
     return panelMinorDecimalPart >= REQUIRED_MINOR_DECIMAL;
 }
 
+/**
+ * Returns the Bootstrap theme class name
+ * @returns {string|null}
+ */
+const getBsTheme = () => document.documentElement.getAttribute("data-bs-theme");
+
 export default {
     baseUrl,
     component,
@@ -106,5 +112,6 @@ export default {
     icon: `${component}`,
     MARKER: '\u200B',
     TINY_MARKER_CLASS: 'tiny_codepro-marker',
-    isPanelCapable
+    isPanelCapable,
+    getBsTheme,
 };

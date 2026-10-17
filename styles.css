@@ -47,6 +47,7 @@
 }
 
 .tiny_codepro-dark .modal-header h5,
+.tiny_codepro-dark .modal-header .modal-title,
 .tiny_codepro-dark .modal-header span {
     color: whitesmoke;
 }
